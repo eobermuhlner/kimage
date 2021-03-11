@@ -212,7 +212,7 @@ interface Matrix {
                     column = 0
                     row++
                     if (row >= rows) {
-                        break;
+                        break
                     }
                 }
             }

@@ -2,7 +2,6 @@ package ch.obermuhlner.kimage.io
 
 import ch.obermuhlner.kimage.image.Image
 import ch.obermuhlner.kimage.image.awt.AwtBufferedImage
-import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
 

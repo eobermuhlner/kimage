@@ -1,7 +1,6 @@
 package ch.obermuhlner.kimage.filter
 
 import ch.obermuhlner.kimage.matrix.Matrix
-import java.util.*
 
 class AverageFilter(private val radius: Int, private val shape: Shape = Shape.Square) : MatrixImageFilter({ _, source -> averageMatrix(source, radius, shape) }) {
 

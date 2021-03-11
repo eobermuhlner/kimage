@@ -27,31 +27,31 @@ object TestMain {
             MatrixImage(
                     image.width,
                     image.height,
-                    Channel.Red to image.getMatrix(Channel.Blue),
-                    Channel.Green to image.getMatrix(Channel.Green),
-                    Channel.Blue to image.getMatrix(Channel.Red))
+                    Channel.Red to image[Channel.Blue],
+                    Channel.Green to image[Channel.Green],
+                    Channel.Blue to image[Channel.Red])
         }
 
         example("channel_blur_green") {
             MatrixImage(
                     image.width,
                     image.height,
-                    Channel.Red to image.getMatrix(Channel.Red),
-                    Channel.Green to GaussianBlurFilter.blur(image.getMatrix(Channel.Green), 3),
-                    Channel.Blue to image.getMatrix(Channel.Blue))
+                    Channel.Red to image[Channel.Red],
+                    Channel.Green to GaussianBlurFilter.blur(image[Channel.Green], 3),
+                    Channel.Blue to image[Channel.Blue])
         }
 
         example("channel_reduce_red") {
             MatrixImage(
                     image.width,
                     image.height,
-                    Channel.Red to image.getMatrix(Channel.Red) * 0.8,
-                    Channel.Green to image.getMatrix(Channel.Green),
-                    Channel.Blue to image.getMatrix(Channel.Blue))
+                    Channel.Red to image[Channel.Red] * 0.8,
+                    Channel.Green to image[Channel.Green],
+                    Channel.Blue to image[Channel.Blue])
         }
 
         example("channel_gray") {
-            val gray = image.getMatrix(Channel.Red) / 3.0 + image.getMatrix(Channel.Green) / 3.0 + image.getMatrix(Channel.Blue) / 3.0
+            val gray = image[Channel.Red] / 3.0 + image[Channel.Green] / 3.0 + image[Channel.Blue] / 3.0
             MatrixImage(
                     image.width,
                     image.height,
@@ -61,7 +61,7 @@ object TestMain {
         }
 
         example("channel_luminance") {
-            val luminance = image.getMatrix(Channel.Red) * 0.2126 + image.getMatrix(Channel.Green) * 0.7152 + image.getMatrix(Channel.Blue) * 0.0722
+            val luminance = image[Channel.Red] * 0.2126 + image[Channel.Green] * 0.7152 + image[Channel.Blue] * 0.0722
             MatrixImage(
                     image.width,
                     image.height,

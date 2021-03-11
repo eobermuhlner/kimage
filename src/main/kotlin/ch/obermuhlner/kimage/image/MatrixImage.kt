@@ -44,5 +44,7 @@ class MatrixImage(
         data[channel][y, x] = color
     }
 
+    operator fun get(channel: Channel): Matrix = getMatrix(channel)
+
     fun getMatrix(channel: Channel): Matrix = data[channelIndex(channel)]
 }
