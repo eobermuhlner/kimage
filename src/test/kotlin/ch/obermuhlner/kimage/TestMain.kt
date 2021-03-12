@@ -17,7 +17,7 @@ object TestMain {
 //        exampleChannelManipulation("orion_32bit.tif")
 //        exampleFilters("orion_32bit.tif")
 
-//        exampleImages()
+        exampleImages()
         exampleExperiments()
     }
 

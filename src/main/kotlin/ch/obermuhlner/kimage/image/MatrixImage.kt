@@ -36,12 +36,16 @@ class MatrixImage(
             matrixFunc: (Channel, Int, Int) -> Matrix = { _, _, _ -> FloatMatrix(height, width) })
             : this(width, height, channels, channels.map { matrixFunc.invoke(it, width, height) })
 
-    override fun getPixel(x: Int, y: Int, channel: Int): Double {
-        return data[channel][y, x]
+    override fun getPixel(x: Int, y: Int, channel: Channel): Double {
+        val channelIndex = channelIndex(channel)
+        if (channelIndex < 0) {
+            return convertPixelToChannel(x, y, channel)
+        }
+        return data[channelIndex][y, x]
     }
 
-    override fun setPixel(x: Int, y: Int, channel: Int, color: Double) {
-        data[channel][y, x] = color
+    override fun setPixel(x: Int, y: Int, channel: Channel, color: Double) {
+        data[channelIndex(channel)][y, x] = color
     }
 
     override fun getMatrix(channel: Channel): Matrix = data[channelIndex(channel)]

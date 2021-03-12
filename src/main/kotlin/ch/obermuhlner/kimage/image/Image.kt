@@ -13,36 +13,24 @@ interface Image {
     operator fun get(x: Int, y: Int): DoubleArray = getPixel(x, y)
     operator fun set(x: Int, y: Int, color: DoubleArray) = setPixel(x, y, color)
 
-    operator fun get(x: Int, y: Int, channel: Int): Double = getPixel(x, y, channel)
-    operator fun set(x: Int, y: Int, channel: Int, color: Double) = setPixel(x, y, channel, color)
-
     operator fun get(x: Int, y: Int, channel: Channel): Double = getPixel(x, y, channel)
     operator fun set(x: Int, y: Int, channel: Channel, color: Double) = setPixel(x, y, channel, color)
 
     fun getPixel(x: Int, y: Int, color: DoubleArray = DoubleArray(channels.size)): DoubleArray {
-        for (channel in channels.indices) {
-            color[channel] = getPixel(x, y, channel)
+        for (i in channels.indices) {
+            color[i] = getPixel(x, y, channels[i])
         }
         return color
     }
 
     fun setPixel(x: Int, y: Int, color: DoubleArray) {
-        for (channel in channels.indices) {
-            setPixel(x, y, channel, color[channel])
+        for (i in channels.indices) {
+            setPixel(x, y, channels[i], color[i])
         }
     }
 
-    fun getPixel(x: Int, y: Int, channel: Int): Double
-    fun setPixel(x: Int, y: Int, channel: Int, color: Double)
-
-    fun getPixel(x: Int, y: Int, channel: Channel): Double {
-        val index = channelIndex(channel)
-        return if (index >= 0) {
-            getPixel(x, y, index)
-        } else {
-            convertPixelToChannel(x, y, channel)
-        }
-    }
+    fun getPixel(x: Int, y: Int, channel: Channel): Double
+    fun setPixel(x: Int, y: Int, channel: Channel, color: Double)
 
     fun convertPixelToChannel(x: Int, y: Int, toChannel: Channel): Double {
         return when (toChannel) {
@@ -52,8 +40,6 @@ interface Image {
             else -> 0.0
         }
     }
-
-    fun setPixel(x: Int, y: Int, channel: Channel, color: Double) = setPixel(x, y, channelIndex(channel), color)
 
     fun getPixel(x: Int, y: Int, targetChannels: List<Channel>, color: DoubleArray = DoubleArray(targetChannels.size)) {
         for (targetChannelIndex in targetChannels.indices) {
