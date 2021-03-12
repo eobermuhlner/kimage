@@ -144,6 +144,10 @@ interface Matrix {
         return m
     }
 
+    fun croppedMatrix(croppedRow: Int, croppedColumn: Int, croppedRows: Int, croppedColumns: Int, strictClipping: Boolean = true): Matrix {
+        return CroppedMatrix(this, croppedRow, croppedColumn, croppedRows, croppedColumns, strictClipping)
+    }
+
     companion object {
         private fun checkRows(rows: Int) {
             require(rows >= 0) { "rows < 0 : $rows" }

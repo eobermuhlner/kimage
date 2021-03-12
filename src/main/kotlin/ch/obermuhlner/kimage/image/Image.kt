@@ -1,5 +1,7 @@
 package ch.obermuhlner.kimage.image
 
+import ch.obermuhlner.kimage.matrix.DoubleMatrix
+import ch.obermuhlner.kimage.matrix.Matrix
 import kotlin.math.max
 import kotlin.math.min
 
@@ -91,6 +93,18 @@ interface Image {
         }
     }
 
+    operator fun get(channel: Channel): Matrix = getMatrix(channel)
+
+    fun getMatrix(channel: Channel): Matrix {
+        val m = DoubleMatrix(height, width)
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                m[y, x] = getPixel(x, y, channel)
+            }
+        }
+        return m
+    }
+
     fun croppedImage(croppedX: Int, croppedY: Int, croppedWidth: Int, croppedHeight: Int, strictClipping: Boolean = true): Image {
         return CroppedImage(this, croppedX, croppedY, croppedWidth, croppedHeight, strictClipping)
     }
@@ -99,6 +113,6 @@ interface Image {
         return x >= 0 && y >= 0 && x < width && y < height
     }
 
-    fun boundedX(x: Int) = min(0, max(width - 1, x))
-    fun boundedY(y: Int) = min(0, max(height - 1, y))
+    fun boundedX(x: Int) = max(0, min(width - 1, x))
+    fun boundedY(y: Int) = max(0, min(height - 1, y))
 }

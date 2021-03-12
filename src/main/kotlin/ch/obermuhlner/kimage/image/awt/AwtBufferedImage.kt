@@ -3,11 +3,12 @@ package ch.obermuhlner.kimage.image.awt
 import ch.obermuhlner.kimage.image.AbstractImage
 import ch.obermuhlner.kimage.image.Channel
 import ch.obermuhlner.kimage.image.Image
+import ch.obermuhlner.kimage.matrix.Matrix
 import java.awt.image.BufferedImage
 import kotlin.math.max
 import kotlin.math.min
 
-class AwtBufferedImage(val bufferedImage: BufferedImage): AbstractImage(bufferedImage.width, bufferedImage.height, listOf(Channel.Red, Channel.Green, Channel.Blue)) {
+class AwtBufferedImage(val bufferedImage: BufferedImage, channels: List<Channel> = listOf(Channel.Red, Channel.Green, Channel.Blue)): AbstractImage(bufferedImage.width, bufferedImage.height, channels) {
 
     override fun getPixel(x: Int, y: Int, channel: Int): Double {
         val rgb = bufferedImage.getRGB(x, y)
@@ -34,7 +35,12 @@ class AwtBufferedImage(val bufferedImage: BufferedImage): AbstractImage(buffered
 
     companion object {
         fun from(image: Image): AwtBufferedImage {
-            val awtBufferedImage = AwtBufferedImage(BufferedImage(image.width, image.height, BufferedImage.TYPE_INT_RGB))
+            val awtBufferedImage = if (image.hasChannel(Channel.Gray)) {
+                AwtBufferedImage(BufferedImage(image.width, image.height, BufferedImage.TYPE_USHORT_GRAY), listOf(Channel.Gray))
+            } else {
+                AwtBufferedImage(BufferedImage(image.width, image.height, BufferedImage.TYPE_INT_RGB))
+            }
+
             awtBufferedImage.setPixels(image)
             return awtBufferedImage
         }
