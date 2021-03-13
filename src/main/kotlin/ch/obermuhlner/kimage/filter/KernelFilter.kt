@@ -20,9 +20,9 @@ class KernelFilter(private val kernel: Matrix)
 
         val EdgeDetectionDiagonal = Matrix.matrixOf(
                 3, 3,
-                1.0, 0.0, -1.0,
-                0.0, 0.0, 0.0,
-                -1.0, 0.0, 1.0)
+                -1.0, 0.0, -1.0,
+                0.0, 4.0, 0.0,
+                -1.0, 0.0, -1.0)
 
         val Sharpen = Matrix.matrixOf(
                 3, 3,
