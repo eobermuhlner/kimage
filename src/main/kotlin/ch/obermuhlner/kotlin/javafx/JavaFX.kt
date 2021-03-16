@@ -17,6 +17,7 @@ import javafx.scene.layout.HBox
 import javafx.scene.layout.VBox
 import javafx.scene.shape.Circle
 import javafx.scene.shape.Rectangle
+import java.text.Format
 import java.util.function.Function
 
 fun <T: Node> node(node: T, initializer: T.() -> Unit)
@@ -84,15 +85,15 @@ fun textfield(textProperty: StringProperty, initializer: TextField.() -> Unit): 
     return field
 }
 
-fun textfield(integerProperty: IntegerProperty, initializer: TextField.() -> Unit): TextField {
+fun textfield(integerProperty: IntegerProperty, format: Format = KImageApplication.INTEGER_FORMAT, initializer: TextField.() -> Unit): TextField {
     val field = textfield(initializer)
-    field.textProperty().bindBidirectional(integerProperty, KImageApplication.INTEGER_FORMAT)
+    field.textProperty().bindBidirectional(integerProperty, format)
     return field
 }
 
-fun textfield(doubleProperty: DoubleProperty, initializer: TextField.() -> Unit): TextField {
+fun textfield(doubleProperty: DoubleProperty, format: Format = KImageApplication.DOUBLE_FORMAT, initializer: TextField.() -> Unit): TextField {
     val field = textfield(initializer)
-    field.textProperty().bindBidirectional(doubleProperty, KImageApplication.DOUBLE_FORMAT)
+    field.textProperty().bindBidirectional(doubleProperty, format)
     return field
 }
 
