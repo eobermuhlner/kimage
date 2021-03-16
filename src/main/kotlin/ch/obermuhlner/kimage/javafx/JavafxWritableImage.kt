@@ -31,17 +31,24 @@ class JavafxWritableImage(
 
     override fun setPixel(x: Int, y: Int, color: DoubleArray) {
         var argb = 0
+        var hasAlpha = false
         for (i in channels.indices) {
             val channel = channels[i]
             val intColor = max(min((color[i] * 256).toInt(), 255), 0)
             argb = argb or when (channel) {
-                Channel.Alpha -> intColor shl 24
+                Channel.Alpha -> {
+                    hasAlpha = true
+                    intColor shl 24
+                }
                 Channel.Red -> intColor shl 16
                 Channel.Green -> intColor shl 8
                 Channel.Blue -> intColor
                 Channel.Gray -> (intColor shl 16) or (intColor shl 8) or intColor
                 else -> throw IllegalArgumentException("Unknown channel: $channel")
             }
+        }
+        if (!hasAlpha) {
+            argb = argb or -0x1000000
         }
         image.pixelWriter.setArgb(x, y, argb)
     }
@@ -54,7 +61,7 @@ class JavafxWritableImage(
             Channel.Red -> (rgb and 0x00ffff) or (intColor shl 16)
             Channel.Green -> (rgb and 0xff00ff) or (intColor shl 8)
             Channel.Blue -> (rgb and 0xffff00) or intColor
-            Channel.Gray -> (intColor shl 16) or (intColor shl 8) or intColor
+            Channel.Gray -> (rgb and 0x00ffffff) or (intColor shl 16) or (intColor shl 8) or intColor
             else -> throw IllegalArgumentException("Unknown channel: $channel")
         }
         image.pixelWriter.setArgb(x, y, newRgb)
