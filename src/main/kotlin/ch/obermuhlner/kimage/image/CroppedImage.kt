@@ -15,8 +15,20 @@ class CroppedImage(
     override val channels: List<Channel>
         get() = image.channels
 
+    override fun getPixel(x: Int, y: Int, color: DoubleArray): DoubleArray {
+        return image.getPixel(innerX(x), innerY(y), color)
+    }
+
+    override fun getPixel(x: Int, y: Int, targetChannels: List<Channel>, color: DoubleArray) {
+        return image.getPixel(innerX(x), innerY(y), targetChannels, color)
+    }
+
     override fun getPixel(x: Int, y: Int, channel: Channel): Double {
         return image.getPixel(innerX(x), innerY(y), channel)
+    }
+
+    override fun setPixel(x: Int, y: Int, color: DoubleArray) {
+        image.setPixel(innerX(x), innerY(y), color)
     }
 
     override fun setPixel(x: Int, y: Int, channel: Channel, color: Double) {
