@@ -5,6 +5,7 @@ import ch.obermuhlner.kimage.image.Channel.*
 import ch.obermuhlner.kimage.image.MatrixImage
 import ch.obermuhlner.kimage.io.ImageReader
 import ch.obermuhlner.kimage.io.ImageWriter
+import ch.obermuhlner.kimage.javafx.KImageApplication
 import ch.obermuhlner.kimage.javafx.KImageApplication.Companion.interactive
 import ch.obermuhlner.kotlin.javafx.*
 import javafx.beans.property.SimpleDoubleProperty
@@ -56,16 +57,17 @@ object KImage {
             form {
                 children += vbox {
                     children += label("Removal Factor:")
-                    children += textfield(removalFactorProperty) {}
+                    children += textfield(removalFactorProperty, KImageApplication.PERCENT_FORMAT) {}
                 }
             }
-            filter("Subtract") {
+            filterArea("Subtract") { x, y, w, h ->
+                val croppedOriginalImage = originalImage.croppedImage(x, y, w, h)
                 MatrixImage(
-                    width,
-                    height,
-                    Red to originalImage[Red] - this[Red] * removalFactorProperty.get(),
-                    Green to originalImage[Green] - this[Green] * removalFactorProperty.get(),
-                    Blue to originalImage[Blue] - this[Blue] * removalFactorProperty.get())
+                    this.width,
+                    this.height,
+                    Red to croppedOriginalImage[Red] - this[Red] * removalFactorProperty.get(),
+                    Green to croppedOriginalImage[Green] - this[Green] * removalFactorProperty.get(),
+                    Blue to croppedOriginalImage[Blue] - this[Blue] * removalFactorProperty.get())
             }
         }
 

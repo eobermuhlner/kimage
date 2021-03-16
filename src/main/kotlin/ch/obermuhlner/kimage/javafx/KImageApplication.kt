@@ -23,6 +23,7 @@ import kotlin.math.min
 
 class KImageApplication : Application() {
 
+    private lateinit var primaryStage: Stage
     var currentImage: Image? = null
     val currentImageView = ImageView()
     val workflowEditor = VBox()
@@ -34,6 +35,8 @@ class KImageApplication : Application() {
     private val zoomOutputImage = JavafxWritableImage(zoomOutputWritableImage)
 
     override fun start(primaryStage: Stage) {
+        this.primaryStage = primaryStage
+
         val root = Group()
         val scene = Scene(root)
 
@@ -47,6 +50,8 @@ class KImageApplication : Application() {
     fun setCurrentImage(image: Image, title: String = "Image") {
         currentImage = image
         currentImageView.image = JavaFXImageUtil.toWritableImage(image)
+
+        primaryStage.title = title
     }
 
     private fun createMainEditor(): Node {
@@ -66,17 +71,28 @@ class KImageApplication : Application() {
     fun form(initializer: VBox.() -> Unit) {
         workflowEditor.children.clear()
 
+        workflowEditor.apply(initializer)
+    }
+
+    fun filter(name: String, filter: Image.() -> Image) {
+        filterArea(name) { _, _, _, _ ->
+            this.filter()
+        }
+    }
+
+    fun filterArea(name: String, filter: Image.(Int, Int, Int, Int) -> Image) {
         val zoomCenterXProperty = SimpleIntegerProperty()
         val zoomCenterYProperty = SimpleIntegerProperty()
-
-        zoomInputImage.setPixels(doubleArrayOf(1.0, 0.0, 0.0))
-        zoomOutputImage.setPixels(doubleArrayOf(0.0, 0.0, 1.0))
 
         fun updateZoom(zoomX: Int = zoomCenterXProperty.get(), zoomY: Int = zoomCenterYProperty.get()) {
             val zoomOffsetX = zoomX - ZOOM_WIDTH / 2
             val zoomOffsetY = zoomY - ZOOM_HEIGHT / 2
 
-            zoomInputImage.setPixels(zoomOffsetX, zoomOffsetY, currentImage!!, 0, 0, ZOOM_WIDTH, ZOOM_HEIGHT, doubleArrayOf(0.0, 0.0, 0.0))
+            currentImage?.let {
+                zoomInputImage.setPixels(zoomOffsetX, zoomOffsetY, it, 0, 0, ZOOM_WIDTH, ZOOM_HEIGHT, doubleArrayOf(0.0, 0.0, 0.0))
+
+                zoomOutputImage.setPixels(zoomInputImage.filter(zoomOffsetX, zoomOffsetY, ZOOM_WIDTH, ZOOM_HEIGHT))
+            }
         }
 
         var zoomDragX: Double? = null
@@ -119,18 +135,16 @@ class KImageApplication : Application() {
                 image = zoomOutputWritableImage
                 setupZoomDragEvents(this)
             }
-
-            this.apply(initializer)
         }
 
-        updateZoom(currentImage!!.width / 2, currentImage!!.height / 2)
-    }
+        currentImage?.let {
+            updateZoom(it.width / 2, it.height / 2)
+        }
 
-    fun filter(name: String, filter: Image.() -> Image) {
         workflowEditor.children += button(name) {
             onAction = EventHandler {
                 currentImage?.let {
-                    val result = it.filter()
+                    val result = it.filter(0, 0, it.width, it.height)
                     setCurrentImage(result, "Filtered")
                     latch.countDown()
                 }
@@ -142,8 +156,8 @@ class KImageApplication : Application() {
         private const val IMAGE_WIDTH = 600
         private const val IMAGE_HEIGHT = 600
 
-        private const val ZOOM_WIDTH = 150
-        private const val ZOOM_HEIGHT = 150
+        private const val ZOOM_WIDTH = 200
+        private const val ZOOM_HEIGHT = 200
 
         val INTEGER_FORMAT = DecimalFormat("##0")
         val DOUBLE_FORMAT = DecimalFormat("##0.000")
