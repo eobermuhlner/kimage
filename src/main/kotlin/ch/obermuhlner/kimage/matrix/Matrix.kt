@@ -158,7 +158,7 @@ interface Matrix {
         }
 
         private fun checkSquare(matrix: Matrix) {
-            require(!(matrix.columns !== matrix.rows)) {
+            require(!(matrix.columns != matrix.rows)) {
                 "columns " + matrix.columns.toString() + " != rows " + matrix.rows
             }
         }
@@ -190,16 +190,16 @@ interface Matrix {
         }
 
         private fun checkSameSize(matrix: Matrix, other: Matrix) {
-            require(!(matrix.rows !== other.rows)) {
+            require(!(matrix.rows != other.rows)) {
                 "rows != other.rows : " + matrix.rows.toString() + " != " + other.rows
             }
-            require(!(matrix.columns !== other.columns)) {
+            require(!(matrix.columns != other.columns)) {
                 "columns != other.columns : " + matrix.columns.toString() + " != " + other.columns
             }
         }
 
         private fun checkColumnsOtherRows(matrix: Matrix, other: Matrix) {
-            require(!(matrix.columns !== other.rows)) {
+            require(!(matrix.columns != other.rows)) {
                 "columns != other.rows : " + matrix.columns.toString() + " != " + other.rows
             }
         }

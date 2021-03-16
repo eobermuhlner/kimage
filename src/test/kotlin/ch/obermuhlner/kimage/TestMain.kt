@@ -12,7 +12,7 @@ object TestMain {
     @JvmStatic
     fun main(args: Array<String>) {
 //        exampleChannelManipulation("animal.png")
-//        exampleFilters("animal.png")
+        exampleFilters("animal.png")
 
 //        exampleChannelManipulation("orion_32bit.tif")
 //        exampleFilters("orion_32bit.tif")
@@ -23,6 +23,10 @@ object TestMain {
 
     private fun exampleExperiments() {
         val image = ImageReader.read(File("images/animal.png"))
+
+        example("gaussian_blur_3") {
+            image.gaussianBlur(3)
+        }
 
         example("channel_gray") {
             MatrixImage(

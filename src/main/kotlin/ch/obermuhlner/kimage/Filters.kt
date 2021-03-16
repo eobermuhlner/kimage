@@ -14,14 +14,16 @@ fun Image.median(radius: Int, shape: Shape = Shape.Square): Image = MedianFilter
 fun Matrix.median(radius: Int, shape: Shape = Shape.Square): Matrix = MedianFilter.medianMatrix(this, radius, shape)
 
 fun Image.kernelFilter(kernel: Matrix): Image = KernelFilter(kernel).filter(this)
-fun Image.sharpen(kernel: Matrix): Image = this.kernelFilter(KernelFilter.Sharpen)
-fun Image.unsharpMask(kernel: Matrix): Image = this.kernelFilter(KernelFilter.UnsharpMask)
-fun Image.edgeDetectionStrong(kernel: Matrix): Image = this.kernelFilter(KernelFilter.EdgeDetectionStrong)
-fun Image.edgeDetectionCross(kernel: Matrix): Image = this.kernelFilter(KernelFilter.EdgeDetectionCross)
+fun Image.sharpen(): Image = this.kernelFilter(KernelFilter.Sharpen)
+fun Image.unsharpMask(): Image = this.kernelFilter(KernelFilter.UnsharpMask)
+fun Image.edgeDetectionStrong(): Image = this.kernelFilter(KernelFilter.EdgeDetectionStrong)
+fun Image.edgeDetectionCross(): Image = this.kernelFilter(KernelFilter.EdgeDetectionCross)
+fun Image.edgeDetectionDiagonal(): Image = this.kernelFilter(KernelFilter.EdgeDetectionDiagonal)
 
-fun Matrix.sharpen(kernel: Matrix): Matrix = this.convolute(KernelFilter.Sharpen)
-fun Matrix.unsharpMask(kernel: Matrix): Matrix = this.convolute(KernelFilter.UnsharpMask)
-fun Matrix.edgeDetectionStrong(kernel: Matrix): Matrix = this.convolute(KernelFilter.EdgeDetectionStrong)
-fun Matrix.edgeDetectionCross(kernel: Matrix): Matrix = this.convolute(KernelFilter.EdgeDetectionCross)
+fun Matrix.sharpen(): Matrix = this.convolute(KernelFilter.Sharpen)
+fun Matrix.unsharpMask(): Matrix = this.convolute(KernelFilter.UnsharpMask)
+fun Matrix.edgeDetectionStrong(): Matrix = this.convolute(KernelFilter.EdgeDetectionStrong)
+fun Matrix.edgeDetectionCross(): Matrix = this.convolute(KernelFilter.EdgeDetectionCross)
+fun Matrix.edgeDetectionDiagonal(): Matrix = this.convolute(KernelFilter.EdgeDetectionDiagonal)
 
 
