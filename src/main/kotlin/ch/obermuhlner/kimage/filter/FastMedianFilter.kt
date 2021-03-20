@@ -18,16 +18,16 @@ class FastMedianFilter(private val radius: Int, recursive: Boolean = false) : Ma
         }
 
         fun add(matrix: Matrix, rowStart: Int, columnStart: Int, rows: Int, columns: Int) {
-            for (row in rowStart until rows) {
-                for (column in columnStart until columns) {
+            for (row in rowStart until rowStart+rows) {
+                for (column in columnStart until columnStart+columns) {
                     add(matrix[row, column])
                 }
             }
         }
 
         fun remove(matrix: Matrix, rowStart: Int, columnStart: Int, rows: Int, columns: Int) {
-            for (row in rowStart until rows) {
-                for (column in columnStart until columns) {
+            for (row in rowStart until rowStart+rows) {
+                for (column in columnStart until columnStart+columns) {
                     remove(matrix[row, column])
                 }
             }
@@ -76,17 +76,38 @@ class FastMedianFilter(private val radius: Int, recursive: Boolean = false) : Ma
 
             val histogram = Histogram()
 
-            //histogram.add(sourceCopy, -radius, -radius, kernelSize, kernelSize)
+            histogram.add(sourceCopy, -radius, -radius, kernelSize, kernelSize)
 
             for (row in 0 until source.rows) {
-                for (column in 0 until source.columns) {
-                    histogram.clear()
-                    histogram.add(sourceCopy, row-radius, column-radius, row+radius, column+radius)
+                val forward = row % 2 == 0
+                val columnRange = if (forward) 0 until source.columns else source.columns-1 downTo 0
+                for (column in columnRange) {
                     val medianValue = histogram.estimateMedian()
                     if (recursive) {
                         sourceCopy[row, column] = medianValue
                     }
                     target[row, column] = medianValue
+                    if (forward) {
+                        if (column < source.columns - 1) {
+                            // move right
+                            histogram.remove(sourceCopy, row-radius, column-radius, kernelSize, 1)
+                            histogram.add(sourceCopy, row-radius, column+radius+1, kernelSize, 1)
+                        } else {
+                            // move down
+                            histogram.remove(sourceCopy, row-radius, column-radius, 1, kernelSize)
+                            histogram.add(sourceCopy, row+radius+1, column-radius, 1, kernelSize)
+                        }
+                    } else {
+                        if (column > 0) {
+                            // move left
+                            histogram.remove(sourceCopy, row-radius, column+radius, kernelSize, 1)
+                            histogram.add(sourceCopy, row-radius, column-radius-1, kernelSize, 1)
+                        } else {
+                            // move down
+                            histogram.remove(sourceCopy, row-radius, column-radius, 1, kernelSize)
+                            histogram.add(sourceCopy, row+radius+1, column-radius, 1, kernelSize)
+                        }
+                    }
                 }
             }
             return target
