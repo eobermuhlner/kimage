@@ -10,7 +10,7 @@ fun Matrix.gaussianBlur(radius: Int): Matrix = GaussianBlurFilter.blur(this, rad
 fun Image.average(radius: Int, shape: Shape = Shape.Square): Image = AverageFilter(radius, shape).filter(this)
 fun Matrix.average(radius: Int, shape: Shape = Shape.Square): Matrix = AverageFilter.averageMatrix(this, radius, shape)
 
-fun Image.median(radius: Int, shape: Shape = Shape.Square): Image = MedianFilter(radius, shape).filter(this)
+fun Image.median(radius: Int, shape: Shape = Shape.Square, recursive: Boolean = false): Image = MedianFilter(radius, shape, recursive).filter(this)
 fun Matrix.median(radius: Int, shape: Shape = Shape.Square): Matrix = MedianFilter.medianMatrix(this, radius, shape)
 
 fun Image.kernelFilter(kernel: Matrix): Image = KernelFilter(kernel).filter(this)
