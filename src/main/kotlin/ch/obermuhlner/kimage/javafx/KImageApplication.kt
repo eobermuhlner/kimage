@@ -1,6 +1,7 @@
 package ch.obermuhlner.kimage.javafx
 
 import ch.obermuhlner.kimage.image.Image
+import ch.obermuhlner.kimage.io.ImageReader
 import ch.obermuhlner.kotlin.javafx.*
 import javafx.application.Application
 import javafx.application.Platform
@@ -13,10 +14,15 @@ import javafx.scene.image.ImageView
 import javafx.scene.image.WritableImage
 import javafx.scene.input.MouseEvent
 import javafx.scene.layout.VBox
+import javafx.stage.FileChooser
 import javafx.stage.Stage
+import java.io.File
+import java.io.IOException
 import java.lang.Thread.sleep
+import java.nio.file.Paths
 import java.text.DecimalFormat
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
 import kotlin.math.max
 import kotlin.math.min
@@ -27,6 +33,8 @@ class KImageApplication : Application() {
     var currentImage: Image? = null
     val currentImageView = ImageView()
     val workflowEditor = VBox()
+
+    private var currentDirectory = Paths.get(System.getProperty("user.home", ".")).toFile()
 
     private val zoomInputWritableImage = WritableImage(ZOOM_WIDTH, ZOOM_HEIGHT)
     private val zoomInputImage = JavafxWritableImage(zoomInputWritableImage)
@@ -45,6 +53,25 @@ class KImageApplication : Application() {
         primaryStage.scene = scene
         primaryStage.show()
         applicationSingleton = this
+    }
+
+    fun openImageFile(initialFileName: String? = null, initialDirectory: File = currentDirectory, title: String = "Open Image"): Image {
+        val fileChooser = FileChooser()
+        println("FILENAME " + fileChooser.initialFileName)
+        fileChooser.initialDirectory = initialDirectory
+        fileChooser.title = title
+        fileChooser.extensionFilters.add(FileChooser.ExtensionFilter("Image", "*.tif", "*.tiff", "*.png", "*.jpg", "*.jpeg"))
+        fileChooser.extensionFilters.add(FileChooser.ExtensionFilter("All", "*"))
+        val chosenFile = fileChooser.showOpenDialog(primaryStage)
+        if (chosenFile != null) {
+            try {
+                setCurrentImage(ImageReader.readMatrixImage(chosenFile), chosenFile.name)
+                currentDirectory = chosenFile.parentFile
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+        }
+        return currentImage!!
     }
 
     fun setCurrentImage(image: Image, title: String = "Image") {
@@ -167,7 +194,7 @@ class KImageApplication : Application() {
         private var applicationSingleton: KImageApplication? = null
         private var latch = CountDownLatch(0)
 
-        @Synchronized fun interactive(func: KImageApplication.() -> Unit) {
+        @Synchronized fun <T> interactive(func: KImageApplication.() -> T): T {
             if (!singletonLaunched) {
                 singletonLaunched = true
                 thread {
@@ -179,11 +206,13 @@ class KImageApplication : Application() {
             }
 
             latch = CountDownLatch(1)
+            val result = AtomicReference<T>()
             Platform.runLater {
-                applicationSingleton!!.func()
+                result.set(applicationSingleton!!.func())
 
             }
             latch.await()
+            return result.get()
         }
 
         @JvmStatic
