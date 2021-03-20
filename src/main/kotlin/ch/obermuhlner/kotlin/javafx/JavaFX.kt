@@ -1,6 +1,7 @@
 package ch.obermuhlner.kotlin.javafx
 
 import ch.obermuhlner.kimage.javafx.KImageApplication
+import javafx.beans.property.BooleanProperty
 import javafx.beans.property.DoubleProperty
 import javafx.beans.property.IntegerProperty
 import javafx.beans.property.StringProperty
@@ -75,6 +76,15 @@ fun <T> combobox(items: List<T>, initializer: ComboBox<T>.() -> Unit)
 
 fun <T> combobox(items: ObservableList<T>, initializer: ComboBox<T>.() -> Unit)
         = ComboBox(items).apply(initializer)
+
+fun checkbox(initializer: CheckBox.() -> Unit)
+        = CheckBox().apply(initializer)
+
+fun checkbox(booleanProperty: BooleanProperty, initializer: CheckBox.() -> Unit): CheckBox {
+    val field = CheckBox().apply(initializer)
+    field.selectedProperty().bindBidirectional(booleanProperty)
+    return field
+}
 
 fun textfield(initializer: TextField.() -> Unit)
         = TextField().apply(initializer)
