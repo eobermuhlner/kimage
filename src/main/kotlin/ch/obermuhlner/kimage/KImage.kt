@@ -8,6 +8,7 @@ import ch.obermuhlner.kimage.io.ImageWriter
 import ch.obermuhlner.kimage.javafx.KImageApplication
 import ch.obermuhlner.kimage.javafx.KImageApplication.Companion.interactive
 import ch.obermuhlner.kotlin.javafx.*
+import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleDoubleProperty
 import javafx.beans.property.SimpleIntegerProperty
 import java.io.File
@@ -19,23 +20,29 @@ object KImage {
     }
 
     private fun example() {
-        val originalImage = ImageReader.readMatrixImage(File("images/animal.png"))
-        //val originalImage = ImageReader.readMatrixImage(File("images/orion_small_compress0.png"))
+        //val originalImage = ImageReader.readMatrixImage(File("images/animal.png"))
+        val originalImage = ImageReader.readMatrixImage(File("images/orion_small_compress0.png"))
         //val originalImage = ImageReader.readMatrixImage(File("images/orion_32bit.tif"))
+
+//        val originalImage = interactive {
+//            openImageFile(initialDirectory = File("images"))
+//        }
 
         interactive {
             setCurrentImage(originalImage, "Original")
 
             val radiusProperty = SimpleIntegerProperty(3)
+            val recursiveProperty = SimpleBooleanProperty(true)
             form {
                 children += vbox {
                     children += label("Median Radius:")
                     children += textfield(radiusProperty) {}
+                    children += checkbox(recursiveProperty) {}
                 }
             }
 
             filter ("Median") {
-                median(radiusProperty.get(), Shape.Cross).median(radiusProperty.get(), Shape.DiagonalCross)
+                median(radiusProperty.get(), Shape.Cross).median(radiusProperty.get(), Shape.Square, recursiveProperty.get())
             }
         }
 
