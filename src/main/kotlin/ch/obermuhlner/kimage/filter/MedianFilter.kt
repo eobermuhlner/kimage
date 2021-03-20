@@ -3,10 +3,11 @@ package ch.obermuhlner.kimage.filter
 import ch.obermuhlner.kimage.matrix.Matrix
 import java.util.*
 
-class MedianFilter(private val radius: Int, private val shape: Shape = Shape.Square) : MatrixImageFilter({ _, source -> medianMatrix(source, radius, shape) }) {
+class MedianFilter(private val radius: Int, private val shape: Shape = Shape.Square, recursive: Boolean = false) : MatrixImageFilter({ _, source -> medianMatrix(source, radius, shape, recursive) }) {
 
     companion object {
-        fun medianMatrix(source: Matrix, radius: Int, shape: Shape): Matrix {
+        fun medianMatrix(source: Matrix, radius: Int, shape: Shape, recursive: Boolean = false): Matrix {
+            val sourceCopy = if (recursive) source.copy() else source
             val target = source.create()
             val kernelSize = radius+radius+1
             val n = kernelSize * kernelSize
@@ -14,7 +15,11 @@ class MedianFilter(private val radius: Int, private val shape: Shape = Shape.Squ
 
             for (row in 0 until source.rows) {
                 for (column in 0 until source.columns) {
-                    target[row, column] = median(source, row, column, radius, shape, values)
+                    val medianValue = median(sourceCopy, row, column, radius, shape, values)
+                    if (recursive) {
+                        sourceCopy[row, column] = medianValue
+                    }
+                    target[row, column] = medianValue
                 }
             }
             return target
