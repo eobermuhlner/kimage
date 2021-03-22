@@ -84,7 +84,9 @@ class FastMedianFilter(private val radius: Int, recursive: Boolean = false) : Ma
                 for (column in columnRange) {
                     val medianValue = histogram.estimateMedian()
                     if (recursive) {
+                        histogram.remove(sourceCopy[row, column])
                         sourceCopy[row, column] = medianValue
+                        histogram.add(medianValue)
                     }
                     target[row, column] = medianValue
                     if (forward) {
