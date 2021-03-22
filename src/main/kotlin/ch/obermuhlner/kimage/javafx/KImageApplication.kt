@@ -2,6 +2,7 @@ package ch.obermuhlner.kimage.javafx
 
 import ch.obermuhlner.kimage.image.Image
 import ch.obermuhlner.kimage.io.ImageReader
+import ch.obermuhlner.kimage.math.clamp
 import ch.obermuhlner.kotlin.javafx.*
 import javafx.application.Application
 import javafx.application.Platform
@@ -24,8 +25,6 @@ import java.text.DecimalFormat
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
-import kotlin.math.max
-import kotlin.math.min
 
 class KImageApplication : Application() {
 
@@ -136,10 +135,8 @@ class KImageApplication : Application() {
                 zoomDragY = event.y
                 var zoomX = zoomCenterXProperty.get() + deltaX.toInt()
                 var zoomY = zoomCenterYProperty.get() + deltaY.toInt()
-                zoomX = max(zoomX, 0)
-                zoomY = max(zoomY, 0)
-                zoomX = min(zoomX, currentImage!!.width.toInt() - 1)
-                zoomY = min(zoomY, currentImage!!.height.toInt() - 1)
+                zoomX = clamp(zoomX, 0, currentImage!!.width.toInt() - 1)
+                zoomY = clamp(zoomY, 0, currentImage!!.height.toInt() - 1)
                 zoomCenterXProperty.set(zoomX)
                 zoomCenterYProperty.set(zoomY)
                 updateZoom(zoomX, zoomY)

@@ -3,9 +3,8 @@ package ch.obermuhlner.kimage.filter
 import ch.obermuhlner.kimage.image.Channel
 import ch.obermuhlner.kimage.image.Image
 import ch.obermuhlner.kimage.image.MatrixImage
+import ch.obermuhlner.kimage.math.clamp
 import ch.obermuhlner.kimage.matrix.Matrix
-import kotlin.math.max
-import kotlin.math.min
 
 class FastMedianPixelFilter(private val radius: Int, private val medianChannel: Channel = Channel.Luminance) : Filter<Image> {
 
@@ -45,7 +44,7 @@ class FastMedianPixelFilter(private val radius: Int, private val medianChannel: 
         }
 
         fun add(value: Double, row: Int, column: Int) {
-            val index = max(0, min(binCount - 1, (value * binCount).toInt()))
+            val index = clamp((value * binCount).toInt(), 0, binCount - 1)
             bins[index]++
             sampleRow[index] = row
             sampleColumn[index] = column
@@ -53,7 +52,7 @@ class FastMedianPixelFilter(private val radius: Int, private val medianChannel: 
         }
 
         fun remove(value: Double) {
-            val index = max(0, min(binCount - 1, (value * binCount).toInt()))
+            val index = clamp((value * binCount).toInt(), 0, binCount - 1)
             bins[index]--
             n--
         }

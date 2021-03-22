@@ -1,9 +1,8 @@
 package ch.obermuhlner.kimage.image
 
+import ch.obermuhlner.kimage.math.clamp
 import ch.obermuhlner.kimage.matrix.DoubleMatrix
 import ch.obermuhlner.kimage.matrix.Matrix
-import kotlin.math.max
-import kotlin.math.min
 
 interface Image {
     val width: Int
@@ -99,6 +98,6 @@ interface Image {
         return x >= 0 && y >= 0 && x < width && y < height
     }
 
-    fun boundedX(x: Int) = max(0, min(width - 1, x))
-    fun boundedY(y: Int) = max(0, min(height - 1, y))
+    fun boundedX(x: Int) = clamp(x, 0, width - 1)
+    fun boundedY(y: Int) = clamp(y, 0, height - 1)
 }

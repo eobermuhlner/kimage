@@ -3,9 +3,8 @@ package ch.obermuhlner.kimage.image.awt
 import ch.obermuhlner.kimage.image.AbstractImage
 import ch.obermuhlner.kimage.image.Channel
 import ch.obermuhlner.kimage.image.Image
+import ch.obermuhlner.kimage.math.clamp
 import java.awt.image.BufferedImage
-import kotlin.math.max
-import kotlin.math.min
 
 class AwtBufferedImage(val bufferedImage: BufferedImage, channels: List<Channel> = listOf(Channel.Red, Channel.Green, Channel.Blue)): AbstractImage(bufferedImage.width, bufferedImage.height, channels) {
 
@@ -22,7 +21,7 @@ class AwtBufferedImage(val bufferedImage: BufferedImage, channels: List<Channel>
     }
 
     override fun setPixel(x: Int, y: Int, channel: Channel, color: Double) {
-        val intColor = max(min((color * 256).toInt(), 255), 0)
+        val intColor = clamp((color * 256).toInt(), 0, 255)
         val newRgb = when (channel) {
             Channel.Alpha -> (bufferedImage.getRGB(x, y) and 0x00ffffff) or (intColor shl 24)
             Channel.Red -> (bufferedImage.getRGB(x, y) and 0x00ffff) or (intColor shl 16)

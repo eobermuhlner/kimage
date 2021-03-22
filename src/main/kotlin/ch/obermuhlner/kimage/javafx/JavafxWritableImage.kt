@@ -2,9 +2,8 @@ package ch.obermuhlner.kimage.javafx
 
 import ch.obermuhlner.kimage.image.Channel
 import ch.obermuhlner.kimage.image.Image
+import ch.obermuhlner.kimage.math.clamp
 import javafx.scene.image.WritableImage
-import kotlin.math.max
-import kotlin.math.min
 
 class JavafxWritableImage(
     private val image: WritableImage,
@@ -34,7 +33,7 @@ class JavafxWritableImage(
         var hasAlpha = false
         for (i in channels.indices) {
             val channel = channels[i]
-            val intColor = max(min((color[i] * 256).toInt(), 255), 0)
+            val intColor = clamp((color[i] * 256).toInt(), 0, 255)
             argb = argb or when (channel) {
                 Channel.Alpha -> {
                     hasAlpha = true
@@ -55,7 +54,7 @@ class JavafxWritableImage(
 
     override fun setPixel(x: Int, y: Int, channel: Channel, color: Double) {
         val rgb: Int = image.pixelReader.getArgb(x, y)
-        val intColor = max(min((color * 256).toInt(), 255), 0)
+        val intColor = clamp((color * 256).toInt(), 0, 255)
         val newRgb = when (channel) {
             Channel.Alpha -> (rgb and 0x00ffffff) or (intColor shl 24)
             Channel.Red -> (rgb and 0x00ffff) or (intColor shl 16)

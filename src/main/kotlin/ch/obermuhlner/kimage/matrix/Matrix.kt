@@ -1,7 +1,6 @@
 package ch.obermuhlner.kimage.matrix
 
-import kotlin.math.max
-import kotlin.math.min
+import ch.obermuhlner.kimage.math.clamp
 
 interface Matrix {
     val rows: Int
@@ -22,8 +21,8 @@ interface Matrix {
         }
     }
 
-    fun boundedColumn(column: Int) = max(0, min(columns - 1, column))
-    fun boundedRow(row: Int) = max(0, min(rows - 1, row))
+    fun boundedColumn(column: Int) = clamp(column, 0, columns - 1)
+    fun boundedRow(row: Int) = clamp(row, 0, rows - 1)
 
     operator fun plus(other: Matrix): Matrix {
         checkSameSize(this, other)

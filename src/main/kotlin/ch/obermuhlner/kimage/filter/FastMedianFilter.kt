@@ -1,8 +1,7 @@
 package ch.obermuhlner.kimage.filter
 
+import ch.obermuhlner.kimage.math.clamp
 import ch.obermuhlner.kimage.matrix.Matrix
-import kotlin.math.max
-import kotlin.math.min
 
 class FastMedianFilter(private val radius: Int, recursive: Boolean = false) : MatrixImageFilter({ _, source -> fastMedianMatrix(source, radius, recursive) }) {
 
@@ -34,13 +33,13 @@ class FastMedianFilter(private val radius: Int, recursive: Boolean = false) : Ma
         }
 
         fun add(value: Double) {
-            val index = max(0, min(binCount - 1, (value * binCount).toInt()))
+            val index = clamp((value * binCount).toInt(), 0, binCount - 1)
             bins[index]++
             n++
         }
 
         fun remove(value: Double) {
-            val index = max(0, min(binCount - 1, (value * binCount).toInt()))
+            val index = clamp((value * binCount).toInt(), 0, binCount - 1)
             bins[index]--
             n--
         }
