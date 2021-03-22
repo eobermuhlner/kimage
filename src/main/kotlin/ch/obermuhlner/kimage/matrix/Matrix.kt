@@ -144,6 +144,16 @@ interface Matrix {
         return m
     }
 
+    fun point(pointFunc: (Double) -> Double): Matrix {
+        val m = copy()
+        for (row in 0 until rows) {
+            for (column in 0 until columns) {
+                this[row, column] = pointFunc.invoke(this[row, column])
+            }
+        }
+        return m
+    }
+
     fun croppedMatrix(croppedRow: Int, croppedColumn: Int, croppedRows: Int, croppedColumns: Int, strictClipping: Boolean = true): Matrix {
         return CroppedMatrix(this, croppedRow, croppedColumn, croppedRows, croppedColumns, strictClipping)
     }
