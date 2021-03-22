@@ -10,8 +10,13 @@ fun Matrix.gaussianBlur(radius: Int): Matrix = GaussianBlurFilter.blur(this, rad
 fun Image.average(radius: Int, shape: Shape = Shape.Square): Image = AverageFilter(radius, shape).filter(this)
 fun Matrix.average(radius: Int, shape: Shape = Shape.Square): Matrix = AverageFilter.averageMatrix(this, radius, shape)
 
-fun Image.median(radius: Int, shape: Shape = Shape.Square, recursive: Boolean = false): Image = MedianFilter(radius, shape, recursive).filter(this)
-fun Matrix.median(radius: Int, shape: Shape = Shape.Square): Matrix = MedianFilter.medianMatrix(this, radius, shape)
+fun Image.median(radius: Int, recursive: Boolean = false): Image = FastMedianFilter(radius, recursive).filter(this)
+fun Matrix.median(radius: Int, recursive: Boolean = false): Matrix = FastMedianFilter.fastMedianMatrix(this, radius, recursive)
+
+fun Image.medianPixel(radius: Int): Image = FastMedianFilter(radius).filter(this)
+
+fun Image.slowMedian(radius: Int, shape: Shape = Shape.Square, recursive: Boolean = false): Image = MedianFilter(radius, shape, recursive).filter(this)
+fun Matrix.slowMedian(radius: Int, shape: Shape = Shape.Square): Matrix = MedianFilter.medianMatrix(this, radius, shape)
 
 fun Image.kernelFilter(kernel: Matrix): Image = KernelFilter(kernel).filter(this)
 fun Image.sharpen(): Image = this.kernelFilter(KernelFilter.Sharpen)
@@ -25,5 +30,4 @@ fun Matrix.unsharpMask(): Matrix = this.convolute(KernelFilter.UnsharpMask)
 fun Matrix.edgeDetectionStrong(): Matrix = this.convolute(KernelFilter.EdgeDetectionStrong)
 fun Matrix.edgeDetectionCross(): Matrix = this.convolute(KernelFilter.EdgeDetectionCross)
 fun Matrix.edgeDetectionDiagonal(): Matrix = this.convolute(KernelFilter.EdgeDetectionDiagonal)
-
 

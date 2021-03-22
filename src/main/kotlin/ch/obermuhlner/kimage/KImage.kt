@@ -21,8 +21,8 @@ object KImage {
 
     private fun example() {
         //val originalImage = ImageReader.readMatrixImage(File("images/animal.png"))
-        val originalImage = ImageReader.readMatrixImage(File("images/orion_small_compress0.png"))
-        //val originalImage = ImageReader.readMatrixImage(File("images/orion_32bit.tif"))
+        //val originalImage = ImageReader.readMatrixImage(File("images/orion_small_compress0.png"))
+        val originalImage = ImageReader.readMatrixImage(File("images/orion_32bit.tif"))
 
 //        val originalImage = interactive {
 //            openImageFile(initialDirectory = File("images"))
@@ -42,7 +42,7 @@ object KImage {
             }
 
             filter ("Median") {
-                median(radiusProperty.get(), Shape.Cross).median(radiusProperty.get(), Shape.Square, recursiveProperty.get())
+                medianPixel(radiusProperty.get())
             }
         }
 

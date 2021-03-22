@@ -7,32 +7,89 @@ import ch.obermuhlner.kimage.image.MatrixImage
 import ch.obermuhlner.kimage.io.ImageReader
 import ch.obermuhlner.kimage.io.ImageWriter
 import java.io.File
+import kotlin.random.Random
 
 object TestMain {
     @JvmStatic
     fun main(args: Array<String>) {
+//        exampleFilters("lena512color.tiff")
+
 //        exampleChannelManipulation("animal.png")
-        exampleFilters("animal.png")
+//        exampleFilters("animal.png")
 
 //        exampleChannelManipulation("orion_32bit.tif")
 //        exampleFilters("orion_32bit.tif")
 
-        exampleImages()
+//        exampleImages()
         exampleExperiments()
     }
 
     private fun exampleExperiments() {
-        val image = ImageReader.read(File("images/animal.png"))
+        val image = ImageReader.readMatrixImage(File("images/lena512color.tiff"))
+        val gimp_median = ImageReader.readMatrixImage(File("images/lena512color_gimp_median3.tiff"))
 
-        example("gaussian_blur_3") {
-            image.gaussianBlur(3)
+
+        randomNoise(image, 0.1)
+
+        val median = example("median_3") {
+            MedianFilter(3).filter(image)
+        }
+        val fast_median = example("fast_median_3") {
+            FastMedianFilter(3).filter(image)
+        }
+        val fast_median_pixel = example("fast_median_pixel_3") {
+            FastMedianPixelFilter(3).filter(image)
+        }
+        example("delta_image_to_median_rgb") {
+            deltaRGB(image, median)
+        }
+        example("delta_image_to_median_lum") {
+            deltaChannel(image, median)
+        }
+        example("delta_image_to_fast_median_rgb") {
+            deltaRGB(image, fast_median)
+        }
+        example("delta_median_to_gimp_median_rgb") {
+            deltaRGB(median, gimp_median)
+        }
+        example("delta_median_to_fast_median_rgb") {
+            deltaRGB(median, fast_median)
+        }
+        example("delta_median_to_fast_median_lum") {
+            deltaChannel(median, fast_median)
+        }
+        example("delta_median_to_fast_median_red") {
+            deltaChannel(median, fast_median, channel = Channel.Red)
+        }
+        example("delta_median_to_fast_median_green") {
+            deltaChannel(median, fast_median, channel = Channel.Green)
+        }
+        example("delta_median_to_fast_median_blue") {
+            deltaChannel(median, fast_median, channel = Channel.Blue)
+        }
+        example("delta_median_to_fast_median_pixel_rgb") {
+            deltaRGB(median, fast_median_pixel)
         }
 
-        example("channel_gray") {
-            MatrixImage(
-                    image.width,
-                    image.height,
-                    Channel.Gray to image[Channel.Gray])
+//        example("channel_gray") {
+//            MatrixImage(
+//                    image.width,
+//                    image.height,
+//                    Channel.Gray to image[Channel.Gray])
+//        }
+    }
+
+    private fun randomNoise(image: Image, noise: Double) {
+        val random = Random(1)
+
+        for (y in 0 until image.height) {
+            for (x in 0 until image.width) {
+                if (random.nextDouble() < noise) {
+                    image[x, y, Channel.Red] = random.nextDouble()
+                    image[x, y, Channel.Green] = random.nextDouble()
+                    image[x, y, Channel.Blue] = random.nextDouble()
+                }
+            }
         }
     }
 
@@ -179,8 +236,21 @@ object TestMain {
         example("median_10_square", imageName) {
             MedianFilter(10, Shape.Square).filter(image)
         }
+        example("median_10_square_recursive", imageName) {
+            MedianFilter(10, Shape.Square, true).filter(image)
+        }
         example("median_10_circle", imageName) {
             MedianFilter(10, Shape.Circle).filter(image)
+        }
+
+        example("fast_median_10", imageName) {
+            FastMedianFilter(10).filter(image)
+        }
+        example("fast_median_10_recursive", imageName) {
+            FastMedianFilter(10, true).filter(image)
+        }
+        example("fast_median_pixel_10", imageName) {
+            FastMedianPixelFilter(10).filter(image)
         }
 
         example("average_10_horizontal", imageName) {
@@ -269,7 +339,7 @@ object TestMain {
         }
     }
 
-    private fun example(name: String, imageName: String = "untitled.png", func: () -> Image) {
+    private fun example(name: String, imageName: String = "untitled.png", func: () -> Image): Image {
         val image = measureElapsed(name) {
             func()
         }
@@ -278,6 +348,7 @@ object TestMain {
         } else {
             ImageWriter.write(image, File("images/output/${imageName}_$name.png"))
         }
+        return image
     }
 
     fun <T> measureElapsed(name: String, func: () -> T): T {
