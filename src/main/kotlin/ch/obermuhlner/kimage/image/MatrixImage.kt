@@ -48,5 +48,12 @@ class MatrixImage(
         data[channelIndex(channel)][y, x] = color
     }
 
-    override fun getMatrix(channel: Channel): Matrix = data[channelIndex(channel)]
+    override fun getMatrix(channel: Channel): Matrix {
+        val idx = channelIndex(channel)
+        return if (idx >= 0) {
+            data[idx]
+        } else {
+            super.getMatrix(channel)
+        }
+    }
 }
