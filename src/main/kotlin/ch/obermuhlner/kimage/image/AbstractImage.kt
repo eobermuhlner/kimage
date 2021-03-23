@@ -10,4 +10,8 @@ abstract class AbstractImage(
     }
 
     override fun channelIndex(channel: Channel) = channelToIndex[channel.ordinal]
+
+    override fun toString(): String {
+        return "Image($width, $height)"
+    }
 }
