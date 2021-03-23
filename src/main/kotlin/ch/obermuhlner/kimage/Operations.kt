@@ -9,9 +9,9 @@ fun deltaRGB(image1: Image, image2: Image, factor: Double = 10.0): Image {
     return MatrixImage(
         image1.width,
         image2.height,
-        Channel.Red to (image1[Channel.Red] - image2[Channel.Red]) * factor,
-        Channel.Green to (image1[Channel.Green] - image2[Channel.Green]) * factor,
-        Channel.Blue to (image1[Channel.Blue] - image2[Channel.Blue]) * factor)
+        image1.channels) { channel, _, _ ->
+        (image1[channel] - image2[channel]) * factor
+    }
 }
 
 fun deltaChannel(image1: Image, image2: Image, factor: Double = 10.0, channel: Channel = Channel.Luminance): Image {
@@ -26,3 +26,22 @@ fun deltaChannel(image1: Image, image2: Image, factor: Double = 10.0, channel: C
         Channel.Green to green,
         Channel.Blue to blue)
 }
+
+operator fun Image.minus(other: Image): Image {
+    return MatrixImage(
+        this.width,
+        this.height,
+        this.channels) { channel, _, _ ->
+        this[channel] - other[channel]
+    }
+}
+
+operator fun Image.times(value: Double): Image {
+    return MatrixImage(
+        this.width,
+        this.height,
+        this.channels) { channel, _, _ ->
+        this[channel] * value
+    }
+}
+
