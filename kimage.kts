@@ -11,5 +11,5 @@ val size = max(1, min(input.width, input.height) / 100)
 println("Kernel size = $size")
 
 val background = input.median(size * 2).gaussianBlur(size)
-input - background * 1.1
+input - background * 0.99
 
