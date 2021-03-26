@@ -160,7 +160,12 @@ object KImage {
     }
 
     private fun executeScript(engine: ScriptEngine, script: String, outputFile: File) {
+        val startMillis = System.currentTimeMillis()
         val result = engine.eval(script)
+        val endMillis = System.currentTimeMillis()
+        val deltaMillis = endMillis - startMillis
+
+        println("Processed in $deltaMillis ms")
 
         var output = engine.get("output")
         if (output == null) {
