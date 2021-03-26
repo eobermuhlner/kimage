@@ -20,16 +20,18 @@ object TestMain {
 //        exampleChannelManipulation("orion_32bit.tif")
 //        exampleFilters("orion_32bit.tif")
 
-//        exampleImages()
-        exampleExperiments()
+        exampleImages()
+//        exampleExperiments()
     }
 
     private fun exampleExperiments() {
         val image = ImageReader.readMatrixImage(File("images/lena512color.tiff"))
         val gimp_median = ImageReader.readMatrixImage(File("images/lena512color_gimp_median3.tiff"))
 
-
-        randomNoise(image, 0.1)
+        example("noise") {
+            randomNoise(image, 0.1)
+            image
+        }
 
         val median = example("median_3") {
             MedianFilter(3).filter(image)
@@ -85,21 +87,32 @@ object TestMain {
         for (y in 0 until image.height) {
             for (x in 0 until image.width) {
                 if (random.nextDouble() < noise) {
-                    image[x, y, Channel.Red] = random.nextDouble()
-                    image[x, y, Channel.Green] = random.nextDouble()
-                    image[x, y, Channel.Blue] = random.nextDouble()
+                    image[x, y, Channel.Red] = 0.0 //random.nextDouble()
+                    image[x, y, Channel.Green] = 1.0 //random.nextDouble()
+                    image[x, y, Channel.Blue] = 0.0 //random.nextDouble()
                 }
             }
         }
     }
 
     fun exampleImages() {
-        for (imageName in listOf("animal.png", "orion_32bit.tif", "orion_small_compress0.png")) {
-            example("read_$imageName", imageName) {
+        for (imageName in listOf(
+            "lena512color.tiff",
+            "animal.png",
+//            "orion_32bit.tif",
+//            "orion_small_compress0.png",
+        )) {
+            example("read_write_$imageName", imageName) {
                 ImageReader.read(File("images/$imageName"))
             }
-            example("read_matrix_$imageName", imageName) {
+            example("read_write_matrix_$imageName", imageName) {
                 ImageReader.readMatrixImage(File("images/$imageName"))
+            }
+            example("read_write_${imageName}.png", imageName) {
+                ImageReader.read(File("images/$imageName"))
+            }
+            example("read_write_${imageName}.tif", imageName) {
+                ImageReader.read(File("images/$imageName"))
             }
         }
     }
@@ -343,7 +356,7 @@ object TestMain {
         val image = measureElapsed(name) {
             func()
         }
-        if (name.endsWith(".tif") || name.endsWith(".jpg") || name.endsWith(".png")) {
+        if (name.endsWith(".tif") || name.endsWith(".tiff") || name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png")) {
             ImageWriter.write(image, File("images/output/${imageName}_$name"))
         } else {
             ImageWriter.write(image, File("images/output/${imageName}_$name.png"))
