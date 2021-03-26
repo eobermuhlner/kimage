@@ -4,6 +4,8 @@ import ch.obermuhlner.kimage.image.*
 import kotlin.math.min
 import kotlin.math.max
 
+println("Background removal using median filter + gaussian blur")
+
 val size = max(1, min(input.width, input.height) / 100)
 //val size = 5
 println("Kernel size = $size")

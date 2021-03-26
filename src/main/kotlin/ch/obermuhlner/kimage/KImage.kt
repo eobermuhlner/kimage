@@ -10,16 +10,18 @@ import ch.obermuhlner.kimage.javafx.KImageApplication.Companion.interactive
 import ch.obermuhlner.kotlin.javafx.*
 import com.xenomachina.argparser.ArgParser
 import com.xenomachina.argparser.default
+import com.xenomachina.argparser.mainBody
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleDoubleProperty
 import javafx.beans.property.SimpleIntegerProperty
 import java.io.File
-import javax.script.ScriptEngine
-import javax.script.ScriptEngineManager
+import javax.script.*
 
 object KImage {
+    private const val VERSION: String = "0.1.0"
+
     @JvmStatic
-    fun main(args: Array<String>) {
+    fun main(args: Array<String>) = mainBody {
         //example()
         execute(args)
 
@@ -31,6 +33,10 @@ object KImage {
 
     fun execute(args: Array<String>) {
         val parser = ArgParser(args)
+
+        val version by parser.flagging(
+            "--version",
+            help = "print version")
 
         val verbose by parser.flagging(
             "-v", "--verbose",
@@ -44,11 +50,11 @@ object KImage {
         }
 
         val scriptFilename: String by parser.storing(
-            "-f", "--file",
+            "-s", "--script",
             help = "script file to execute").default("kimage.kts")
 
         val scriptString: String by parser.storing(
-            "-s", "--script",
+            "-e", "--execute",
             help = "script to execute").default("")
 
         val multi by parser.flagging(
@@ -63,32 +69,32 @@ object KImage {
             "-d", "--dir",
             help = "output directory").default("")
 
+        val filenames by parser.positionalList(
+            "FILES",
+            help = "image files to process", 0..Int.MAX_VALUE)
 
-        val filenames by parser.positionalList("FILES", "image filename", 0..Int.MAX_VALUE)
-
-        val scriptFile = File(scriptFilename)
-        val script = when {
-            scriptString != "" -> scriptString
-            scriptFile.exists() -> scriptFile.readText()
-            else -> "println(\"Missing script\")"
+        if (version) {
+            println(VERSION)
+            return
         }
 
-        val manager = ScriptEngineManager()
-        val engine = manager.getEngineByName("kotlin")!!
-
-        if (filenames.isEmpty()) {
-            parameters.forEach {
-                if (verbose) {
-                    println("  ${it.first} = ${it.second}" )
-                }
-                engine.put(it.first, it.second)
+        try {
+            val scriptFile = File(scriptFilename)
+            val (script, extension) = when {
+                scriptString != "" -> Pair(scriptString, "kts")
+                scriptFile.exists() -> Pair(scriptFile.readText(), scriptFile.extension)
+                else -> Pair("println(\"Missing script\")", "kts")
             }
 
-            executeScript(engine, script, outputFile(File("kimage.png"), outputPrefix, outputDirectory))
-        } else {
-            if (multi) {
-                println("Processing $filenames")
+            val manager = ScriptEngineManager()
+            val engine = manager.getEngineByExtension(extension)
 
+            if (engine == null) {
+                println("Script language not supported: $extension")
+                return
+            }
+
+            if (filenames.isEmpty()) {
                 parameters.forEach {
                     if (verbose) {
                         println("  ${it.first} = ${it.second}" )
@@ -96,39 +102,59 @@ object KImage {
                     engine.put(it.first, it.second)
                 }
 
-                val inputFiles = filenames.map { File(it) }
-                if (verbose) {
-                    println("  inputFiles = $inputFiles" )
-                }
-                engine.put("inputFiles", inputFiles)
-
-                executeScript(engine, script, outputFile(inputFiles[0], outputPrefix, outputDirectory))
+                executeScript(engine, script, outputFile(File("kimage.png"), outputPrefix, outputDirectory))
             } else {
-                for (filename in filenames) {
-                    val inputFile = File(filename)
-                    if (inputFile.exists()) {
-                        println("Processing $inputFile")
+                if (multi) {
+                    println("Processing $filenames")
 
-                        val inputImage = ImageReader.readMatrixImage(inputFile)
-
-                        parameters.forEach {
-                            if (verbose) {
-                                println("  ${it.first} = ${it.second}" )
-                            }
-                            engine.put(it.first, it.second)
-                        }
+                    parameters.forEach {
                         if (verbose) {
-                            println("  inputFile = $inputFile" )
-                            println("  input = $inputImage" )
+                            println("  ${it.first} = ${it.second}" )
                         }
-                        engine.put("inputFile", inputFile)
-                        engine.put("input", inputImage)
+                        engine.put(it.first, it.second)
+                    }
 
-                        executeScript(engine, script, outputFile(inputFile, outputPrefix, outputDirectory))
-                    } else {
-                        println("File not found: $inputFile")
+                    val inputFiles = filenames.map { File(it) }
+                    if (verbose) {
+                        println("  inputFiles = $inputFiles" )
+                    }
+                    engine.put("inputFiles", inputFiles)
+
+                    executeScript(engine, script, outputFile(inputFiles[0], outputPrefix, outputDirectory))
+                } else {
+                    for (filename in filenames) {
+                        val inputFile = File(filename)
+                        if (inputFile.exists()) {
+                            println("Processing $inputFile")
+
+                            val inputImage = ImageReader.readMatrixImage(inputFile)
+
+                            parameters.forEach {
+                                if (verbose) {
+                                    println("  ${it.first} = ${it.second}" )
+                                }
+                                engine.put(it.first, it.second)
+                            }
+                            if (verbose) {
+                                println("  inputFile = $inputFile" )
+                                println("  input = $inputImage" )
+                            }
+                            engine.put("inputFile", inputFile)
+                            engine.put("input", inputImage)
+
+                            executeScript(engine, script, outputFile(inputFile, outputPrefix, outputDirectory))
+                        } else {
+                            println("File not found: $inputFile")
+                        }
+                        println()
                     }
                 }
+            }
+        } catch (ex: Exception) {
+            if (verbose) {
+                ex.printStackTrace()
+            } else {
+                println(ex.message)
             }
         }
     }
@@ -150,7 +176,12 @@ object KImage {
     }
 
     private fun outputFile(imageFile: File, prefix: String, directoryName: String): File {
-        val directoryFile = if (directoryName != "") File(directoryName) else File(imageFile.parent)
+        val directoryFile = when {
+            directoryName != "" -> File(directoryName)
+            imageFile.parent != null -> File(imageFile.parent)
+            else -> File(".")
+        }
+
         var file = File(directoryFile, "${prefix}_" + imageFile.name)
         var index = 1
         while (file.exists()) {
