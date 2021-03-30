@@ -5,14 +5,11 @@ class DoubleMatrix(override val rows: Int, override val columns: Int) : Matrix {
 
     override fun create(rows: Int, columns: Int): Matrix = DoubleMatrix(rows, columns)
 
-    override fun get(row: Int, column: Int): Double {
-        val index = boundedColumn(column) + boundedRow(row) * columns
+    override fun get(index: Int): Double {
         return data[index]
     }
 
-    override fun set(row: Int, column: Int, value: Double) {
-        val index = boundedColumn(column) + boundedRow(row) * columns
+    override fun set(index: Int, value: Double) {
         data[index] = value
     }
-
 }

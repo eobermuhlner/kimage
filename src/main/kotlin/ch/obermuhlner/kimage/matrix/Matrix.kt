@@ -6,10 +6,22 @@ interface Matrix {
     val rows: Int
     val columns: Int
 
+    val size: Int
+        get() = rows * columns
+
     fun create(r: Int = rows, c: Int = columns): Matrix
 
-    operator fun get(row: Int, column: Int): Double
-    operator fun set(row: Int, column: Int, value: Double)
+    operator fun get(index: Int): Double
+    operator fun set(index: Int, value: Double)
+
+    operator fun get(row: Int, column: Int): Double {
+        val index = boundedColumn(column) + boundedRow(row) * columns
+        return this[index]
+    }
+    operator fun set(row: Int, column: Int, value: Double) {
+        val index = boundedColumn(column) + boundedRow(row) * columns
+        this[index] = value
+    }
 
     fun set(other: Matrix) {
         checkSameSize(this, other)
@@ -143,15 +155,27 @@ interface Matrix {
         return m
     }
 
-    fun point(pointFunc: (Double) -> Double): Matrix {
+    fun onEach(func: (Double) -> Double): Matrix {
         val m = copy()
-        for (row in 0 until rows) {
-            for (column in 0 until columns) {
-                this[row, column] = pointFunc.invoke(this[row, column])
-            }
+        for (index in 0 until size) {
+            this[index] = func.invoke(this[index])
         }
         return m
     }
+
+    fun accumulate(func: (Double, Double) -> Double): Double {
+        var result = this[0]
+
+        for (index in 1 until size) {
+            result = func(result, this[index])
+        }
+
+        return result
+    }
+
+    fun min(): Double = accumulate { x1, x2 -> kotlin.math.min(x1, x2) }
+
+    fun max(): Double = accumulate { x1, x2 -> kotlin.math.max(x1, x2) }
 
     fun croppedMatrix(croppedRow: Int, croppedColumn: Int, croppedRows: Int, croppedColumns: Int, strictClipping: Boolean = true): Matrix {
         return CroppedMatrix(this, croppedRow, croppedColumn, croppedRows, croppedColumns, strictClipping)
