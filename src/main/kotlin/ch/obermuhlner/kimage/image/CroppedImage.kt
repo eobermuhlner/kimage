@@ -39,6 +39,10 @@ class CroppedImage(
         return CroppedMatrix(image.getMatrix(channel), offsetY, offsetX, height, width)
     }
 
+    override fun toString(): String {
+        return "CroppedImage($offsetX, $offsetY, $width, $height, $image)"
+    }
+
     private fun innerX(x: Int) = if (strictClipping) {
         boundedX(x) + offsetX
     } else {
