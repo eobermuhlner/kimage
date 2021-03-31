@@ -94,6 +94,10 @@ interface Image {
         return CroppedImage(this, croppedX, croppedY, croppedWidth, croppedHeight, strictClipping)
     }
 
+    fun croppedCenter(croppedCenterX: Int, croppedCenterY: Int, croppedWidth: Int, croppedHeight: Int, strictClipping: Boolean = true): Image {
+        return croppedImage(croppedCenterX - croppedWidth/2, croppedCenterY - croppedHeight / 2, croppedWidth, croppedHeight, strictClipping)
+    }
+
     fun isInside(x: Int, y: Int): Boolean {
         return x >= 0 && y >= 0 && x < width && y < height
     }
