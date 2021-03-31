@@ -13,6 +13,18 @@ class CroppedMatrix(
         return matrix.create(r, c)
     }
 
+    override fun get(index: Int): Double {
+        val row = index / columns
+        val column = index % columns
+        return get(row, column)
+    }
+
+    override fun set(index: Int, value: Double) {
+        val row = index / columns
+        val column = index % columns
+        set(row, column, value)
+    }
+
     override fun get(row: Int, column: Int): Double {
         return matrix.get(innerRow(row), innerColumn(column))
     }
