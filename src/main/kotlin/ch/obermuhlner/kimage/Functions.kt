@@ -3,6 +3,7 @@ package ch.obermuhlner.kimage
 import ch.obermuhlner.kimage.image.Channel
 import ch.obermuhlner.kimage.image.Image
 import ch.obermuhlner.kimage.image.MatrixImage
+import ch.obermuhlner.kimage.matrix.averageError
 import ch.obermuhlner.kimage.matrix.stretchClassic
 import kotlin.math.abs
 
@@ -80,5 +81,9 @@ fun Image.stretchClassic(min: Double, max: Double, func: (Double) -> Double = { 
         this.channels) { channel, _, _ ->
         this[channel].stretchClassic(min, max, func)
     }
+}
+
+fun Image.averageError(other: Image, channel: Channel = Channel.Luminance): Double {
+    return this[channel].averageError(other[channel])
 }
 
