@@ -11,3 +11,12 @@ fun Matrix.stretchClassic(min: Double, max: Double, func: (Double) -> Double = {
     }
 }
 
+fun Matrix.averageError(other: Matrix): Double {
+    var sum = 0.0
+    for (index in 0 until size) {
+        val delta = this[index] - other[index]
+        sum += delta * delta
+    }
+    return sum / size
+}
+
