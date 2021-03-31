@@ -12,4 +12,9 @@ class DoubleMatrix(override val rows: Int, override val columns: Int) : Matrix {
     override fun set(index: Int, value: Double) {
         data[index] = value
     }
+
+    override operator fun iterator(): Iterator<Double> {
+        return data.iterator()
+    }
+
 }
