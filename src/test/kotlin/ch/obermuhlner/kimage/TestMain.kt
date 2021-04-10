@@ -29,32 +29,82 @@ object TestMain {
     }
 
     private fun exampleError() {
-        val image1 = measureElapsed("Read image1") {
+        var image1 = measureElapsed("Read image1") {
             //ImageReader.read(File("images/align/IMG_7130.TIF"))
-            ImageReader.read(File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2528.TIF"))
-
+            ImageReader.readMatrixImage(File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2528.TIF"))
         }
-        val image2 = measureElapsed("Read image2") {
-            //ImageReader.read(File("images/align/IMG_7132.TIF"))
-            ImageReader.read(File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2532.TIF"))
+        
+        val radius = 50
 
-        }
-
-        measureElapsed("findInterestingCrop") {
-
+        val (bestX, bestY) = measureElapsed("findInterestingCrop") {
+            findInterestingCrop(image1, radius)
         }
 
-        measureElapsed("alignImages") {
-            //alignImages(image1, image2, 20, 20, 200, 200,2480, 3800) // IMG_7130.TIF
-            alignImages(image1, image2, 20, 20, 200, 200,2355, 2425)
+        val inputFiles = listOf(
+            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2528.TIF"),
+            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2530.TIF"),
+            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2531.TIF"),
+            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2532.TIF"),
+            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2533.TIF"),
+            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2534.TIF"),
+            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2535.TIF"),
+            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2536.TIF"),
+            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2537.TIF"),
+            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2538.TIF"),
+            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2539.TIF"),
+            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2540.TIF"),
+            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2541.TIF"),
+        )
+
+        var sumImage: Image = MatrixImage(image1)
+        var sumImageCount: Int = 1
+
+        for (inputFile in inputFiles) {
+            val image2 = measureElapsed("Read image2 $inputFile") {
+                ImageReader.readMatrixImage(inputFile)
+            }
+
+            val (alignX, alignY) = measureElapsed("alignImages") {
+                alignImages(inputFile.name, image1, image2, radius, radius, 200, 200, bestX, bestY)
+            }
+
+            val alignedImage2 = image2.croppedImage(alignX, alignY, image2.width, image2.height)
+            ImageWriter.write(alignedImage2, File("aligned_" + inputFile.name))
+
+            sumImage += alignedImage2
+            sumImageCount++
+
+            val stackedImage = sumImage / sumImageCount.toDouble()
+            ImageWriter.write(stackedImage, File("stacked_" + inputFile.name))
         }
     }
 
-    private fun alignImages(image1: Image, image2: Image, radius: Int, searchRadius: Int, centerX: Int = image1.width / 2, centerY: Int = image2.width) {
-        alignImages(image1, image2, radius, radius, searchRadius, searchRadius, centerX, centerY)
+    fun findInterestingCrop(image: Image, radius: Int): Pair<Int, Int> {
+        val insetWidth = image.width / 4
+        val insetHeight = image.height / 4
+        var bestStdDev = 0.0
+        var bestX = 0
+        var bestY = 0
+        for (y in insetWidth until image.height - insetWidth step radius) {
+            for (x in insetHeight until image.width - insetHeight step radius) {
+                val croppedImage = image.croppedImage(x, y, radius, radius)
+                val stddev = croppedImage[Channel.Red].stddev()
+                if (stddev > bestStdDev) {
+                    //println("stddev $x, $y : $stddev")
+                    bestStdDev = stddev
+                    bestX = x
+                    bestY = y
+                }
+            }
+        }
+        return Pair(bestX, bestY)
     }
 
-    private fun alignImages(image1: Image, image2: Image, radiusX: Int, radiusY: Int, searchRadiusX: Int, searchRadiusY: Int, centerX: Int = image1.width / 2, centerY: Int = image2.width) {
+    private fun alignImages(name: String, image1: Image, image2: Image, radius: Int, searchRadius: Int, centerX: Int = image1.width / 2, centerY: Int = image2.width) {
+        alignImages(name, image1, image2, radius, radius, searchRadius, searchRadius, centerX, centerY)
+    }
+
+    private fun alignImages(name: String, image1: Image, image2: Image, radiusX: Int, radiusY: Int, searchRadiusX: Int, searchRadiusY: Int, centerX: Int = image1.width / 2, centerY: Int = image2.width): Pair<Int, Int> {
         val compareWidth = radiusX * 2 + 1
         val compareHeight = radiusY * 2 + 1
         val searchWidth = searchRadiusX * 2 + 1
@@ -69,15 +119,15 @@ object TestMain {
             MatrixImage(image2.croppedCenter(centerX, centerY, largeWidth, largeHeight))
         }
 
-        ImageWriter.write(baseImage, File("partial_base.png"))
-        ImageWriter.write(otherImage, File("partial_other.png"))
+        ImageWriter.write(baseImage, File("${name}_partial_base.png"))
+        ImageWriter.write(otherImage, File("${name}_partial_other.png"))
 
         var bestError = 1.0
         var bestX = 0
         var bestY = 0
 
         val croppedBaseImage = baseImage.croppedCenter(baseImage.width/2, baseImage.height/2, compareWidth, compareHeight, false)
-        ImageWriter.write(croppedBaseImage, File("cropped_base.png"))
+        ImageWriter.write(croppedBaseImage, File("${name}_cropped_base.png"))
         println("Base $croppedBaseImage")
         val errorImage = MatrixImage(searchWidth, searchHeight)
 
@@ -99,15 +149,17 @@ object TestMain {
             }
         }
 
-        ImageWriter.write(otherImage.croppedCenter(otherImage.width/2+bestX, otherImage.height/2+bestY, compareWidth, compareHeight, false), File("cropped_other.png"))
+        ImageWriter.write(otherImage.croppedCenter(otherImage.width/2+bestX, otherImage.height/2+bestY, compareWidth, compareHeight, false), File("${name}_cropped_other.png"))
 
         val min = errorImage[Channel.Red].min()
         val max = errorImage[Channel.Red].max()
         println("min: $min")
         println("max: $max")
 
-        ImageWriter.write(errorImage, File("error.png"))
-        ImageWriter.write(errorImage / max, File("stretched_error.png"))
+        ImageWriter.write(errorImage, File("${name}_error.png"))
+        ImageWriter.write(errorImage / max, File("${name}_stretched_error.png"))
+
+        return Pair(bestX, bestY)
     }
 
     private fun exampleAlign() {
@@ -132,7 +184,7 @@ object TestMain {
             File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2533.TIF"),
             File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2534.TIF"),
             File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2535.TIF"),
-            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2556.TIF"),
+            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2536.TIF"),
             File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2537.TIF"),
             File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2538.TIF"),
             File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2539.TIF"),
@@ -146,6 +198,8 @@ object TestMain {
         println("Base image: ${inputFiles[0]}")
         val baseImage = ImageReader.readMatrixImage(inputFiles[0])
 
+        val (centerX, centerY) = findInterestingCrop(baseImage, radius)
+
         var sumImage: Image = MatrixImage(baseImage)
 
         for (index in 1 until inputFiles.size) {
@@ -155,7 +209,7 @@ object TestMain {
             val stackImage = ImageReader.readMatrixImage(inputFile)
 
             val alignment = measureElapsed("align $inputFile") {
-                imageAligner.align(baseImage, stackImage, maxOffset = 200)
+                imageAligner.align(baseImage, stackImage, centerX, centerY, maxOffset = 500)
             }
             println(alignment)
 
