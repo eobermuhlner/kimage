@@ -7,18 +7,18 @@ import java.io.File
 import kotlin.math.min
 import kotlin.math.max
 
-println("Test multi image script")
+println("Test single image script")
 
 val files = inputFiles as List<File>
+val file = inputFile as File
+val image = inputImage as Image
 val parameters = inputParameters as Map<String, String>
 
 println("Input files = $files")
+println("Input file = $file")
+println("Input image = $image")
 for (parameter in parameters) {
     println("  Parameter ${parameter.key} = ${parameter.value}")
-}
-
-for (file in files) {
-    println("  $file ${file.exists()}")
 }
 
 null
