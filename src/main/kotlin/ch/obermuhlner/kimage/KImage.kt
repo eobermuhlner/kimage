@@ -18,65 +18,64 @@ import java.io.File
 import javax.script.*
 
 object KImage {
-    private const val VERSION: String = "0.1.0"
-
     @JvmStatic
     fun main(args: Array<String>) = mainBody {
-        //example()
-        execute(args)
+        ArgParser(args).parseInto(::KimageCli).run {
+            //example()
+            execute()
+        }
+    }
+}
 
-        //execute(arrayOf("images/lena512color.tiff"))
-        //execute(arrayOf("images/orion_32bit.tif"))
-        //execute(arrayOf("images/animal.png"))
-        //execute(arrayOf("images/eric_avatar_diving.png"))
+class KimageCli(parser: ArgParser) {
+    private val VERSION: String = "0.1.0"
+
+    val version by parser.flagging(
+        "--version",
+        help = "print version")
+
+    val verbose by parser.flagging(
+        "-v", "--verbose",
+        help = "enable verbose mode")
+
+    val parameters by parser.adding(
+        "-p", "--param",
+        help = "add parameter key=value") {
+        val split = split("=")
+        Pair(split[0], split[1])
     }
 
-    fun execute(args: Array<String>) {
-        val parser = ArgParser(args)
+    val scriptFilename: String by parser.storing(
+        "-s", "--script",
+        help = "script file to execute").default("kimage.kts")
 
-        val version by parser.flagging(
-            "--version",
-            help = "print version")
+    val scriptString: String by parser.storing(
+        "-e", "--execute",
+        help = "script to execute").default("")
 
-        val verbose by parser.flagging(
-            "-v", "--verbose",
-            help = "enable verbose mode")
+    val multi by parser.flagging(
+        "-m", "--multi",
+        help = "enable multi input mode")
 
-        val parameters by parser.adding(
-            "-p", "--param",
-            help = "add parameter key=value") {
-            val split = split("=")
-            Pair(split[0], split[1])
-        }
+    val outputPrefix: String by parser.storing(
+        "-o", "--output-prefix",
+        help = "output prefix").default("output")
 
-        val scriptFilename: String by parser.storing(
-            "-s", "--script",
-            help = "script file to execute").default("kimage.kts")
+    val outputDirectory: String by parser.storing(
+        "-d", "--dir",
+        help = "output directory").default("")
 
-        val scriptString: String by parser.storing(
-            "-e", "--execute",
-            help = "script to execute").default("")
+    val filenames by parser.positionalList(
+        "FILES",
+        help = "image files to process", 0..Int.MAX_VALUE)
 
-        val multi by parser.flagging(
-            "-m", "--multi",
-            help = "enable multi input mode")
-
-        val outputPrefix: String by parser.storing(
-            "-o", "--output-prefix",
-            help = "output prefix").default("output")
-
-        val outputDirectory: String by parser.storing(
-            "-d", "--dir",
-            help = "output directory").default("")
-
-        val filenames by parser.positionalList(
-            "FILES",
-            help = "image files to process", 0..Int.MAX_VALUE)
-
+    fun execute() {
         if (version) {
             println(VERSION)
             return
         }
+
+        val parametersMap: Map<String, String> = mapOf(*parameters.toTypedArray())
 
         try {
             val scriptFile = File(scriptFilename)
@@ -94,13 +93,19 @@ object KImage {
                 return
             }
 
+            val inputFiles = filenames.map { File(it) }
+
             if (filenames.isEmpty()) {
                 parameters.forEach {
                     if (verbose) {
-                        println("  ${it.first} = ${it.second}" )
+                        println("  Parameter ${it.first} = ${it.second}" )
                     }
-                    engine.put(it.first, it.second)
                 }
+                engine.put("inputParameters", parametersMap)
+                if (verbose) {
+                    println("  inputFiles = $inputFiles" )
+                }
+                engine.put("inputFiles", inputFiles)
 
                 executeScript(engine, script, outputFile(File("kimage.png"), outputPrefix, outputDirectory))
             } else {
@@ -109,12 +114,11 @@ object KImage {
 
                     parameters.forEach {
                         if (verbose) {
-                            println("  ${it.first} = ${it.second}" )
+                            println("  Parameter ${it.first} = ${it.second}" )
                         }
-                        engine.put(it.first, it.second)
                     }
+                    engine.put("inputParameters", parametersMap)
 
-                    val inputFiles = filenames.map { File(it) }
                     if (verbose) {
                         println("  inputFiles = $inputFiles" )
                     }
@@ -131,16 +135,19 @@ object KImage {
 
                             parameters.forEach {
                                 if (verbose) {
-                                    println("  ${it.first} = ${it.second}" )
+                                    println("  Parameter ${it.first} = ${it.second}" )
                                 }
-                                engine.put(it.first, it.second)
                             }
+                            engine.put("inputParameters", parametersMap)
+
                             if (verbose) {
+                                println("  inputFiles = $inputFiles" )
                                 println("  inputFile = $inputFile" )
-                                println("  input = $inputImage" )
+                                println("  inputImage = $inputImage" )
                             }
+                            engine.put("inputFiles", inputFiles)
                             engine.put("inputFile", inputFile)
-                            engine.put("input", inputImage)
+                            engine.put("inputImage", inputImage)
 
                             executeScript(engine, script, outputFile(inputFile, outputPrefix, outputDirectory))
                         } else {
