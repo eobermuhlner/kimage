@@ -7,6 +7,8 @@ import java.io.File
 import kotlin.math.min
 import kotlin.math.max
 
+require(inputSingleMode)
+
 println("Test single image script")
 
 val files = inputFiles as List<File>

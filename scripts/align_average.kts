@@ -7,6 +7,8 @@ import java.io.File
 import kotlin.math.min
 import kotlin.math.max
 
+require(inputSingleMode)
+
 println("Align multiple images and average")
 println("Input files = $inputFiles")
 

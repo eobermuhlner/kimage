@@ -45,6 +45,10 @@ class KimageCli(parser: ArgParser) {
         Pair(split[0], split[1])
     }
 
+    val singleMode by parser.flagging(
+        "--single",
+        help = "enable single mode").default(false)
+
     val scriptFilename: String by parser.storing(
         "-s", "--script",
         help = "script file to execute").default("kimage.kts")
@@ -52,10 +56,6 @@ class KimageCli(parser: ArgParser) {
     val scriptString: String by parser.storing(
         "-e", "--execute",
         help = "script to execute").default("")
-
-    val multi by parser.flagging(
-        "-m", "--multi",
-        help = "enable multi input mode")
 
     val outputPrefix: String by parser.storing(
         "-o", "--output-prefix",
@@ -96,58 +96,37 @@ class KimageCli(parser: ArgParser) {
             val inputFiles = filenames.map { File(it) }
 
             if (filenames.isEmpty()) {
-                parameters.forEach {
-                    if (verbose) {
-                        println("  Parameter ${it.first} = ${it.second}" )
-                    }
-                }
-                engine.put("inputParameters", parametersMap)
-                if (verbose) {
-                    println("  inputFiles = $inputFiles" )
-                }
-                engine.put("inputFiles", inputFiles)
+                initCommonParameters(engine, false, inputFiles, parametersMap)
 
                 executeScript(engine, script, outputFile(File("kimage.png"), outputPrefix, outputDirectory))
             } else {
-                if (multi) {
-                    println("Processing $filenames")
+                val executed = if (!singleMode) {
+                    println("Processing files: $filenames")
 
-                    parameters.forEach {
-                        if (verbose) {
-                            println("  Parameter ${it.first} = ${it.second}" )
-                        }
+                    initCommonParameters(engine, false, inputFiles, parametersMap)
+
+                    try {
+                        executeScript(engine, script, outputFile(inputFiles[0], outputPrefix, outputDirectory))
+                        true
+                    } catch (ex: Exception) {
+                        // ignore
+                        println("Script will run in single mode");
+                        println()
+                        false
                     }
-                    engine.put("inputParameters", parametersMap)
-
-                    if (verbose) {
-                        println("  inputFiles = $inputFiles" )
-                    }
-                    engine.put("inputFiles", inputFiles)
-
-                    executeScript(engine, script, outputFile(inputFiles[0], outputPrefix, outputDirectory))
                 } else {
+                    false
+                }
+
+                if (!executed) {
                     for (filename in filenames) {
                         val inputFile = File(filename)
                         if (inputFile.exists()) {
-                            println("Processing $inputFile")
+                            println("Processing single file: $inputFile")
 
                             val inputImage = ImageReader.readMatrixImage(inputFile)
-
-                            parameters.forEach {
-                                if (verbose) {
-                                    println("  Parameter ${it.first} = ${it.second}" )
-                                }
-                            }
-                            engine.put("inputParameters", parametersMap)
-
-                            if (verbose) {
-                                println("  inputFiles = $inputFiles" )
-                                println("  inputFile = $inputFile" )
-                                println("  inputImage = $inputImage" )
-                            }
-                            engine.put("inputFiles", inputFiles)
-                            engine.put("inputFile", inputFile)
-                            engine.put("inputImage", inputImage)
+                            initCommonParameters(engine, true, inputFiles, parametersMap)
+                            initSingleFileParameters(engine, inputFile, inputImage)
 
                             executeScript(engine, script, outputFile(inputFile, outputPrefix, outputDirectory))
                         } else {
@@ -163,6 +142,49 @@ class KimageCli(parser: ArgParser) {
             } else {
                 println(ex.message)
             }
+        }
+    }
+
+    private fun initCommonParameters(
+        engine: ScriptEngine,
+        singleMode: Boolean,
+        inputFiles: List<File>,
+        parametersMap: Map<String, String>
+    ) {
+        engine.put("kimageVersion", VERSION)
+        engine.put("inputVerbose", verbose)
+        engine.put("outputDirectory", outputDirectory)
+        engine.put("outputPrefix", outputPrefix)
+
+        engine.put("inputSingleMode", singleMode)
+        engine.put("inputMultiMode", !singleMode)
+        engine.put("inputFiles", inputFiles)
+        engine.put("inputParameters", parametersMap)
+
+        if (verbose) {
+            println("  kimageVersion = $version")
+            println("  inputSingleMode = $singleMode")
+            println("  inputVerbose = $verbose")
+            println("  outputDirectory = $outputDirectory")
+            println("  outputPrefix = $outputPrefix")
+            println("  inputFiles = $inputFiles")
+            parameters.forEach {
+                println("  inputParameters[${it.first}] = ${it.second}")
+            }
+        }
+    }
+
+    private fun initSingleFileParameters(
+        engine: ScriptEngine,
+        inputFile: File,
+        inputImage: MatrixImage
+    ) {
+        engine.put("inputFile", inputFile)
+        engine.put("inputImage", inputImage)
+
+        if (verbose) {
+            println("  inputFile = $inputFile")
+            println("  inputImage = $inputImage")
         }
     }
 

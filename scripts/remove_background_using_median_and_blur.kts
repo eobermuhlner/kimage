@@ -7,6 +7,8 @@ import java.io.File
 import kotlin.math.min
 import kotlin.math.max
 
+require(inputMultiMode)
+
 println("Background removal using median filter + gaussian blur")
 
 val files = inputFiles as List<File>
