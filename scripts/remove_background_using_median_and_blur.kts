@@ -3,9 +3,8 @@ import ch.obermuhlner.kimage.align.*
 import ch.obermuhlner.kimage.filter.*
 import ch.obermuhlner.kimage.image.*
 import ch.obermuhlner.kimage.io.*
-import java.io.File
-import kotlin.math.min
-import kotlin.math.max
+import java.io.*
+import kotlin.math.*
 
 require(inputMultiMode)
 

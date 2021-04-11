@@ -28,50 +28,49 @@ object KImage {
 }
 
 class KimageCli(parser: ArgParser) {
-    private val VERSION: String = "0.1.0"
 
-    val version by parser.flagging(
+    private val versionMode by parser.flagging(
         "--version",
         help = "print version")
 
-    val verbose by parser.flagging(
+    private val verboseMode by parser.flagging(
         "-v", "--verbose",
         help = "enable verbose mode")
 
-    val parameters by parser.adding(
+    private val parameters by parser.adding(
         "-p", "--param",
         help = "add parameter key=value") {
         val split = split("=")
         Pair(split[0], split[1])
     }
 
-    val singleMode by parser.flagging(
+    private val singleMode by parser.flagging(
         "--single",
         help = "enable single mode").default(false)
 
-    val scriptFilename: String by parser.storing(
+    private val scriptFilename: String by parser.storing(
         "-s", "--script",
         help = "script file to execute").default("kimage.kts")
 
-    val scriptString: String by parser.storing(
+    private val scriptString: String by parser.storing(
         "-e", "--execute",
         help = "script to execute").default("")
 
-    val outputPrefix: String by parser.storing(
+    private val outputPrefix: String by parser.storing(
         "-o", "--output-prefix",
         help = "output prefix").default("output")
 
-    val outputDirectory: String by parser.storing(
+    private val outputDirectory: String by parser.storing(
         "-d", "--dir",
         help = "output directory").default("")
 
-    val filenames by parser.positionalList(
+    private val filenames by parser.positionalList(
         "FILES",
         help = "image files to process", 0..Int.MAX_VALUE)
 
     fun execute() {
-        if (version) {
-            println(VERSION)
+        if (versionMode) {
+            println(Companion.VERSION)
             return
         }
 
@@ -79,11 +78,13 @@ class KimageCli(parser: ArgParser) {
 
         try {
             val scriptFile = File(scriptFilename)
-            val (script, extension) = when {
+            val (originalScript, extension) = when {
                 scriptString != "" -> Pair(scriptString, "kts")
                 scriptFile.exists() -> Pair(scriptFile.readText(), scriptFile.extension)
                 else -> Pair("println(\"Missing script\")", "kts")
             }
+
+            val script = addImportsToScript(originalScript, extension)
 
             val manager = ScriptEngineManager()
             val engine = manager.getEngineByExtension(extension)
@@ -137,11 +138,19 @@ class KimageCli(parser: ArgParser) {
                 }
             }
         } catch (ex: Exception) {
-            if (verbose) {
+            if (verboseMode) {
                 ex.printStackTrace()
             } else {
                 println(ex.message)
             }
+        }
+    }
+
+    private fun addImportsToScript(originalScript: String, extension: String): String {
+        return if (extension != "kts" || originalScript.contains(IMPORT_REGEX)) {
+            originalScript
+        } else {
+            IMPORT_STATEMENTS + originalScript
         }
     }
 
@@ -151,8 +160,8 @@ class KimageCli(parser: ArgParser) {
         inputFiles: List<File>,
         parametersMap: Map<String, String>
     ) {
-        engine.put("kimageVersion", VERSION)
-        engine.put("inputVerbose", verbose)
+        engine.put("kimageVersion", Companion.VERSION)
+        engine.put("inputVerbose", verboseMode)
         engine.put("outputDirectory", outputDirectory)
         engine.put("outputPrefix", outputPrefix)
 
@@ -161,10 +170,10 @@ class KimageCli(parser: ArgParser) {
         engine.put("inputFiles", inputFiles)
         engine.put("inputParameters", parametersMap)
 
-        if (verbose) {
-            println("  kimageVersion = $version")
+        if (verboseMode) {
+            println("  kimageVersion = $versionMode")
             println("  inputSingleMode = $singleMode")
-            println("  inputVerbose = $verbose")
+            println("  inputVerbose = $verboseMode")
             println("  outputDirectory = $outputDirectory")
             println("  outputPrefix = $outputPrefix")
             println("  inputFiles = $inputFiles")
@@ -182,7 +191,7 @@ class KimageCli(parser: ArgParser) {
         engine.put("inputFile", inputFile)
         engine.put("inputImage", inputImage)
 
-        if (verbose) {
+        if (verboseMode) {
             println("  inputFile = $inputFile")
             println("  inputImage = $inputImage")
         }
@@ -287,5 +296,21 @@ class KimageCli(parser: ArgParser) {
         interactive {
             ImageWriter.write(currentImage!!, File("images/background_removed.png"))
         }
+    }
+
+    companion object {
+        private const val VERSION: String = "0.1.0"
+
+        private val IMPORT_STATEMENTS = """
+            import ch.obermuhlner.kimage.*
+            import ch.obermuhlner.kimage.align.*
+            import ch.obermuhlner.kimage.filter.*
+            import ch.obermuhlner.kimage.image.*
+            import ch.obermuhlner.kimage.io.*
+            import java.io.*
+            import kotlin.math.*
+        """.trimIndent()
+
+        private val IMPORT_REGEX = Regex("^import")
     }
 }
