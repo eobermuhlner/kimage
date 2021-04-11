@@ -11,6 +11,8 @@ version '1.0-SNAPSHOT'
 mainClassName = 'ch.obermuhlner.kimage.KImage'
 applicationName = 'kimage'
 
+sourceCompatibility = '1.8'
+
 repositories {
     mavenLocal()
     mavenCentral()
