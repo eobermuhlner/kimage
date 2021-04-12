@@ -22,6 +22,6 @@ val size = max(1, min(image.width, image.height) / 100)
 //val size = 5
 println("Kernel size = $size")
 
-val background = image.median(size).gaussianBlur(size * 2)
+val background = image.medianFilter(size).gaussianBlurFilter(size * 2)
 image - background * 0.99
 
