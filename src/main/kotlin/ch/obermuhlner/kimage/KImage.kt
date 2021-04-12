@@ -160,26 +160,31 @@ class KimageCli(parser: ArgParser) {
         inputFiles: List<File>,
         parametersMap: Map<String, String>
     ) {
-        engine.put("kimageVersion", Companion.VERSION)
-        engine.put("inputVerbose", verboseMode)
-        engine.put("outputDirectory", outputDirectory)
-        engine.put("outputPrefix", outputPrefix)
+        setVariable(engine, "kimageVersion", VERSION)
+        setVariable(engine, "verboseMode", verboseMode)
+        setVariable(engine, "outputDirectory", outputDirectory)
+        setVariable(engine, "outputPrefix", outputPrefix)
 
-        engine.put("inputSingleMode", singleMode)
-        engine.put("inputMultiMode", !singleMode)
-        engine.put("inputFiles", inputFiles)
+        setVariable(engine, "singleMode", singleMode)
+        setVariable(engine, "multiMode", !singleMode)
+        setVariable(engine, "inputFiles", inputFiles)
+
         engine.put("inputParameters", parametersMap)
-
         if (verboseMode) {
-            println("  kimageVersion = $versionMode")
-            println("  inputSingleMode = $singleMode")
-            println("  inputVerbose = $verboseMode")
-            println("  outputDirectory = $outputDirectory")
-            println("  outputPrefix = $outputPrefix")
-            println("  inputFiles = $inputFiles")
             parameters.forEach {
                 println("  inputParameters[${it.first}] = ${it.second}")
             }
+        }
+    }
+
+    private fun setVariable(
+        engine: ScriptEngine,
+        name: String,
+        value: Any?
+    ) {
+        engine.put(name, value)
+        if (verboseMode) {
+            println("  $name = $value")
         }
     }
 
@@ -188,13 +193,8 @@ class KimageCli(parser: ArgParser) {
         inputFile: File,
         inputImage: MatrixImage
     ) {
-        engine.put("inputFile", inputFile)
-        engine.put("inputImage", inputImage)
-
-        if (verboseMode) {
-            println("  inputFile = $inputFile")
-            println("  inputImage = $inputImage")
-        }
+        setVariable(engine, "inputFile", inputFile)
+        setVariable(engine, "inputImage", inputImage)
     }
 
     private fun executeScript(engine: ScriptEngine, script: String, outputFile: File) {
@@ -214,6 +214,9 @@ class KimageCli(parser: ArgParser) {
             is Image -> {
                 println("Output file: $outputFile")
                 ImageWriter.write(output, outputFile)
+            }
+            else -> {
+                println("Output: $output")
             }
         }
     }
