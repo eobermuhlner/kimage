@@ -260,7 +260,7 @@ class KimageCli(parser: ArgParser) {
             }
 
             filter ("Median") {
-                medianPixel(radiusProperty.get())
+                medianPixelFilter(radiusProperty.get())
             }
         }
 
@@ -273,7 +273,7 @@ class KimageCli(parser: ArgParser) {
                 }
             }
             filter("Blur") {
-                gaussianBlur(radiusProperty.get())
+                gaussianBlurFilter(radiusProperty.get())
             }
         }
 
