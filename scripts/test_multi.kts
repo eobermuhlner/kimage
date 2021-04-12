@@ -15,7 +15,9 @@ val parameters = inputParameters as Map<String, String>
 
 println("Input files: $files")
 for (parameter in parameters) {
-    println("  Parameter: ${parameter.key} = ${parameter.value}")
+    val key: String = parameter.key
+    val value: String = parameter.value
+    println("  Parameter: ${key} = ${value}")
 }
 
 for (file in files) {
