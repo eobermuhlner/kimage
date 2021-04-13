@@ -34,6 +34,11 @@ if (verboseMode) {
     println("  -> calculated blurKernelSize = $blurKernelSize pixels")
 }
 
-val background = image.medianFilter(medianKernelSize).gaussianBlurFilter(blurKernelSize)
-image - background * removalFactor
+val medianImage = image.medianFilter(medianKernelSize)
+//ImageWriter.write(medianImage, File("median.png"))
+
+val backgroundImage = medianImage.gaussianBlurFilter(blurKernelSize)
+//ImageWriter.write(backgroundImage, File("background.png"))
+
+image - backgroundImage * removalFactor
 
