@@ -83,7 +83,11 @@ fun Image.stretchClassic(min: Double, max: Double, func: (Double) -> Double = { 
     }
 }
 
-fun Image.averageError(other: Image, channel: Channel = Channel.Luminance): Double {
-    return this[channel].averageError(other[channel])
+fun Image.averageError(other: Image, channels: List<Channel> = this.channels): Double {
+    var sum = 0.0
+    for (channel in channels) {
+        sum += this[channel].averageError(other[channel])
+    }
+    return sum / channels.size.toDouble()
 }
 
