@@ -11,6 +11,7 @@ import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -272,14 +273,48 @@ public class TiffReader {
 		// Get the single or array values
 		Object values = null;
 		if (typeCount == 1 && fieldTag != null && !fieldTag.isArray()
-				&& !(fieldType == FieldType.RATIONAL
-						|| fieldType == FieldType.SRATIONAL)) {
-			values = valuesList.get(0);
+				&& !(fieldType == FieldType.RATIONAL || fieldType == FieldType.SRATIONAL)) {
+			if (valuesList.isEmpty()) {
+				values = getDefaultValue(fieldType);
+			} else {
+				values = valuesList.get(0);
+			}
 		} else {
 			values = valuesList;
 		}
 
 		return values;
+	}
+
+	private static Object getDefaultValue(FieldType fieldType) {
+		switch(fieldType) {
+			case BYTE:
+				return (short) 0;
+			case ASCII:
+				return "";
+			case SHORT:
+				return 0;
+			case LONG:
+				return 0L;
+			case RATIONAL:
+				return Arrays.asList(0L, 1L);
+			case SBYTE:
+				return (byte) 0;
+			case UNDEFINED:
+				return (short) 0;
+			case SSHORT:
+				return (short) 0;
+			case SLONG:
+				return 0L;
+			case SRATIONAL:
+				return Arrays.asList(0, 1);
+			case FLOAT:
+				return 0.0f;
+			case DOUBLE:
+				return 0.0;
+			default:
+				throw new IllegalArgumentException("Unknown FieldType: " + fieldType);
+		}
 	}
 
 	/**
