@@ -40,7 +40,7 @@ for (index in 1 until inputFiles.size) {
     val alignment = imageAligner.align(baseImage, stackImage, maxOffset = searchRadius)
     println("Alignment: $alignment")
 
-    val img = stackImage.croppedImage(alignment.x, alignment.y, baseImage.width, baseImage.height)
+    val img = stackImage.crop(alignment.x, alignment.y, baseImage.width, baseImage.height)
     ImageWriter.write(img, File("aligned_" + inputFile.name))
 
     val delta = deltaRGB(baseImage, img)
