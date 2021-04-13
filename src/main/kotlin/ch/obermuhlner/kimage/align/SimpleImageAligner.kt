@@ -16,7 +16,7 @@ class SimpleImageAligner(val radiusX1: Int = 50, val radiusY1: Int = 0, val radi
         }
 
         //val baseCropped1 = base.croppedImage(centerX-radiusX1, centerY-radiusY1, radiusX1*2+1, radiusY1+1, false)
-        val baseCropped2 = base.croppedImage(centerX-radiusX2, centerY-radiusY2, radiusX2*2+1, radiusY2+1, false)
+        val baseCropped2 = base.crop(centerX-radiusX2, centerY-radiusY2, radiusX2*2+1, radiusY2+1, false)
 
         //var bestError1 = 1.0
         var bestError2 = 1.0
@@ -30,7 +30,7 @@ class SimpleImageAligner(val radiusX1: Int = 50, val radiusY1: Int = 0, val radi
 //                val error1 = baseCropped1.averageError(image.croppedImage(x-radiusX1, y-radiusY1, radiusX1*2+1, radiusY1+1, false), channel)
 //                if (error1 < bestError1 * errorThreshold) {
                     //println("Error1: $dx, $dy : $error1 better than $bestError1")
-                    val error2 = baseCropped2.averageError(image.croppedImage(x-radiusX2, y-radiusY2, radiusX2*2+1, radiusY2*2+1, false), channel)
+                    val error2 = baseCropped2.averageError(image.crop(x-radiusX2, y-radiusY2, radiusX2*2+1, radiusY2*2+1, false), channel)
                     if (error2 < bestError2) {
                         //println("Error2: $dx, $dy : $error2 better than $bestError2")
                         bestAlignX = dx

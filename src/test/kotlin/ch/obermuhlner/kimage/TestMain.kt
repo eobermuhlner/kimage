@@ -68,7 +68,7 @@ object TestMain {
                 alignImages(inputFile.name, image1, image2, radius, radius, 200, 200, bestX, bestY)
             }
 
-            val alignedImage2 = image2.croppedImage(alignX, alignY, image2.width, image2.height)
+            val alignedImage2 = image2.crop(alignX, alignY, image2.width, image2.height)
             ImageWriter.write(alignedImage2, File("aligned_" + inputFile.name))
 
             sumImage += alignedImage2
@@ -87,7 +87,7 @@ object TestMain {
         var bestY = 0
         for (y in insetWidth until image.height - insetWidth step radius) {
             for (x in insetHeight until image.width - insetHeight step radius) {
-                val croppedImage = image.croppedImage(x, y, radius, radius)
+                val croppedImage = image.crop(x, y, radius, radius)
                 val stddev = croppedImage[Channel.Red].stddev()
                 if (stddev > bestStdDev) {
                     //println("stddev $x, $y : $stddev")
@@ -113,10 +113,10 @@ object TestMain {
         val largeHeight = (radiusY + searchRadiusY) * 2 + 1
 
         val baseImage = measureElapsed("Crop base image") {
-            MatrixImage(image1.croppedCenter(centerX, centerY, largeWidth, largeHeight))
+            MatrixImage(image1.cropCenter(centerX, centerY, largeWidth, largeHeight))
         }
         val otherImage = measureElapsed("Crop other image") {
-            MatrixImage(image2.croppedCenter(centerX, centerY, largeWidth, largeHeight))
+            MatrixImage(image2.cropCenter(centerX, centerY, largeWidth, largeHeight))
         }
 
         ImageWriter.write(baseImage, File("${name}_partial_base.png"))
@@ -126,14 +126,14 @@ object TestMain {
         var bestX = 0
         var bestY = 0
 
-        val croppedBaseImage = baseImage.croppedCenter(baseImage.width/2, baseImage.height/2, compareWidth, compareHeight, false)
+        val croppedBaseImage = baseImage.cropCenter(baseImage.width/2, baseImage.height/2, compareWidth, compareHeight, false)
         ImageWriter.write(croppedBaseImage, File("${name}_cropped_base.png"))
         println("Base $croppedBaseImage")
         val errorImage = MatrixImage(searchWidth, searchHeight)
 
         for (dy in -searchRadiusY .. searchRadiusY) {
             for (dx in -searchRadiusX .. searchRadiusX) {
-                val croppedOtherImage = otherImage.croppedCenter(otherImage.width/2+dx, otherImage.height/2+dy, compareWidth, compareHeight, false)
+                val croppedOtherImage = otherImage.cropCenter(otherImage.width/2+dx, otherImage.height/2+dy, compareWidth, compareHeight, false)
                 val error = croppedBaseImage.averageError(croppedOtherImage, Channel.Red)
                 if (error < bestError) {
                     println("$dx, $dy : $error")
@@ -149,7 +149,7 @@ object TestMain {
             }
         }
 
-        ImageWriter.write(otherImage.croppedCenter(otherImage.width/2+bestX, otherImage.height/2+bestY, compareWidth, compareHeight, false), File("${name}_cropped_other.png"))
+        ImageWriter.write(otherImage.cropCenter(otherImage.width/2+bestX, otherImage.height/2+bestY, compareWidth, compareHeight, false), File("${name}_cropped_other.png"))
 
         val min = errorImage[Channel.Red].min()
         val max = errorImage[Channel.Red].max()
@@ -213,7 +213,7 @@ object TestMain {
             }
             println(alignment)
 
-            val img = stackImage.croppedImage(alignment.x, alignment.y, baseImage.width, baseImage.height)
+            val img = stackImage.crop(alignment.x, alignment.y, baseImage.width, baseImage.height)
             val error = baseImage.averageError(img, Channel.Red)
             println("Image error: $error")
 
@@ -524,33 +524,33 @@ object TestMain {
         example("cropped_strict", imageName) {
             val width3 = image.width / 3
             val height3 = image.height / 3
-            image.croppedImage(width3, height3, width3, height3, true)
+            image.crop(width3, height3, width3, height3, true)
         }
 
         example("cropped_nonstrict", imageName) {
             val width3 = image.width / 3
             val height3 = image.height / 3
-            image.croppedImage(width3, height3, width3, height3, false)
+            image.crop(width3, height3, width3, height3, false)
         }
 
         example("average_3_square_cropped", imageName) {
             val width3 = image.width / 3
             val height3 = image.height / 3
             val filtered = AverageFilter(3, Shape.Square).filter(image)
-            filtered.croppedImage(width3, height3, width3, height3)
+            filtered.crop(width3, height3, width3, height3)
         }
 
         example("cropped_strict_average_3_square", imageName) {
             val width3 = image.width / 3
             val height3 = image.height / 3
-            val cropped = image.croppedImage(width3, height3, width3, height3)
+            val cropped = image.crop(width3, height3, width3, height3)
             AverageFilter(3, Shape.Square).filter(cropped)
         }
 
         example("cropped_nonstrict_average_3_square", imageName) {
             val width3 = image.width / 3
             val height3 = image.height / 3
-            val cropped = image.croppedImage(width3, height3, width3, height3, false)
+            val cropped = image.crop(width3, height3, width3, height3, false)
             AverageFilter(3, Shape.Square).filter(cropped)
         }
     }

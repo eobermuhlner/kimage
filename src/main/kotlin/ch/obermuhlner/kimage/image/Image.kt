@@ -61,7 +61,7 @@ interface Image {
     }
 
     fun setPixels(sourceX: Int, sourceY: Int, source: Image, targetX: Int, targetY: Int, width: Int, height: Int, outsideColor: DoubleArray? = null) {
-        croppedImage(targetX, targetY, width, height).setPixels(source.croppedImage(sourceX, sourceY, width, height), outsideColor)
+        crop(targetX, targetY, width, height).setPixels(source.crop(sourceX, sourceY, width, height), outsideColor)
     }
 
     fun setPixels(source: Image, outsideColor: DoubleArray? = null) {
@@ -90,12 +90,12 @@ interface Image {
         return m
     }
 
-    fun croppedImage(croppedX: Int, croppedY: Int, croppedWidth: Int, croppedHeight: Int, strictClipping: Boolean = true): Image {
+    fun crop(croppedX: Int, croppedY: Int, croppedWidth: Int, croppedHeight: Int, strictClipping: Boolean = true): Image {
         return CroppedImage(this, croppedX, croppedY, croppedWidth, croppedHeight, strictClipping)
     }
 
-    fun croppedCenter(croppedCenterX: Int, croppedCenterY: Int, croppedWidth: Int, croppedHeight: Int, strictClipping: Boolean = true): Image {
-        return croppedImage(croppedCenterX - croppedWidth/2, croppedCenterY - croppedHeight / 2, croppedWidth, croppedHeight, strictClipping)
+    fun cropCenter(croppedCenterX: Int, croppedCenterY: Int, croppedWidth: Int, croppedHeight: Int, strictClipping: Boolean = true): Image {
+        return crop(croppedCenterX - croppedWidth/2, croppedCenterY - croppedHeight / 2, croppedWidth, croppedHeight, strictClipping)
     }
 
     fun isInside(x: Int, y: Int): Boolean {

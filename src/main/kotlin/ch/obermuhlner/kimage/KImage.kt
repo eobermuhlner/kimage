@@ -286,7 +286,7 @@ class KimageCli(parser: ArgParser) {
                 }
             }
             filterArea("Subtract") { x, y, w, h ->
-                val croppedOriginalImage = originalImage.croppedImage(x, y, w, h)
+                val croppedOriginalImage = originalImage.crop(x, y, w, h)
                 MatrixImage(
                     this.width,
                     this.height,
