@@ -105,18 +105,16 @@ object TestMain {
     }
 
     private fun alignImages(name: String, image1: Image, image2: Image, radiusX: Int, radiusY: Int, searchRadiusX: Int, searchRadiusY: Int, centerX: Int = image1.width / 2, centerY: Int = image2.width): Pair<Int, Int> {
-        val compareWidth = radiusX * 2 + 1
-        val compareHeight = radiusY * 2 + 1
         val searchWidth = searchRadiusX * 2 + 1
         val searchHeight = searchRadiusY * 2 + 1
-        val largeWidth = (radiusX + searchRadiusX) * 2 + 1
-        val largeHeight = (radiusY + searchRadiusY) * 2 + 1
+        val largeRadiusX = radiusX + searchRadiusX
+        val largeRadiusY = radiusY + searchRadiusY
 
         val baseImage = measureElapsed("Crop base image") {
-            MatrixImage(image1.cropCenter(centerX, centerY, largeWidth, largeHeight))
+            MatrixImage(image1.cropCenter(centerX, centerY, largeRadiusX, largeRadiusY))
         }
         val otherImage = measureElapsed("Crop other image") {
-            MatrixImage(image2.cropCenter(centerX, centerY, largeWidth, largeHeight))
+            MatrixImage(image2.cropCenter(centerX, centerY, largeRadiusX, largeRadiusY))
         }
 
         ImageWriter.write(baseImage, File("${name}_partial_base.png"))
@@ -126,15 +124,15 @@ object TestMain {
         var bestX = 0
         var bestY = 0
 
-        val croppedBaseImage = baseImage.cropCenter(baseImage.width/2, baseImage.height/2, compareWidth, compareHeight, false)
+        val croppedBaseImage = baseImage.cropCenter(baseImage.width/2, baseImage.height/2, radiusX, radiusY, false)
         ImageWriter.write(croppedBaseImage, File("${name}_cropped_base.png"))
         println("Base $croppedBaseImage")
         val errorImage = MatrixImage(searchWidth, searchHeight)
 
         for (dy in -searchRadiusY .. searchRadiusY) {
             for (dx in -searchRadiusX .. searchRadiusX) {
-                val croppedOtherImage = otherImage.cropCenter(otherImage.width/2+dx, otherImage.height/2+dy, compareWidth, compareHeight, false)
-                val error = croppedBaseImage.averageError(croppedOtherImage, Channel.Red)
+                val croppedOtherImage = otherImage.cropCenter(otherImage.width/2+dx, otherImage.height/2+dy, radiusX, radiusY, false)
+                val error = croppedBaseImage.averageError(croppedOtherImage)
                 if (error < bestError) {
                     println("$dx, $dy : $error")
                     bestError = error
@@ -149,7 +147,7 @@ object TestMain {
             }
         }
 
-        ImageWriter.write(otherImage.cropCenter(otherImage.width/2+bestX, otherImage.height/2+bestY, compareWidth, compareHeight, false), File("${name}_cropped_other.png"))
+        ImageWriter.write(otherImage.cropCenter(otherImage.width/2+bestX, otherImage.height/2+bestY, radiusX, radiusY, false), File("${name}_cropped_other.png"))
 
         val min = errorImage[Channel.Red].min()
         val max = errorImage[Channel.Red].max()
@@ -214,7 +212,7 @@ object TestMain {
             println(alignment)
 
             val img = stackImage.crop(alignment.x, alignment.y, baseImage.width, baseImage.height)
-            val error = baseImage.averageError(img, Channel.Red)
+            val error = baseImage.averageError(img)
             println("Image error: $error")
 
             val delta = deltaRGB(baseImage, img)
