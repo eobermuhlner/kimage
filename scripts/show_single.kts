@@ -9,7 +9,7 @@ import ch.obermuhlner.kimage.javafx.KImageApplication.Companion.interactive
 import java.io.*
 import kotlin.math.*
 
-require(inputSingleMode)
+require(singleMode)
 
 val file = inputFile as File
 val image = inputImage as Image
