@@ -110,7 +110,9 @@ class KimageCli(parser: ArgParser) {
                         executeScript(engine, script, outputFile(inputFiles[0], outputPrefix, outputDirectory))
                         true
                     } catch (ex: Exception) {
-                        // ignore
+                        if (verboseMode) {
+                            ex.printStackTrace()
+                        }
                         println("Script will run in single mode");
                         println()
                         false
