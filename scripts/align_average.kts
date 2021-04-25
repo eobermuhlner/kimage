@@ -20,7 +20,7 @@ fun findInterestingCropCenter(image: Image, radius: Int): Pair<Int, Int> {
             val croppedImage = image.cropCenter(x, y, radius, radius)
             val stddev = croppedImage[Channel.Red].stddev()
             if (stddev > bestStdDev) {
-                ImageWriter.write(croppedImage, File("check_${stddev}.png"))
+                //ImageWriter.write(croppedImage, File("check_${stddev}.png"))
                 //println("stddev $x, $y : $stddev")
                 bestStdDev = stddev
                 bestX = x
@@ -42,7 +42,7 @@ val baseImage = ImageReader.readMatrixImage(baseInputFile)
 println("Base image: $baseImage")
 
 val checkRadius = parameters.getOrDefault("checkRadius", "100").toInt()
-val searchRadius = parameters.getOrDefault("searchRadius", "200").toInt()
+val searchRadius = parameters.getOrDefault("searchRadius", "400").toInt()
 
 val (autoCenterX, autoCenterY) = findInterestingCropCenter(baseImage, checkRadius)
 
@@ -77,8 +77,8 @@ for (index in 0 until inputFiles.size) {
     val alignedImage = image.crop(alignment.x, alignment.y, baseImage.width, baseImage.height)
     ImageWriter.write(alignedImage, File("aligned_" + inputFile.name))
 
-    val delta = deltaRGB(baseImage, alignedImage)
-    ImageWriter.write(delta, File("delta_aligned_" + inputFile.name))
+    //val delta = deltaRGB(baseImage, alignedImage)
+    //ImageWriter.write(delta, File("delta_aligned_" + inputFile.name))
 
     val error = baseImage.averageError(alignedImage)
     println("Standard error to base image: $inputFile $error")
