@@ -86,6 +86,8 @@ class KimageCli(parser: ArgParser) {
 
             val script = addImportsToScript(originalScript, extension)
 
+            val determinedSingleMode = script.contains("require(singleMode)")
+
             val manager = ScriptEngineManager()
             val engine = manager.getEngineByExtension(extension)
 
@@ -101,7 +103,7 @@ class KimageCli(parser: ArgParser) {
 
                 executeScript(engine, script, outputFile(File("kimage.png"), outputPrefix, outputDirectory))
             } else {
-                val executed = if (!singleMode) {
+                val executed = if (!singleMode && !determinedSingleMode) {
                     println("Processing files: $filenames")
 
                     initCommonParameters(engine, false, inputFiles, parametersMap)
