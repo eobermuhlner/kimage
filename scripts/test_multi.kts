@@ -6,7 +6,7 @@ import ch.obermuhlner.kimage.io.*
 import java.io.*
 import kotlin.math.*
 
-require(inputMultiMode)
+require(multiMode)
 
 println("Test multi image script")
 

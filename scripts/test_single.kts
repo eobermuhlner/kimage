@@ -6,7 +6,7 @@ import ch.obermuhlner.kimage.io.*
 import java.io.*
 import kotlin.math.*
 
-require(inputSingleMode)
+require(singleMode)
 
 println("Test single image script")
 

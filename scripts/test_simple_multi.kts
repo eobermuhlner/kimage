@@ -1,4 +1,4 @@
-require(inputMultiMode)
+require(multiMode)
 
 println("Test simple multi image script")
 
