@@ -48,14 +48,6 @@ class KimageCli(parser: ArgParser) {
         "--single",
         help = "enable single mode").default(false)
 
-    private val scriptFilename: String by parser.storing(
-        "-s", "--script",
-        help = "script file to execute").default("kimage.kts")
-
-    private val scriptString: String by parser.storing(
-        "-e", "--execute",
-        help = "script to execute").default("")
-
     private val outputPrefix: String by parser.storing(
         "-o", "--output-prefix",
         help = "output prefix").default("output")
@@ -63,6 +55,10 @@ class KimageCli(parser: ArgParser) {
     private val outputDirectory: String by parser.storing(
         "-d", "--dir",
         help = "output directory").default("")
+
+    private val command by parser.positional(
+        "COMMAND",
+        help = "command to execute").default("")
 
     private val filenames by parser.positionalList(
         "FILES",
@@ -74,16 +70,28 @@ class KimageCli(parser: ArgParser) {
             return
         }
 
+        val scriptFileMap: MutableMap<String, File> = mutableMapOf()
+        fillScriptFiles(scriptFileMap, File(KImage.javaClass.protectionDomain.codeSource.location.toURI()).absolutePath)
+        fillScriptFiles(scriptFileMap, System.getProperty("user.home"))
+        fillScriptFiles(scriptFileMap, System.getProperty("user.dir"))
+
+        if (command == "") {
+            println("Scripts:")
+            scriptFileMap.keys.sorted().forEach {
+                println(String.format("  %-40s %s", it, scriptFileMap[it]))
+            }
+            return
+        }
+
+        val (originalScript, extension) = when {
+            scriptFileMap.containsKey(command) -> Pair(scriptFileMap[command]!!.readText(), scriptFileMap[command]!!.extension)
+            File(command).exists() -> Pair(File(command).readText(), File(command).extension)
+            else -> Pair(command, "kts")
+        }
+
         val parametersMap: Map<String, String> = mapOf(*parameters.toTypedArray())
 
         try {
-            val scriptFile = File(scriptFilename)
-            val (originalScript, extension) = when {
-                scriptString != "" -> Pair(scriptString, "kts")
-                scriptFile.exists() -> Pair(scriptFile.readText(), scriptFile.extension)
-                else -> Pair("println(\"Missing script\")", "kts")
-            }
-
             val script = addImportsToScript(originalScript, extension)
 
             val determinedSingleMode = script.contains("require(singleMode)")
@@ -104,7 +112,9 @@ class KimageCli(parser: ArgParser) {
                 executeScript(engine, script, outputFile(File("kimage.png"), outputPrefix, outputDirectory))
             } else {
                 val executed = if (!singleMode && !determinedSingleMode) {
-                    println("Processing files: $filenames")
+                    if (verboseMode) {
+                        println("Processing files: $filenames")
+                    }
 
                     initCommonParameters(engine, false, inputFiles, parametersMap)
 
@@ -147,6 +157,47 @@ class KimageCli(parser: ArgParser) {
             } else {
                 println(ex.message)
             }
+        }
+    }
+
+    private fun fillScriptFiles(scriptFilesMap: MutableMap<String, File>, path: String?) {
+        if (path == null) {
+            return
+        }
+
+        var current: File? = File(path)
+        while (current != null && current.exists()) {
+            if (current.isDirectory) {
+                val currentScriptDir = File(current, ".kimage")
+                if (currentScriptDir.exists() && currentScriptDir.isDirectory) {
+                    currentScriptDir.listFiles { file ->
+                        file.isFile && (file.extension == "kts" || file.extension == "kimage")
+                    }.forEach {
+                        addScriptFile(scriptFilesMap, it)
+                    }
+                }
+                current.listFiles { file ->
+                    file.isFile && (file.extension == "kimage" || file.name.endsWith(".kimage.kts"))
+                }.forEach {
+                    addScriptFile(scriptFilesMap, it)
+                }
+            }
+            current = current.parentFile
+        }
+    }
+
+    private fun addScriptFile(scriptFilesMap: MutableMap<String, File>, file: File) {
+        var name = file.name
+        if (name.endsWith(".kimage.kts")) {
+            name = name.removeSuffix(".kimage.kts")
+        } else if (name.endsWith(".kimage")) {
+            name = name.removeSuffix(".kimage")
+        } else if (name.endsWith(".kts")) {
+            name = name.removeSuffix(".kts")
+        }
+
+        if (!scriptFilesMap.containsKey(name)) {
+            scriptFilesMap[name] = file
         }
     }
 
@@ -207,7 +258,9 @@ class KimageCli(parser: ArgParser) {
         val endMillis = System.currentTimeMillis()
         val deltaMillis = endMillis - startMillis
 
-        println("Processed in $deltaMillis ms")
+        if (verboseMode) {
+            println("Processed in $deltaMillis ms")
+        }
 
         var output = engine.get("output")
         if (output == null) {
@@ -220,7 +273,9 @@ class KimageCli(parser: ArgParser) {
                 ImageWriter.write(output, outputFile)
             }
             else -> {
-                println("Output: $output")
+                if (output != null) {
+                    println("Output: $output")
+                }
             }
         }
     }
