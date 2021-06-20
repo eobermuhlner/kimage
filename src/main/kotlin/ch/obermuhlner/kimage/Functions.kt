@@ -3,8 +3,11 @@ package ch.obermuhlner.kimage
 import ch.obermuhlner.kimage.image.Channel
 import ch.obermuhlner.kimage.image.Image
 import ch.obermuhlner.kimage.image.MatrixImage
+import ch.obermuhlner.kimage.io.ImageFormat
+import ch.obermuhlner.kimage.io.ImageWriter
 import ch.obermuhlner.kimage.matrix.averageError
 import ch.obermuhlner.kimage.matrix.stretchClassic
+import java.io.File
 import kotlin.math.abs
 
 fun deltaRGB(image1: Image, image2: Image, factor: Double = 10.0): Image {
@@ -89,5 +92,13 @@ fun Image.averageError(other: Image, channels: List<Channel> = this.channels): D
         sum += this[channel].averageError(other[channel])
     }
     return sum / channels.size.toDouble()
+}
+
+fun Image.write(file: File) {
+    ImageWriter.write(this, file)
+}
+
+fun Image.write(file: File, format: ImageFormat) {
+    ImageWriter.write(this, file, format)
 }
 
