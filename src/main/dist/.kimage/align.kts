@@ -39,7 +39,7 @@ if (verboseMode) {
 
 //ImageWriter.write(baseImage.cropCenter(centerX, centerY, checkRadius), File("check_" + baseInputFile.name))
 
-for (inputFile in inputFiles) {
+for (inputFile in files) {
     println("Loading image: $inputFile")
 
     val image = ImageReader.readMatrixImage(inputFile)

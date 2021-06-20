@@ -25,7 +25,7 @@ object TestScript {
     }
 
     private fun runMultiModeScript(vararg filepaths: String) {
-        val files = filepaths.map { File(it) }
+        val files: List<Any> = filepaths.map { File(it) }
 
         multiModeScript(inputFiles = files)
     }
@@ -55,7 +55,7 @@ object TestScript {
         outputDirectory: File = File("."),
         outputPrefix: String = "output",
         multiMode: Boolean = true,
-        inputFiles: List<File>
+        inputFiles: List<Any>
     ) {
         // BEGIN OF SCRIPT
 
@@ -92,7 +92,7 @@ object TestScript {
 
         //ImageWriter.write(baseImage.cropCenter(centerX, centerY, checkRadius), File("check_" + baseInputFile.name))
 
-        for (inputFile in inputFiles) {
+        for (inputFile in files) {
             println("Loading image: $inputFile")
 
             val image = ImageReader.readMatrixImage(inputFile)
