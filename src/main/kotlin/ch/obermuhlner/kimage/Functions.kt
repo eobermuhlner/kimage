@@ -68,6 +68,15 @@ operator fun Image.div(value: Double): Image {
     }
 }
 
+infix fun Image.max(other: Image): Image {
+    return MatrixImage(
+        this.width,
+        this.height,
+        this.channels) { channel, _, _ ->
+        this[channel] max other[channel]
+    }
+}
+
 fun Image.onEach(func: (Double) -> Double): Image {
     return MatrixImage(
         this.width,

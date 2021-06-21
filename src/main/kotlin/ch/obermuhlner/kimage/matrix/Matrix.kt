@@ -1,6 +1,7 @@
 package ch.obermuhlner.kimage.matrix
 
 import ch.obermuhlner.kimage.math.clamp
+import kotlin.math.max
 
 interface Matrix {
     val rows: Int
@@ -138,6 +139,16 @@ interface Matrix {
                 this[row, column] /= value
             }
         }
+    }
+
+    infix fun max(other: Matrix): Matrix {
+        val m = create()
+        for (row in 0 until rows) {
+            for (column in 0 until columns) {
+                m[row, column] = max(this[row, column], other[row, column])
+            }
+        }
+        return m
     }
 
     fun convolute(kernel: Matrix): Matrix {
