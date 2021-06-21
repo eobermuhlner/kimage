@@ -17,7 +17,7 @@ val parameters = inputParameters as Map<String, String>
 println("Loading image: $files[0]")
 var baseImage: Image = ImageReader.readMatrixImage(files[0])
 val channels = baseImage.channels
-val huge = HugeFloatArray(File("temp.mem"), files.size, channels.size, baseImage.width, baseImage.height)
+val huge = HugeFloatArray(files.size, channels.size, baseImage.width, baseImage.height)
 
 for (fileIndex in files.indices) {
     val inputFile = files[fileIndex]
