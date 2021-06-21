@@ -4,6 +4,8 @@ import ch.obermuhlner.kimage.filter.*
 import ch.obermuhlner.kimage.huge.*
 import ch.obermuhlner.kimage.image.*
 import ch.obermuhlner.kimage.io.*
+import ch.obermuhlner.kimage.math.*
+
 import java.io.*
 import kotlin.math.*
 
@@ -14,7 +16,7 @@ println("Stack multiple images using median")
 val files = inputFiles as List<File>
 val parameters = inputParameters as Map<String, String>
 
-println("Loading image: $files[0]")
+println("Loading image: ${files[0]}")
 var baseImage: Image = ImageReader.readMatrixImage(files[0])
 val channels = baseImage.channels
 val huge = HugeFloatArray(files.size, channels.size, baseImage.width, baseImage.height)
@@ -47,9 +49,7 @@ for (channelIndex in channels.indices) {
             values[fileIndex] = huge[fileIndex, channelIndex, matrixIndex]
         }
 
-        values.sort()
-        val stackedValue = values[values.size / 2]
-        resultMatrix[matrixIndex] = stackedValue.toDouble()
+        resultMatrix[matrixIndex] = values.median().toDouble()
     }
 }
 

@@ -1,17 +1,19 @@
 package ch.obermuhlner.kimage.huge
 
+import java.io.Closeable
 import java.io.File
 import java.nio.FloatBuffer
 import java.nio.channels.FileChannel
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption
 
-class HugeFloatArray(vararg val dimensions: Int) {
+class HugeFloatArray(vararg val dimensions: Int) : Closeable {
 
     private val maxBufferSize = Integer.MAX_VALUE / 4
 
     private val elementSize = 4 // float has 4 bytes
 
+    private val memoryFiles: MutableList<File> = mutableListOf()
     private val floatBuffers: Array<FloatBuffer>
     private val bufferSize: Long
 
@@ -23,7 +25,7 @@ class HugeFloatArray(vararg val dimensions: Int) {
         val bufferByteSize = bufferSize * elementSize
         floatBuffers = Array(bufferCount) {
             val file = File.createTempFile("HugeFloatArray_${it}_", ".mem")
-            println("bufferFile : $file")
+            memoryFiles.add(file)
             file.deleteOnExit()
 
             val channel: FileChannel = Files.newByteChannel(file.toPath(), StandardOpenOption.CREATE, StandardOpenOption.READ, StandardOpenOption.WRITE) as FileChannel
@@ -77,4 +79,9 @@ class HugeFloatArray(vararg val dimensions: Int) {
         set(index, value)
     }
 
+    override fun close() {
+        memoryFiles.forEach {
+            it.delete()
+        }
+    }
 }
