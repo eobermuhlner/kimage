@@ -78,7 +78,7 @@ class KimageCli(parser: ArgParser) {
         if (command == "") {
             println("Scripts:")
             scriptFileMap.keys.sorted().forEach {
-                println(String.format("  %-40s %s", it, scriptFileMap[it]))
+                println(it)
             }
             return
         }
@@ -111,29 +111,7 @@ class KimageCli(parser: ArgParser) {
 
                 executeScript(engine, script, outputFile(File("kimage.png"), outputPrefix, outputDirectory))
             } else {
-                val executed = if (!singleMode && !determinedSingleMode) {
-                    if (verboseMode) {
-                        println("Processing files: $filenames")
-                    }
-
-                    initCommonParameters(engine, false, inputFiles, parametersMap)
-
-                    try {
-                        executeScript(engine, script, outputFile(inputFiles[0], outputPrefix, outputDirectory))
-                        true
-                    } catch (ex: Exception) {
-                        if (verboseMode) {
-                            ex.printStackTrace()
-                        }
-                        println("Script will run in single mode");
-                        println()
-                        false
-                    }
-                } else {
-                    false
-                }
-
-                if (!executed) {
+                if (singleMode || determinedSingleMode) {
                     for (filename in filenames) {
                         val inputFile = File(filename)
                         if (inputFile.exists()) {
@@ -149,12 +127,21 @@ class KimageCli(parser: ArgParser) {
                         }
                         println()
                     }
+                } else {
+                    if (verboseMode) {
+                        println("Processing files: $filenames")
+                    }
+
+                    initCommonParameters(engine, false, inputFiles, parametersMap)
+
+                    executeScript(engine, script, outputFile(inputFiles[0], outputPrefix, outputDirectory))
                 }
             }
         } catch (ex: Exception) {
             if (verboseMode) {
                 ex.printStackTrace()
             } else {
+                println("Failed to execute:")
                 println(ex.message)
             }
         }
