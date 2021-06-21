@@ -3,7 +3,7 @@ package ch.obermuhlner.kimage.matrix
 class FloatMatrix(override val rows: Int, override val columns: Int) : Matrix {
     private val data: FloatArray = FloatArray(columns * rows)
 
-    override fun create(rows: Int, columns: Int): Matrix = FloatMatrix(rows, columns)
+    override fun create(createRows: Int, createColumns: Int): Matrix = FloatMatrix(rows, columns)
 
     override fun get(index: Int): Double {
         return data[index].toDouble()

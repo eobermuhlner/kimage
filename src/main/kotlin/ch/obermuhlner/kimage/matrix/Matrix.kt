@@ -10,7 +10,7 @@ interface Matrix {
     val size: Int
         get() = rows * columns
 
-    fun create(r: Int = rows, c: Int = columns): Matrix
+    fun create(createRows: Int = rows, createColumns: Int = columns): Matrix
 
     operator fun get(index: Int): Double
     operator fun set(index: Int, value: Double)

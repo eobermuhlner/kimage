@@ -9,8 +9,8 @@ class CroppedMatrix(
         private val strictClipping: Boolean = true)
     : Matrix {
 
-    override fun create(r: Int, c: Int): Matrix {
-        return matrix.create(r, c)
+    override fun create(createRows: Int, createColumns: Int): Matrix {
+        return matrix.create(createRows, createColumns)
     }
 
     override fun get(index: Int): Double {
