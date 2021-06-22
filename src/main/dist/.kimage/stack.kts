@@ -11,12 +11,33 @@ import kotlin.math.*
 
 require(multiMode)
 
-println("Stack multiple images using median")
+println("Stack multiple images")
 
 val files = inputFiles as List<File>
 val parameters = inputParameters as Map<String, String>
 
-println("Loading image: ${files[0]}")
+val methodName = parameters.getOrDefault("method", "sigmaclip-median")
+val sigmaClipKappa = parameters.getOrDefault("kappa", "2.0").toFloat()
+val sigmaClipIterations = parameters.getOrDefault("iterations", "5").toInt()
+
+if (verboseMode) {
+    println("Parameters:")
+    println("  method = $methodName")
+    println("  kappa = $sigmaClipKappa")
+    println("  iterations = $sigmaClipIterations")
+    println()
+}
+
+val stackingMethod: (FloatArray) -> Float = when(methodName) {
+    "median" -> { array -> array.median() }
+    "average" -> { array -> array.average() }
+    "max" -> { array -> array.maxOrNull()!! }
+    "sigmaclip-median" -> { array -> array.sigmaClip(kappa = sigmaClipKappa, iterations = sigmaClipIterations).median() }
+    "sigmaclip-average" -> { array -> array.sigmaClip(kappa = sigmaClipKappa, iterations = sigmaClipIterations).average() }
+    else -> FloatArray::median
+}
+
+println("Loading image: $files[0]")
 var baseImage: Image = ImageReader.readMatrixImage(files[0])
 val channels = baseImage.channels
 val huge = HugeFloatArray(files.size, channels.size, baseImage.width, baseImage.height)
@@ -49,7 +70,9 @@ for (channelIndex in channels.indices) {
             values[fileIndex] = huge[fileIndex, channelIndex, matrixIndex]
         }
 
-        resultMatrix[matrixIndex] = values.median().toDouble()
+        values.sort()
+        val stackedValue = stackingMethod(values)
+        resultMatrix[matrixIndex] = stackedValue.toDouble()
     }
 }
 
