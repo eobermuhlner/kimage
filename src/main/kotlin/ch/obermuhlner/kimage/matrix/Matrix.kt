@@ -2,6 +2,7 @@ package ch.obermuhlner.kimage.matrix
 
 import ch.obermuhlner.kimage.math.clamp
 import kotlin.math.max
+import kotlin.math.sqrt
 
 interface Matrix {
     val rows: Int
@@ -207,7 +208,7 @@ interface Matrix {
             val delta = value - avg
             sum += delta * delta
         }
-        return sum / size
+        return sqrt(sum / size)
     }
 
     fun croppedMatrix(croppedRow: Int, croppedColumn: Int, croppedRows: Int, croppedColumns: Int, strictClipping: Boolean = true): Matrix {
