@@ -1,5 +1,6 @@
 package ch.obermuhlner.kimage.math
 
+import kotlin.NoSuchElementException
 import kotlin.math.sqrt
 
 fun clamp(x: Double, min: Double, max: Double): Double {
@@ -26,75 +27,213 @@ fun clamp(x: Int, min: Int, max: Int): Int {
     }
 }
 
-fun FloatArray.sum(offset: Int = 0, length: Int = this.size-offset): Float {
-    if (length == 0) {
-        return Float.NaN
-    }
-
+private fun Iterator<Float>.sumAndCountFloat(): Pair<Float, Int> {
+    var count = 0
     var sum = 0.0f
-    for (i in offset until (offset+length)) {
-        sum += this[i]
+    for (value in this) {
+        sum += value
+        count++
     }
 
-    return sum
+    return if (count == 0) Pair(Float.NaN, 0) else Pair(sum, count)
 }
 
-fun FloatArray.average(offset: Int = 0, length: Int = this.size-offset): Float {
-    return sum(offset, length) / length
+fun Iterator<Double>.sumAndCountDouble(): Pair<Double, Int> {
+    var count = 0
+    var sum = 0.0
+    for (value in this) {
+        sum += value
+        count++
+    }
+
+    return if (count == 0) Pair(Double.NaN, 0) else Pair(sum, count)
+}
+
+fun Iterator<Float>.sum(): Float {
+    return sumAndCountFloat().first
+}
+
+fun Iterator<Double>.sum(): Double {
+    return sumAndCountDouble().first
+}
+
+fun Iterable<Float>.sum(): Float {
+    return iterator().sum()
+}
+
+fun Iterable<Double>.sum(): Double {
+    return iterator().sum()
+}
+
+fun FloatArray.sum(offset: Int = 0, length: Int = size-offset): Float {
+    return ArrayFloatIterator(this, offset, length).sum()
+}
+
+fun DoubleArray.sum(offset: Int = 0, length: Int = size-offset): Double {
+    return ArrayDoubleIterator(this, offset, length).sum()
+}
+
+fun Iterator<Float>.average(): Float {
+    val (sum, count) = sumAndCountFloat()
+    return sum / count
+}
+
+fun Iterable<Float>.average(): Float {
+    val (sum, count) = iterator().sumAndCountFloat()
+    return sum / count
+}
+
+fun FloatArray.average(offset: Int = 0, length: Int = size-offset): Float {
+    return ArrayFloatIterator(this, offset, length).sum() / length
 }
 
 enum class StandardDeviation { Population, Sample }
-fun FloatArray.stddev(type: StandardDeviation = StandardDeviation.Population, offset: Int = 0, length: Int = this.size-offset): Float {
-    if (length == 0) {
-        return Float.NaN
-    }
-    if (length == 1) {
-        return 0f
+
+fun Iterable<Float>.stddev(type: StandardDeviation = StandardDeviation.Population): Float {
+    val (sum, count) = iterator().sumAndCountFloat()
+
+    when (count) {
+        0 -> return Float.NaN
+        1 -> return 0f
     }
 
-    val avg = average(offset, length)
-    var sum = 0f
-    for (i in offset until (offset+length)) {
-        val delta = this[i] - avg
-        sum += delta * delta
+    val avg = sum / count
+
+    var sumDeltaSquare = 0f
+    for (value in iterator()) {
+        val delta = value - avg
+        sumDeltaSquare += delta * delta
     }
 
     val denom = when (type) {
-        StandardDeviation.Population -> length
-        StandardDeviation.Sample -> length - 1
+        StandardDeviation.Population -> count
+        StandardDeviation.Sample -> count - 1
     }
-    return sqrt(sum / denom)
+    return sqrt(sumDeltaSquare / denom)
 }
 
-fun FloatArray.medianInplace(offset: Int = 0, length: Int = this.size-offset): Float {
+fun Iterable<Double>.stddev(type: StandardDeviation = StandardDeviation.Population): Double {
+    val (sum, count) = iterator().sumAndCountDouble()
+
+    when (count) {
+        0 -> return Double.NaN
+        1 -> return 0.0
+    }
+
+    val avg = sum / count
+
+    var sumDeltaSquare = 0.0
+    for (value in iterator()) {
+        val delta = value - avg
+        sumDeltaSquare += delta * delta
+    }
+
+    val denom = when (type) {
+        StandardDeviation.Population -> count
+        StandardDeviation.Sample -> count - 1
+    }
+    return sqrt(sumDeltaSquare / denom)
+}
+
+fun FloatArray.stddev(type: StandardDeviation = StandardDeviation.Population, offset: Int = 0, length: Int = size-offset): Float {
+    return ArrayFloatIterable(this, offset, length).stddev(type)
+}
+
+fun DoubleArray.stddev(type: StandardDeviation = StandardDeviation.Population, offset: Int = 0, length: Int = size-offset): Double {
+    return ArrayDoubleIterable(this, offset, length).stddev(type)
+}
+
+fun FloatArray.medianInplace(offset: Int = 0, length: Int = size-offset): Float {
     if (length == 0) {
         return Float.NaN
     }
 
-    this.sort(offset, offset+length)
+    sort(offset, offset+length)
 
     val half = offset + length / 2
-    if (length % 2 == 0) {
-        return (this[half-1] + this[half]) / 2
+    return if (length % 2 == 0) {
+        (this[half-1] + this[half]) / 2
     } else {
-        return this[half]
+        this[half]
     }
 }
 
-fun FloatArray.median(offset: Int = 0, length: Int = this.size-offset): Float {
+fun DoubleArray.medianInplace(offset: Int = 0, length: Int = size-offset): Double {
+    if (length == 0) {
+        return Double.NaN
+    }
+
+    sort(offset, offset+length)
+
+    val half = offset + length / 2
+    return if (length % 2 == 0) {
+        (this[half-1] + this[half]) / 2
+    } else {
+        this[half]
+    }
+}
+
+fun MutableList<Float>.medianInplace(offset: Int = 0, length: Int = size-offset): Float {
     if (length == 0) {
         return Float.NaN
     }
 
-    val array = this.copyOfRange(offset, offset+length)
+    subList(offset, offset+length).sort()
+
+    val half = offset + length / 2
+    return if (length % 2 == 0) {
+        (this[half-1] + this[half]) / 2
+    } else {
+        this[half]
+    }
+}
+
+fun MutableList<Double>.medianInplace(offset: Int = 0, length: Int = size-offset): Double {
+    if (length == 0) {
+        return Double.NaN
+    }
+
+    subList(offset, offset+length).sort()
+
+    val half = offset + length / 2
+    return if (length % 2 == 0) {
+        (this[half-1] + this[half]) / 2
+    } else {
+        this[half]
+    }
+}
+
+fun FloatArray.median(offset: Int = 0, length: Int = size-offset): Float {
+    if (length == 0) {
+        return Float.NaN
+    }
+
+    val array = copyOfRange(offset, offset+length)
     return array.medianInplace()
 }
 
-fun FloatArray.sigmaClipInplace(kappa: Float = 2f, iterations: Int = 1, offset: Int = 0, length: Int = this.size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population, center: (FloatArray, Int, Int) -> Float = FloatArray::median): FloatArray {
+fun DoubleArray.median(offset: Int = 0, length: Int = size-offset): Double {
+    if (length == 0) {
+        return Double.NaN
+    }
+
+    val array = copyOfRange(offset, offset+length)
+    return array.medianInplace()
+}
+
+fun Iterable<Float>.median(): Float {
+    return toMutableList().medianInplace()
+}
+
+fun Iterable<Double>.median(): Double {
+    return toMutableList().medianInplace()
+}
+
+fun FloatArray.sigmaClipInplace(kappa: Float = 2f, iterations: Int = 1, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population, center: (FloatArray, Int, Int) -> Float = FloatArray::median): FloatArray {
     var currentLength = length
 
     for (i in 0 until iterations) {
-        val sigma = this.stddev(standardDeviationType, offset, currentLength)
+        val sigma = stddev(standardDeviationType, offset, currentLength)
         val m = center(this, offset, currentLength)
 
         val low = m - kappa * sigma
@@ -109,12 +248,31 @@ fun FloatArray.sigmaClipInplace(kappa: Float = 2f, iterations: Int = 1, offset: 
         currentLength = targetLength
     }
 
-    return this.copyOfRange(offset, offset+currentLength)
+    return copyOfRange(offset, offset+currentLength)
 }
 
-fun FloatArray.sigmaClip(kappa: Float = 2f, iterations: Int = 1, offset: Int = 0, length: Int = this.size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population, center: (FloatArray, Int, Int) -> Float = FloatArray::median): FloatArray {
-    val array = this.copyOfRange(offset, offset+length)
+fun FloatArray.sigmaClip(kappa: Float = 2f, iterations: Int = 1, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population, center: (FloatArray, Int, Int) -> Float = FloatArray::median): FloatArray {
+    val array = copyOfRange(offset, offset+length)
 
     return array.sigmaClipInplace(kappa, iterations, 0, length, standardDeviationType, center)
 }
 
+private class ArrayFloatIterator(private val array: FloatArray, private val offset: Int, private val length: Int) : FloatIterator() {
+    private var index = offset
+    override fun hasNext() = index < offset + length
+    override fun nextFloat() = try { array[index++] } catch (e: ArrayIndexOutOfBoundsException) { index -= 1; throw NoSuchElementException(e.message) }
+}
+
+private class ArrayDoubleIterator(private val array: DoubleArray, private val offset: Int, private val length: Int) : DoubleIterator() {
+    private var index = offset
+    override fun hasNext() = index < offset + length
+    override fun nextDouble() = try { array[index++] } catch (e: ArrayIndexOutOfBoundsException) { index -= 1; throw NoSuchElementException(e.message) }
+}
+
+private class ArrayFloatIterable(private val array: FloatArray, private val offset: Int, private val length: Int) : Iterable<Float> {
+    override fun iterator(): Iterator<Float> = ArrayFloatIterator(array, offset, length)
+}
+
+private class ArrayDoubleIterable(private val array: DoubleArray, private val offset: Int, private val length: Int) : Iterable<Double> {
+    override fun iterator(): Iterator<Double> = ArrayDoubleIterator(array, offset, length)
+}
