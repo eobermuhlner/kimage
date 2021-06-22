@@ -78,7 +78,7 @@ class KimageCli(parser: ArgParser) {
         if (command == "") {
             println("Scripts:")
             scriptFileMap.keys.sorted().forEach {
-                println(it)
+                println("  $it")
             }
             return
         }
