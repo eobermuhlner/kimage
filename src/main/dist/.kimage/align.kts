@@ -17,11 +17,15 @@ val baseInputFile = files[0]
 println("Loading base image: $baseInputFile")
 val baseImage = ImageReader.readMatrixImage(baseInputFile)
 println("Base image: $baseImage")
+println()
 
-val checkRadius = parameters.getOrDefault("checkRadius", "10").toInt()
-val searchRadius = parameters.getOrDefault("searchRadius", "200").toInt()
+val defaultCheckRadius = min(baseImage.width, baseImage.height) / 100
+val defaultSearchRadius = defaultCheckRadius * 5
 
-val imageAligner = SimpleImageAligner(checkRadius)
+val checkRadius = parameters.getOrDefault("checkRadius", defaultCheckRadius.toString()).toInt()
+val searchRadius = parameters.getOrDefault("searchRadius", defaultSearchRadius.toString()).toInt()
+
+val imageAligner = ImageAligner(checkRadius)
 val (autoCenterX, autoCenterY) = imageAligner.findInterestingCropCenter(baseImage)
 
 val centerX = parameters.getOrDefault("centerX", autoCenterX.toString()).toInt()
@@ -56,4 +60,5 @@ for (inputFile in files) {
 
     val error = baseImage.averageError(alignedImage)
     println("Standard error to base image: $inputFile $error")
+    println()
 }
