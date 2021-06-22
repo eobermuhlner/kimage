@@ -4,7 +4,7 @@ import ch.obermuhlner.kimage.math.clamp
 import kotlin.math.max
 import kotlin.math.sqrt
 
-interface Matrix {
+interface Matrix : Iterable<Double> {
     val rows: Int
     val columns: Int
 
@@ -38,7 +38,7 @@ interface Matrix {
     fun boundedColumn(column: Int) = clamp(column, 0, columns - 1)
     fun boundedRow(row: Int) = clamp(row, 0, rows - 1)
 
-    operator fun iterator(): Iterator<Double> {
+    override operator fun iterator(): Iterator<Double> {
         return object : Iterator<Double> {
             var index = 0
             override fun hasNext(): Boolean = index < this@Matrix.size
