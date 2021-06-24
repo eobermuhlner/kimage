@@ -27,7 +27,7 @@ fun clamp(x: Int, min: Int, max: Int): Int {
     }
 }
 
-private fun <T> Iterator<T>.reduceAndCount(initial: T, empty: T = initial, accumulator: (T, T) -> T): Pair<T, Int> {
+private fun <T, U> Iterator<T>.reduceAndCount(initial: U, empty: U, accumulator: (U, T) -> U): Pair<U, Int> {
     var result = initial
     var count = 0
 
@@ -39,7 +39,7 @@ private fun <T> Iterator<T>.reduceAndCount(initial: T, empty: T = initial, accum
     return if (count == 0) Pair(empty, 0) else Pair(result, count)
 }
 
-fun <T> Iterator<T>.reduce(initial: T, empty: T = initial, accumulator: (T, T) -> T): T {
+fun <T, U> Iterator<T>.reduce(initial: U, empty: U, accumulator: (U, T) -> U): U {
     return reduceAndCount(initial, empty, accumulator).first
 }
 
