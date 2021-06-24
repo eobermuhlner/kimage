@@ -3,6 +3,7 @@ package ch.obermuhlner.kimage.align
 import ch.obermuhlner.kimage.averageError
 import ch.obermuhlner.kimage.image.Channel
 import ch.obermuhlner.kimage.image.Image
+import ch.obermuhlner.kimage.math.stddev
 import kotlin.math.max
 
 class ImageAligner(

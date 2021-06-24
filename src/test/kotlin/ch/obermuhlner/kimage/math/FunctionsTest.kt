@@ -247,6 +247,23 @@ internal class FunctionsTest {
     }
 
     @Test
+    fun testDoubleIterableFastMedian() {
+        //assertEquals(Double.NaN, listOf<Double>().fastMedian(), epsilonDouble)
+
+        val data = mutableListOf<Double>()
+        for (value in 0 .. 100) {
+            data.add(value.toDouble())
+        }
+        for (value in 0 .. 10) {
+            data.add(200.0)
+        }
+        for (value in 0 .. 100) {
+            data.add(1000.0)
+        }
+        assertEquals(200.0, data.fastMedian(0.0, 1000.0), 10.0)
+    }
+
+    @Test
     fun testFloatArrayStddev() {
         assertEquals(Float.NaN, floatArrayOf().stddev(), epsilonFloat)
         assertEquals(Float.NaN, floatArrayOf(1f, 2f, 3f, 4f).stddev(length = 0), epsilonFloat)

@@ -279,6 +279,22 @@ fun Iterable<Double>.median(): Double {
     return toMutableList().medianInplace()
 }
 
+fun Iterable<Float>.fastMedian(min: Float, max: Float, binCount: Int = 100): Float {
+    val histogram = Histogram(binCount)
+    for(value in this) {
+        histogram.add(((value - min) / (max - min)).toDouble())
+    }
+    return (histogram.estimateMedian() * (max - min) + min).toFloat()
+}
+
+fun Iterable<Double>.fastMedian(min: Double, max: Double, binCount: Int = 100): Double {
+    val histogram = Histogram(binCount)
+    for(value in this) {
+        histogram.add((value - min) / (max - min))
+    }
+    return histogram.estimateMedian() * (max - min) + min
+}
+
 fun FloatArray.sigmaClipInplace(kappa: Float = 2f, iterations: Int = 1, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population, center: (FloatArray, Int, Int) -> Float = FloatArray::median): FloatArray {
     var currentLength = length
 
