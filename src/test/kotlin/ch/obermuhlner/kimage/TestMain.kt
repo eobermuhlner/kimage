@@ -1,6 +1,6 @@
 package ch.obermuhlner.kimage
 
-import ch.obermuhlner.kimage.align.SimpleImageAligner
+import ch.obermuhlner.kimage.align.ImageAligner
 import ch.obermuhlner.kimage.filter.*
 import ch.obermuhlner.kimage.image.Channel
 import ch.obermuhlner.kimage.image.Image
@@ -192,7 +192,7 @@ object TestMain {
         )
 
         val radius = 100
-        val imageAligner = SimpleImageAligner(radius)
+        val imageAligner = ImageAligner(radius)
 
         println("Base image: ${inputFiles[0]}")
         val baseImage = ImageReader.readMatrixImage(inputFiles[0])
