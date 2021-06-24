@@ -27,26 +27,76 @@ fun clamp(x: Int, min: Int, max: Int): Int {
     }
 }
 
-private fun Iterator<Float>.sumAndCountFloat(): Pair<Float, Int> {
+private fun <T> Iterator<T>.reduceAndCount(initial: T, empty: T = initial, accumulator: (T, T) -> T): Pair<T, Int> {
+    var result = initial
     var count = 0
-    var sum = 0.0f
+
     for (value in this) {
-        sum += value
+        result = accumulator.invoke(result, value)
         count++
     }
 
-    return if (count == 0) Pair(Float.NaN, 0) else Pair(sum, count)
+    return if (count == 0) Pair(empty, 0) else Pair(result, count)
+}
+
+fun <T> Iterator<T>.reduce(initial: T, empty: T = initial, accumulator: (T, T) -> T): T {
+    return reduceAndCount(initial, empty, accumulator).first
+}
+
+fun Iterator<Float>.min(): Float {
+    return reduce(Float.MAX_VALUE, Float.NaN) { a, b -> kotlin.math.min(a, b) }
+}
+
+fun Iterator<Double>.min(): Double {
+    return reduce(Double.MAX_VALUE, Double.NaN) { a, b -> kotlin.math.min(a, b) }
+}
+
+fun FloatArray.min(offset: Int = 0, length: Int = size-offset): Float {
+    return ArrayFloatIterator(this, offset, length).min()
+}
+
+fun DoubleArray.min(offset: Int = 0, length: Int = size-offset): Double {
+    return ArrayDoubleIterator(this, offset, length).min()
+}
+
+fun Iterable<Float>.min(): Float {
+    return iterator().min()
+}
+
+fun Iterable<Double>.min(): Double {
+    return iterator().min()
+}
+
+fun Iterator<Float>.max(): Float {
+    return reduce(Float.MIN_VALUE, Float.NaN) { a, b -> kotlin.math.max(a, b) }
+}
+
+fun Iterator<Double>.max(): Double {
+    return reduce(Double.MIN_VALUE, Double.NaN) { a, b -> kotlin.math.max(a, b) }
+}
+
+fun FloatArray.max(offset: Int = 0, length: Int = size-offset): Float {
+    return ArrayFloatIterator(this, offset, length).max()
+}
+
+fun DoubleArray.max(offset: Int = 0, length: Int = size-offset): Double {
+    return ArrayDoubleIterator(this, offset, length).max()
+}
+
+fun Iterable<Float>.max(): Float {
+    return iterator().max()
+}
+
+fun Iterable<Double>.max(): Double {
+    return iterator().max()
+}
+
+private fun Iterator<Float>.sumAndCountFloat(): Pair<Float, Int> {
+    return reduceAndCount(0f, Float.NaN) { a, b -> a + b }
 }
 
 fun Iterator<Double>.sumAndCountDouble(): Pair<Double, Int> {
-    var count = 0
-    var sum = 0.0
-    for (value in this) {
-        sum += value
-        count++
-    }
-
-    return if (count == 0) Pair(Double.NaN, 0) else Pair(sum, count)
+    return reduceAndCount(0.0, Double.NaN) { a, b -> a + b }
 }
 
 fun Iterator<Float>.sum(): Float {

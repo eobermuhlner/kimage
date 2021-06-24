@@ -12,6 +12,40 @@ internal class FunctionsTest {
     private val epsilonDouble: Double = 1.0E-10
 
     @Test
+    fun testFloatArrayMin() {
+        assertEquals(Float.NaN, floatArrayOf().min(), epsilonFloat)
+        assertEquals(Float.NaN, floatArrayOf(1f, 2f, 3f).min(length = 0), epsilonFloat)
+
+        assertEquals(1f, floatArrayOf(1f, 2f, 3f).min(), epsilonFloat)
+        assertEquals(1f, floatArrayOf(10f, 1f, 2f, 3f, 20f).min(1, 3), epsilonFloat)
+
+        assertEquals(1f, floatArrayOf(10f, 1f, 2f, 3f, 20f).min(offset = 1), epsilonFloat)
+        assertEquals(1f, floatArrayOf(10f, 1f, 2f, 3f, 20f).min(length = 3), epsilonFloat)
+    }
+
+    @Test
+    fun testFloatIterableMin() {
+        assertEquals(1f, listOf(1f, 2f, 3f).min(), epsilonFloat)
+    }
+
+    @Test
+    fun testFloatArrayMax() {
+        assertEquals(Float.NaN, floatArrayOf().max(), epsilonFloat)
+        assertEquals(Float.NaN, floatArrayOf(1f, 2f, 3f).max(length = 0), epsilonFloat)
+
+        assertEquals(3f, floatArrayOf(1f, 2f, 3f).max(), epsilonFloat)
+        assertEquals(3f, floatArrayOf(10f, 1f, 2f, 3f, 20f).max(1, 3), epsilonFloat)
+
+        assertEquals(20f, floatArrayOf(10f, 1f, 2f, 3f, 20f).max(offset = 1), epsilonFloat)
+        assertEquals(10f, floatArrayOf(10f, 1f, 2f, 3f, 20f).max(length = 3), epsilonFloat)
+    }
+
+    @Test
+    fun testFloatIterableMax() {
+        assertEquals(3f, listOf(1f, 2f, 3f).max(), epsilonFloat)
+    }
+
+    @Test
     fun testFloatArraySum() {
         assertEquals(Float.NaN, floatArrayOf().sum(), epsilonFloat)
         assertEquals(Float.NaN, floatArrayOf(1f, 2f, 3f).sum(length = 0), epsilonFloat)
@@ -26,6 +60,42 @@ internal class FunctionsTest {
     @Test
     fun testFloatIterableSum() {
         assertEquals(6f, listOf(1f, 2f, 3f).sum(), epsilonFloat)
+    }
+
+    @Test
+    fun testDoubleArrayMin() {
+        assertEquals(Double.NaN, doubleArrayOf().min(), epsilonDouble)
+        assertEquals(Double.NaN, doubleArrayOf(1.0, 2.0, 3.0).min(length = 0), epsilonDouble)
+
+        assertEquals(1.0, doubleArrayOf(1.0, 2.0, 3.0).min(), epsilonDouble)
+        assertEquals(1.0, doubleArrayOf(10.0, 1.0, 2.0, 3.0, 20.0).min(1, 3), epsilonDouble)
+
+        assertEquals(1.0, doubleArrayOf(10.0, 1.0, 2.0, 3.0, 20.0).min(offset = 1), epsilonDouble)
+        assertEquals(1.0, doubleArrayOf(10.0, 1.0, 2.0, 3.0, 20.0).min(length = 3), epsilonDouble)
+    }
+
+    @Test
+    fun testDoubleIterableMin() {
+        assertEquals(1f, listOf(1f, 2f, 3f).min(), epsilonFloat)
+        assertEquals(1.0, Matrix.matrixOf(1, 3, 1.0, 2.0, 3.0).min(), epsilonDouble)
+    }
+
+    @Test
+    fun testDoubleArrayMax() {
+        assertEquals(Double.NaN, doubleArrayOf().max(), epsilonDouble)
+        assertEquals(Double.NaN, doubleArrayOf(1.0, 2.0, 3.0).max(length = 0), epsilonDouble)
+
+        assertEquals(3.0, doubleArrayOf(1.0, 2.0, 3.0).max(), epsilonDouble)
+        assertEquals(3.0, doubleArrayOf(10.0, 1.0, 2.0, 3.0, 20.0).max(1, 3), epsilonDouble)
+
+        assertEquals(20.0, doubleArrayOf(10.0, 1.0, 2.0, 3.0, 20.0).max(offset = 1), epsilonDouble)
+        assertEquals(10.0, doubleArrayOf(10.0, 1.0, 2.0, 3.0, 20.0).max(length = 3), epsilonDouble)
+    }
+
+    @Test
+    fun testDoubleIterableMax() {
+        assertEquals(3f, listOf(1f, 2f, 3f).max(), epsilonFloat)
+        assertEquals(3.0, Matrix.matrixOf(1, 3, 1.0, 2.0, 3.0).max(), epsilonDouble)
     }
 
     @Test

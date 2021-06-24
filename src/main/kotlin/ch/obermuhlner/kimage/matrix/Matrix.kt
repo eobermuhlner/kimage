@@ -193,24 +193,6 @@ interface Matrix : Iterable<Double> {
         return result
     }
 
-    fun min(): Double = accumulate { x1, x2 -> kotlin.math.min(x1, x2) }
-
-    fun max(): Double = accumulate { x1, x2 -> kotlin.math.max(x1, x2) }
-
-    fun sum(): Double = accumulate { x1, x2 -> x1 + x2 }
-
-    fun avg(): Double = sum() / size
-
-    fun stddev(): Double {
-        val avg = avg()
-        var sum = 0.0
-        for (value in this) {
-            val delta = value - avg
-            sum += delta * delta
-        }
-        return sqrt(sum / size)
-    }
-
     fun croppedMatrix(croppedRow: Int, croppedColumn: Int, croppedRows: Int, croppedColumns: Int, strictClipping: Boolean = true): Matrix {
         return CroppedMatrix(this, croppedRow, croppedColumn, croppedRows, croppedColumns, strictClipping)
     }
