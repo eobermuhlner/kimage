@@ -1,5 +1,15 @@
 package ch.obermuhlner.kimage.matrix
 
+fun max(m1: Matrix, m2: Matrix): Matrix {
+    val m = m1.create()
+    for (row in 0 until m1.rows) {
+        for (column in 0 until m1.columns) {
+            m[row, column] = kotlin.math.max(m1[row, column], m2[row, column])
+        }
+    }
+    return m
+}
+
 fun Matrix.stretchClassic(min: Double, max: Double, func: (Double) -> Double = { it }): Matrix {
     val denom = func(max - min)
     return this.onEach { value ->

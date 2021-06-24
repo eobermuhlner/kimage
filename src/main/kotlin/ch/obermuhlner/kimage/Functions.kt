@@ -5,6 +5,7 @@ import ch.obermuhlner.kimage.image.Image
 import ch.obermuhlner.kimage.image.MatrixImage
 import ch.obermuhlner.kimage.io.ImageFormat
 import ch.obermuhlner.kimage.io.ImageWriter
+import ch.obermuhlner.kimage.matrix.max
 import ch.obermuhlner.kimage.matrix.averageError
 import ch.obermuhlner.kimage.matrix.stretchClassic
 import java.io.File
@@ -73,7 +74,7 @@ infix fun Image.max(other: Image): Image {
         this.width,
         this.height,
         this.channels) { channel, _, _ ->
-        this[channel] max other[channel]
+        max(this[channel], other[channel])
     }
 }
 

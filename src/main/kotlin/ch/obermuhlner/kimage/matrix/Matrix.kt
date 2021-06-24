@@ -142,16 +142,6 @@ interface Matrix : Iterable<Double> {
         }
     }
 
-    infix fun max(other: Matrix): Matrix {
-        val m = create()
-        for (row in 0 until rows) {
-            for (column in 0 until columns) {
-                m[row, column] = max(this[row, column], other[row, column])
-            }
-        }
-        return m
-    }
-
     fun convolute(kernel: Matrix): Matrix {
         val m = create()
         for (row in 0 until rows) {
