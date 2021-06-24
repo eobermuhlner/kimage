@@ -27,6 +27,14 @@ fun clamp(x: Int, min: Int, max: Int): Int {
     }
 }
 
+fun mix(x0: Double, x1: Double, a: Double): Double {
+    return (1.0 - a) * x0 + a * x1
+}
+
+fun mix(x0: Float, x1: Float, a: Float): Float {
+    return (1.0f - a) * x0 + a * x1
+}
+
 private fun <T, U> Iterator<T>.reduceAndCount(initial: U, empty: U, accumulator: (U, T) -> U): Pair<U, Int> {
     var result = initial
     var count = 0
