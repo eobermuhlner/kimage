@@ -7,6 +7,7 @@ import ch.obermuhlner.kimage.image.Image
 import ch.obermuhlner.kimage.image.MatrixImage
 import ch.obermuhlner.kimage.io.ImageReader
 import ch.obermuhlner.kimage.io.ImageWriter
+import ch.obermuhlner.kimage.math.*
 import java.io.File
 import kotlin.random.Random
 
