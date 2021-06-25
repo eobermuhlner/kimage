@@ -20,13 +20,11 @@ val methodName = parameters.getOrDefault("method", "sigmaclip-median")
 val sigmaClipKappa = parameters.getOrDefault("kappa", "2.0").toFloat()
 val sigmaClipIterations = parameters.getOrDefault("iterations", "5").toInt()
 
-if (verboseMode) {
-    println("Parameters:")
-    println("  method = $methodName")
-    println("  kappa = $sigmaClipKappa")
-    println("  iterations = $sigmaClipIterations")
-    println()
-}
+println("Parameters:")
+println("  method = $methodName")
+println("  kappa = $sigmaClipKappa")
+println("  iterations = $sigmaClipIterations")
+println()
 
 val stackingMethod: (FloatArray) -> Float = when(methodName) {
     "median" -> { array -> array.median() }
@@ -34,7 +32,7 @@ val stackingMethod: (FloatArray) -> Float = when(methodName) {
     "max" -> { array -> array.maxOrNull()!! }
     "sigmaclip-median" -> { array -> array.sigmaClip(kappa = sigmaClipKappa, iterations = sigmaClipIterations).median() }
     "sigmaclip-average" -> { array -> array.sigmaClip(kappa = sigmaClipKappa, iterations = sigmaClipIterations).average() }
-    else -> FloatArray::median
+    else -> throw IllegalArgumentException("Unknown method: " + methodName)
 }
 
 println("Loading image: $files[0]")
