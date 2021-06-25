@@ -5,6 +5,7 @@ import ch.obermuhlner.kimage.filter.*
 import ch.obermuhlner.kimage.image.*
 import ch.obermuhlner.kimage.io.*
 import ch.obermuhlner.kimage.math.*
+import ch.obermuhlner.kimage.matrix.Scaling
 import java.io.File
 import kotlin.random.Random
 
@@ -22,8 +23,20 @@ object TestMain {
 //        exampleImages()
 //        exampleMedianExperiments()
 
-        exampleError()
+        //exampleError()
         //exampleAlign()
+        exampleScale()
+    }
+
+    private fun exampleScale() {
+        val image = ImageReader.readMatrixImage(File("images/lena512color.tiff"))
+
+        for (scaling in Scaling.values()) {
+            ImageWriter.write(image.scaleBy(0.5, 0.5, scaling), File("scaled_50_$scaling.png"))
+            ImageWriter.write(image.scaleBy(2.0, 2.0, scaling), File("scaled_200_$scaling.png"))
+            ImageWriter.write(image.cropCenter(image.width/2, image.height/2, image.width / 10).scaleBy(10.0, 10.0, scaling), File("scaled_1000_$scaling.png"))
+            ImageWriter.write(image.cropCenter(image.width/2, image.height/2, image.width / 100).scaleBy(123.45, 123.45, scaling), File("scaled_12345_$scaling.png"))
+        }
     }
 
     private fun exampleError() {
