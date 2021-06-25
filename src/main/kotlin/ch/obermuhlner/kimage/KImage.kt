@@ -1,8 +1,7 @@
 package ch.obermuhlner.kimage
 
+import ch.obermuhlner.kimage.image.*
 import ch.obermuhlner.kimage.image.Channel.*
-import ch.obermuhlner.kimage.image.Image
-import ch.obermuhlner.kimage.image.MatrixImage
 import ch.obermuhlner.kimage.io.ImageReader
 import ch.obermuhlner.kimage.io.ImageWriter
 import ch.obermuhlner.kimage.javafx.KImageApplication

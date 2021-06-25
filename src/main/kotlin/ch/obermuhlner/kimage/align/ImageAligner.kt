@@ -1,9 +1,7 @@
 package ch.obermuhlner.kimage.align
 
-import ch.obermuhlner.kimage.image.averageError
-import ch.obermuhlner.kimage.image.Channel
-import ch.obermuhlner.kimage.image.Image
-import ch.obermuhlner.kimage.math.stddev
+import ch.obermuhlner.kimage.image.*
+import ch.obermuhlner.kimage.math.*
 import kotlin.math.max
 
 class ImageAligner(
@@ -26,7 +24,7 @@ class ImageAligner(
         var bestY = 0
         for (y in insetWidth until image.height - insetWidth step radiusStepY) {
             for (x in insetHeight until image.width - insetHeight step radiusStepX) {
-                val croppedImage = image.cropCenter(x, y, radiusX, radiusY)
+                val croppedImage = image.cropCenter(radiusX, radiusY, x, y)
                 val stddev = croppedImage[Channel.Red].stddev()
                 if (stddev > bestStdDev) {
                     //ImageWriter.write(croppedImage, File("check_${stddev}.png"))

@@ -90,18 +90,6 @@ interface Image {
         return m
     }
 
-    fun crop(croppedX: Int, croppedY: Int, croppedWidth: Int, croppedHeight: Int, strictClipping: Boolean = true): Image {
-        return CroppedImage(this, croppedX, croppedY, croppedWidth, croppedHeight, strictClipping)
-    }
-
-    fun cropCenter(croppedCenterX: Int, croppedCenterY: Int, radius: Int, strictClipping: Boolean = true): Image {
-        return cropCenter(croppedCenterX, croppedCenterY, radius, radius, strictClipping)
-    }
-
-    fun cropCenter(croppedCenterX: Int, croppedCenterY: Int, radiusX: Int, radiusY: Int, strictClipping: Boolean = true): Image {
-        return crop(croppedCenterX - radiusX, croppedCenterY - radiusY, radiusX*2+1, radiusY*2+1, strictClipping)
-    }
-
     fun isInside(x: Int, y: Int): Boolean {
         return x >= 0 && y >= 0 && x < width && y < height
     }

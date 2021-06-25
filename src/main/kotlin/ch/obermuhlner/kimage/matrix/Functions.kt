@@ -35,14 +35,14 @@ fun Matrix.averageError(other: Matrix): Double {
     return sum / size
 }
 
-fun Matrix.scaleBy(scaleRows: Double, scaleColumns: Double, scaling: Scaling = Scaling.Bilinear): Matrix {
+fun Matrix.scaleBy(scaleRows: Double, scaleColumns: Double, scaling: Scaling = Scaling.Bicubic): Matrix {
     val newRows = (rows * scaleRows).toInt()
     val newColumns = (columns * scaleColumns).toInt()
 
     return scaleTo(newRows, newColumns, scaling)
 }
 
-fun Matrix.scaleTo(newRows: Int, newColumns: Int, scaling: Scaling = Scaling.Bilinear): Matrix {
+fun Matrix.scaleTo(newRows: Int, newColumns: Int, scaling: Scaling = Scaling.Bicubic): Matrix {
     return when (scaling) {
         Scaling.Nearest -> scaleNearestTo(newRows, newColumns)
         Scaling.Bilinear -> scaleBilinearTo(newRows, newColumns)

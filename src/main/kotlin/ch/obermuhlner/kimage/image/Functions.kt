@@ -100,13 +100,25 @@ fun Image.averageError(other: Image, channels: List<Channel> = this.channels): D
     return sum / channels.size.toDouble()
 }
 
-fun Image.scaleBy(scaleX: Double, scaleY: Double, scaling: Scaling = Scaling.Bilinear): Image {
+fun Image.crop(croppedX: Int, croppedY: Int, croppedWidth: Int, croppedHeight: Int, strictClipping: Boolean = true): Image {
+    return CroppedImage(this, croppedX, croppedY, croppedWidth, croppedHeight, strictClipping)
+}
+
+fun Image.cropCenter(radius: Int, croppedCenterX: Int = width / 2, croppedCenterY: Int = height / 2, strictClipping: Boolean = true): Image {
+    return cropCenter(radius, radius, croppedCenterX, croppedCenterY, strictClipping)
+}
+
+fun Image.cropCenter(radiusX: Int, radiusY: Int, croppedCenterX: Int = width / 2, croppedCenterY: Int = height / 2, strictClipping: Boolean = true): Image {
+    return crop(croppedCenterX - radiusX, croppedCenterY - radiusY, radiusX*2+1, radiusY*2+1, strictClipping)
+}
+
+fun Image.scaleBy(scaleX: Double, scaleY: Double, scaling: Scaling = Scaling.Bicubic): Image {
     val newWidth = (width * scaleX).toInt()
     val newHeight = (height * scaleY).toInt()
     return scaleTo(newWidth, newHeight, scaling)
 }
 
-fun Image.scaleTo(newWidth: Int, newHeight: Int, scaling: Scaling = Scaling.Bilinear): Image {
+fun Image.scaleTo(newWidth: Int, newHeight: Int, scaling: Scaling = Scaling.Bicubic): Image {
     return MatrixImage(
         newWidth,
         newHeight,
