@@ -258,6 +258,10 @@ class KimageCli(parser: ArgParser) {
                 println("Output file: $outputFile")
                 ImageWriter.write(output, outputFile)
             }
+            is Script -> {
+                output.help()
+                //output.runSingle(listOf())
+            }
             else -> {
                 if (output != null) {
                     println("Output: $output")
