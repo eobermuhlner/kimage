@@ -6,22 +6,22 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import kotlin.math.sqrt
 
-internal class FunctionsTest {
+internal class ImageFunctionsTest {
 
     private val epsilonFloat: Float = 1E-8f
     private val epsilonDouble: Double = 1.0E-10
 
     @Test
     fun testFloatMix() {
-        assertEquals(5f, mix(5f, 7f, 0.0f), epsilonFloat)
-        assertEquals(6f, mix(5f, 6f, 0.5f), epsilonFloat)
-        assertEquals(7f, mix(5f, 7f, 1.0f), epsilonFloat)
+        assertEquals(5.0f, mix(5f, 7f, 0.0f), epsilonFloat)
+        assertEquals(6.0f, mix(5f, 7f, 0.5f), epsilonFloat)
+        assertEquals(7.0f, mix(5f, 7f, 1.0f), epsilonFloat)
     }
 
     @Test
     fun testDoubleMix() {
         assertEquals(5.0, mix(5.0, 7.0, 0.0), epsilonDouble)
-        assertEquals(6.0, mix(5.0, 6.0, 0.5), epsilonDouble)
+        assertEquals(6.0, mix(5.0, 7.0, 0.5), epsilonDouble)
         assertEquals(7.0, mix(5.0, 7.0, 1.0), epsilonDouble)
     }
 

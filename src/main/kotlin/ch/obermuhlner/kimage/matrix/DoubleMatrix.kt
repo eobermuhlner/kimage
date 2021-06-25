@@ -3,7 +3,7 @@ package ch.obermuhlner.kimage.matrix
 class DoubleMatrix(override val rows: Int, override val columns: Int) : Matrix {
     private val data: DoubleArray = DoubleArray(columns * rows)
 
-    override fun create(createRows: Int, createColumns: Int): Matrix = DoubleMatrix(rows, columns)
+    override fun create(createRows: Int, createColumns: Int): Matrix = DoubleMatrix(createRows, createColumns)
 
     override fun get(index: Int): Double {
         return data[index]
