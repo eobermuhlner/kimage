@@ -1,5 +1,6 @@
 package ch.obermuhlner.kimage.matrix
 
+import ch.obermuhlner.kimage.Scaling
 import org.junit.Test
 
 class MatrixFunctionsTest {

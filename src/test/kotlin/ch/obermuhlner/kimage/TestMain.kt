@@ -5,7 +5,6 @@ import ch.obermuhlner.kimage.filter.*
 import ch.obermuhlner.kimage.image.*
 import ch.obermuhlner.kimage.io.*
 import ch.obermuhlner.kimage.math.*
-import ch.obermuhlner.kimage.matrix.Scaling
 import java.io.File
 import kotlin.random.Random
 

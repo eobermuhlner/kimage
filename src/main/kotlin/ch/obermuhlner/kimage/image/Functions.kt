@@ -1,5 +1,6 @@
 package ch.obermuhlner.kimage.image
 
+import ch.obermuhlner.kimage.Scaling
 import ch.obermuhlner.kimage.io.ImageFormat
 import ch.obermuhlner.kimage.io.ImageWriter
 import ch.obermuhlner.kimage.matrix.*

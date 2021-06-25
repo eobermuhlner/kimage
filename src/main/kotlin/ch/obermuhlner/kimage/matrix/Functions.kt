@@ -1,5 +1,6 @@
 package ch.obermuhlner.kimage.matrix
 
+import ch.obermuhlner.kimage.Scaling
 import ch.obermuhlner.kimage.math.clamp
 import ch.obermuhlner.kimage.math.mixBilinear
 import ch.obermuhlner.kimage.math.mixCubicHermite
@@ -32,12 +33,6 @@ fun Matrix.averageError(other: Matrix): Double {
         sum += delta * delta
     }
     return sum / size
-}
-
-enum class Scaling {
-    Nearest,
-    Bilinear,
-    Bicubic
 }
 
 fun Matrix.scaleBy(scaleRows: Double, scaleColumns: Double, scaling: Scaling = Scaling.Bilinear): Matrix {
