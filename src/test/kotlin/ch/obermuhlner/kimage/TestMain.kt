@@ -11,36 +11,37 @@ import kotlin.random.Random
 object TestMain {
     @JvmStatic
     fun main(args: Array<String>) {
-//        exampleFilters("lena512color.tiff")
+        exampleFilters("lena512color.tiff")
 
-//        exampleChannelManipulation("animal.png")
-//        exampleFilters("animal.png")
+        exampleChannelManipulation("animal.png")
+        exampleFilters("animal.png")
 
-//        exampleChannelManipulation("orion_32bit.tif")
-//        exampleFilters("orion_32bit.tif")
+        exampleChannelManipulation("orion.png")
+        exampleFilters("orion.png")
 
-//        exampleImages()
-//        exampleMedianExperiments()
+        exampleImages()
+        exampleMedianExperiments()
+
+        exampleScale("lena512color.tiff")
 
         //exampleError()
         //exampleAlign()
-        exampleScale()
     }
 
-    private fun exampleScale() {
-        val image = ImageReader.readMatrixImage(File("images/lena512color.tiff"))
+    private fun exampleScale(imageName: String) {
+        val image = ImageReader.readMatrixImage(File("images/$imageName"))
 
         for (scaling in Scaling.values()) {
-            example("scaled_50%_$scaling") {
+            example("scaled_50%_$scaling", imageName) {
                 image.scaleBy(0.5, 0.5, scaling)
             }
-            example("scaled_200%_$scaling") {
+            example("scaled_200%_$scaling", imageName) {
                 image.scaleBy(2.0, 2.0, scaling)
             }
-            example("scaled_1000%_$scaling") {
+            example("scaled_1000%_$scaling", imageName) {
                 image.cropCenter(image.width/2, image.height/2, image.width / 10).scaleBy(10.0, 10.0, scaling)
             }
-            example("scaled_12345%_$scaling") {
+            example("scaled_12345%_$scaling", imageName) {
                 image.cropCenter(image.width/2, image.height/2, image.width / 100).scaleBy(123.45, 123.45, scaling)
             }
         }
@@ -48,8 +49,7 @@ object TestMain {
 
     private fun exampleError() {
         var image1 = measureElapsed("Read image1") {
-            //ImageReader.read(File("images/align/IMG_7130.TIF"))
-            ImageReader.readMatrixImage(File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2528.TIF"))
+            ImageReader.readMatrixImage(File("images/align/orion1.png"))
         }
         
         val radius = 50
@@ -59,19 +59,8 @@ object TestMain {
         }
 
         val inputFiles = listOf(
-            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2528.TIF"),
-            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2530.TIF"),
-            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2531.TIF"),
-            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2532.TIF"),
-            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2533.TIF"),
-            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2534.TIF"),
-            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2535.TIF"),
-            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2536.TIF"),
-            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2537.TIF"),
-            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2538.TIF"),
-            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2539.TIF"),
-            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2540.TIF"),
-            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2541.TIF"),
+            File("images/align/orion1.png"),
+            File("images/align/orion1.png")
         )
 
         var sumImage: Image = MatrixImage(image1)
@@ -179,33 +168,10 @@ object TestMain {
     }
 
     private fun exampleAlign() {
-//        val inputFiles = listOf(
-//            File("images/lena512color.tiff"),
-//            File("images/lena512color.tiff"),
-//            File("images/output/lena512color.tiff_median_10_square.png"))
-
-//        val inputFiles = listOf(
-//            File("images/align/IMG_7130.TIF"),
-//            File("images/align/IMG_7131.TIF"),
-//            File("images/align/IMG_7132.TIF"),
-//            File("images/align/IMG_7133.TIF"),
-//            File("images/align/IMG_7134.TIF"),
-//        )
 
         val inputFiles = listOf(
-            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2528.TIF"),
-            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2530.TIF"),
-            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2531.TIF"),
-            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2532.TIF"),
-            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2533.TIF"),
-            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2534.TIF"),
-            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2535.TIF"),
-            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2536.TIF"),
-            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2537.TIF"),
-            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2538.TIF"),
-            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2539.TIF"),
-            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2540.TIF"),
-            File("C:/Users/EricObermuhlner/Pictures/Astrophotography/2021-03-29 M42/Moon/TIFF16/IMG_2541.TIF"),
+            File("images/align/orion1.png"),
+            File("images/align/orion2.png")
         )
 
         val radius = 100
@@ -318,8 +284,7 @@ object TestMain {
         for (imageName in listOf(
             "lena512color.tiff",
             "animal.png",
-//            "orion_32bit.tif",
-//            "orion_small_compress0.png",
+//            "orion1.png",
         )) {
             example("read_write_$imageName", imageName) {
                 ImageReader.read(File("images/$imageName"))
