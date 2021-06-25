@@ -35,6 +35,11 @@ fun mix(x0: Float, x1: Float, a: Float): Float {
     return (1.0f - a) * x0 + a * x1
 }
 
+fun mix(x00: Double, x01: Double, x10: Double, x11: Double, ax: Double, ay: Double): Double {
+    return mix(mix(x00, x10, ax), mix(x01, x11, ax), ay)
+}
+
+
 private fun <T, U> Iterator<T>.reduceAndCount(initial: U, empty: U, accumulator: (U, T) -> U): Pair<U, Int> {
     var result = initial
     var count = 0

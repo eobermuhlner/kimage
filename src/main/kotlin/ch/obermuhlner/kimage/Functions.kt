@@ -5,9 +5,7 @@ import ch.obermuhlner.kimage.image.Image
 import ch.obermuhlner.kimage.image.MatrixImage
 import ch.obermuhlner.kimage.io.ImageFormat
 import ch.obermuhlner.kimage.io.ImageWriter
-import ch.obermuhlner.kimage.matrix.max
-import ch.obermuhlner.kimage.matrix.averageError
-import ch.obermuhlner.kimage.matrix.stretchClassic
+import ch.obermuhlner.kimage.matrix.*
 import java.io.File
 import kotlin.math.abs
 
@@ -102,6 +100,21 @@ fun Image.averageError(other: Image, channels: List<Channel> = this.channels): D
         sum += this[channel].averageError(other[channel])
     }
     return sum / channels.size.toDouble()
+}
+
+fun Image.scaleBy(scaleX: Double, scaleY: Double, scaling: Scaling = Scaling.Bilinear): Image {
+    val newWidth = (width * scaleX).toInt()
+    val newHeight = (height * scaleY).toInt()
+    return scaleTo(newWidth, newHeight, scaling)
+}
+
+fun Image.scaleTo(newWidth: Int, newHeight: Int, scaling: Scaling = Scaling.Bilinear): Image {
+    return MatrixImage(
+        newWidth,
+        newHeight,
+        this.channels) { channel, _, _ ->
+        this[channel].scaleTo(newHeight, newWidth, scaling)
+    }
 }
 
 fun Image.write(file: File) {
