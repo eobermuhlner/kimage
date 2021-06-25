@@ -11,21 +11,21 @@ import kotlin.random.Random
 object TestMain {
     @JvmStatic
     fun main(args: Array<String>) {
-        exampleFilters("lena512color.tiff")
-
-        exampleChannelManipulation("animal.png")
-        exampleFilters("animal.png")
-
-        exampleChannelManipulation("orion.png")
-        exampleFilters("orion.png")
-
-        exampleImages()
-        exampleMedianExperiments()
-
-        exampleScale("lena512color.tiff")
+//        exampleFilters("lena512color.tiff")
+//
+//        exampleChannelManipulation("animal.png")
+//        exampleFilters("animal.png")
+//
+//        exampleChannelManipulation("orion.png")
+//        exampleFilters("orion.png")
+//
+//        exampleImages()
+//        exampleMedianExperiments()
+//
+//        exampleScale("lena512color.tiff")
 
         //exampleError()
-        //exampleAlign()
+        exampleAlign()
     }
 
     private fun exampleScale(imageName: String) {
@@ -39,10 +39,10 @@ object TestMain {
                 image.scaleBy(2.0, 2.0, scaling)
             }
             example("scaled_1000%_$scaling", imageName) {
-                image.cropCenter(image.width/2, image.height/2, image.width / 10).scaleBy(10.0, 10.0, scaling)
+                image.cropCenter(image.width / 10, image.width/2, image.height/2).scaleBy(10.0, 10.0, scaling)
             }
             example("scaled_12345%_$scaling", imageName) {
-                image.cropCenter(image.width/2, image.height/2, image.width / 100).scaleBy(123.45, 123.45, scaling)
+                image.cropCenter(image.width / 100, image.width/2, image.height/2).scaleBy(123.45, 123.45, scaling)
             }
         }
     }
@@ -118,10 +118,10 @@ object TestMain {
         val largeRadiusY = radiusY + searchRadiusY
 
         val baseImage = measureElapsed("Crop base image") {
-            MatrixImage(image1.cropCenter(centerX, centerY, largeRadiusX, largeRadiusY))
+            MatrixImage(image1.cropCenter(largeRadiusX, largeRadiusY, centerX, centerY))
         }
         val otherImage = measureElapsed("Crop other image") {
-            MatrixImage(image2.cropCenter(centerX, centerY, largeRadiusX, largeRadiusY))
+            MatrixImage(image2.cropCenter(largeRadiusX, largeRadiusY, centerX, centerY))
         }
 
         ImageWriter.write(baseImage, File("${name}_partial_base.png"))
@@ -131,14 +131,20 @@ object TestMain {
         var bestX = 0
         var bestY = 0
 
-        val croppedBaseImage = baseImage.cropCenter(baseImage.width/2, baseImage.height/2, radiusX, radiusY, false)
+        val croppedBaseImage = baseImage.cropCenter(radiusX, radiusY, baseImage.width/2, baseImage.height/2, false)
         ImageWriter.write(croppedBaseImage, File("${name}_cropped_base.png"))
         println("Base $croppedBaseImage")
         val errorImage = MatrixImage(searchWidth, searchHeight)
 
         for (dy in -searchRadiusY .. searchRadiusY) {
             for (dx in -searchRadiusX .. searchRadiusX) {
-                val croppedOtherImage = otherImage.cropCenter(otherImage.width/2+dx, otherImage.height/2+dy, radiusX, radiusY, false)
+                val croppedOtherImage = otherImage.cropCenter(
+                    radiusX,
+                    radiusY,
+                    otherImage.width/2+dx,
+                    otherImage.height/2+dy,
+                    false
+                )
                 val error = croppedBaseImage.averageError(croppedOtherImage)
                 if (error < bestError) {
                     println("$dx, $dy : $error")
@@ -154,7 +160,13 @@ object TestMain {
             }
         }
 
-        ImageWriter.write(otherImage.cropCenter(otherImage.width/2+bestX, otherImage.height/2+bestY, radiusX, radiusY, false), File("${name}_cropped_other.png"))
+        ImageWriter.write(otherImage.cropCenter(
+            radiusX,
+            radiusY,
+            otherImage.width/2+bestX,
+            otherImage.height/2+bestY,
+            false
+        ), File("${name}_cropped_other.png"))
 
         val min = errorImage[Channel.Red].min()
         val max = errorImage[Channel.Red].max()
@@ -174,38 +186,35 @@ object TestMain {
             File("images/align/orion2.png")
         )
 
-        val radius = 100
+        val scaleFactor = 1.0
+
+        val radius = 10
         val imageAligner = ImageAligner(radius)
 
         println("Base image: ${inputFiles[0]}")
-        val baseImage = ImageReader.readMatrixImage(inputFiles[0])
+        val baseImage = ImageReader.readMatrixImage(inputFiles[0]).scaleBy(scaleFactor, scaleFactor)
 
-        val (centerX, centerY) = findInterestingCrop(baseImage, radius)
-
-        var sumImage: Image = MatrixImage(baseImage)
+        val (centerX, centerY) = imageAligner.findInterestingCropCenter(baseImage)
 
         for (index in 1 until inputFiles.size) {
             val inputFile = inputFiles[index]
 
-            println("Stack image: ${inputFile}")
-            val stackImage = ImageReader.readMatrixImage(inputFile)
+            println("Align image: ${inputFile}")
+            val stackImage = ImageReader.readMatrixImage(inputFile).scaleBy(scaleFactor, scaleFactor)
 
             val alignment = measureElapsed("align $inputFile") {
-                imageAligner.align(baseImage, stackImage, centerX, centerY, maxOffset = 500)
+                imageAligner.align(baseImage, stackImage, centerX, centerY, maxOffset = 30)
             }
             println(alignment)
 
-            val img = stackImage.crop(alignment.x, alignment.y, baseImage.width, baseImage.height)
-            val error = baseImage.averageError(img)
+            val alignedImage = stackImage.crop(alignment.x, alignment.y, baseImage.width, baseImage.height, false)
+            val error = baseImage.averageError(alignedImage)
             println("Image error: $error")
 
-            val delta = deltaRGB(baseImage, img)
-            ImageWriter.write(delta, File("delta_aligned_" + inputFile.name))
+            ImageWriter.write(alignedImage, File("images/output/aligned_" + inputFile.name))
 
-            sumImage += stackImage
-
-            val stackedImage = sumImage / (index + 1).toDouble()
-            ImageWriter.write(stackedImage, File("stacked_" + inputFile.name))
+            val delta = deltaRGB(baseImage, alignedImage)
+            ImageWriter.write(delta, File("images/output/delta_aligned_" + inputFile.name))
         }
     }
 
