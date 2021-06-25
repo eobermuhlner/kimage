@@ -93,7 +93,7 @@ class KimageCli(parser: ArgParser) {
         try {
             val script = addImportsToScript(originalScript, extension)
 
-            val determinedSingleMode = script.contains("require(singleMode)")
+            val determinedSingleMode = script.contains("require(singleMode)") || originalScript == command
 
             val manager = ScriptEngineManager()
             val engine = manager.getEngineByExtension(extension)
