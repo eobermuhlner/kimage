@@ -1,8 +1,5 @@
-package ch.obermuhlner.kimage
+package ch.obermuhlner.kimage.image
 
-import ch.obermuhlner.kimage.image.Channel
-import ch.obermuhlner.kimage.image.Image
-import ch.obermuhlner.kimage.image.MatrixImage
 import ch.obermuhlner.kimage.io.ImageFormat
 import ch.obermuhlner.kimage.io.ImageWriter
 import ch.obermuhlner.kimage.matrix.*

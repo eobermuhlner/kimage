@@ -1,12 +1,9 @@
 package ch.obermuhlner.kimage
 
-import ch.obermuhlner.kimage.align.ImageAligner
+import ch.obermuhlner.kimage.align.*
 import ch.obermuhlner.kimage.filter.*
-import ch.obermuhlner.kimage.image.Channel
-import ch.obermuhlner.kimage.image.Image
-import ch.obermuhlner.kimage.image.MatrixImage
-import ch.obermuhlner.kimage.io.ImageReader
-import ch.obermuhlner.kimage.io.ImageWriter
+import ch.obermuhlner.kimage.image.*
+import ch.obermuhlner.kimage.io.*
 import ch.obermuhlner.kimage.math.*
 import java.io.File
 import kotlin.random.Random
