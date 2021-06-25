@@ -19,7 +19,7 @@ val baseImage = ImageReader.readMatrixImage(baseInputFile)
 println("Base image: $baseImage")
 println()
 
-val defaultCheckRadius = min(baseImage.width, baseImage.height) / 100
+val defaultCheckRadius = min(baseImage.width, baseImage.height) / 10
 val defaultSearchRadius = defaultCheckRadius * 5
 
 val checkRadius = parameters.getOrDefault("checkRadius", defaultCheckRadius.toString()).toInt()
