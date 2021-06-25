@@ -27,18 +27,24 @@ fun clamp(x: Int, min: Int, max: Int): Int {
     }
 }
 
-fun mix(x0: Double, x1: Double, a: Double): Double {
+fun mixLinear(x0: Double, x1: Double, a: Double): Double {
     return (1.0 - a) * x0 + a * x1
 }
 
-fun mix(x0: Float, x1: Float, a: Float): Float {
+fun mixLinear(x0: Float, x1: Float, a: Float): Float {
     return (1.0f - a) * x0 + a * x1
 }
 
-fun mix(x00: Double, x01: Double, x10: Double, x11: Double, ax: Double, ay: Double): Double {
-    return mix(mix(x00, x10, ax), mix(x01, x11, ax), ay)
+fun mixBilinear(x00: Double, x01: Double, x10: Double, x11: Double, ax: Double, ay: Double): Double {
+    return mixLinear(mixLinear(x00, x10, ax), mixLinear(x01, x11, ax), ay)
 }
 
+fun mixCubicHermite(x00: Double, x01: Double, x10: Double, x11: Double, t: Double): Double {
+    val a = -x00 / 2.0 + 3.0 * x01 / 2.0 - 3.0 * x10 / 2.0 + x11 / 2.0
+    val b = x00 - 5.0 * x01 / 2.0 + 2.0 * x10 - x11 / 2.0
+    val c = -x00 / 2.0 + x10 / 2.0
+    return a * t * t * t + b * t * t + c * t + x01
+}
 
 private fun <T, U> Iterator<T>.reduceAndCount(initial: U, empty: U, accumulator: (U, T) -> U): Pair<U, Int> {
     var result = initial

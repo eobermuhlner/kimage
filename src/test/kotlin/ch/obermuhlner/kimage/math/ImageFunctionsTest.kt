@@ -13,16 +13,16 @@ internal class ImageFunctionsTest {
 
     @Test
     fun testFloatMix() {
-        assertEquals(5.0f, mix(5f, 7f, 0.0f), epsilonFloat)
-        assertEquals(6.0f, mix(5f, 7f, 0.5f), epsilonFloat)
-        assertEquals(7.0f, mix(5f, 7f, 1.0f), epsilonFloat)
+        assertEquals(5.0f, mixLinear(5f, 7f, 0.0f), epsilonFloat)
+        assertEquals(6.0f, mixLinear(5f, 7f, 0.5f), epsilonFloat)
+        assertEquals(7.0f, mixLinear(5f, 7f, 1.0f), epsilonFloat)
     }
 
     @Test
     fun testDoubleMix() {
-        assertEquals(5.0, mix(5.0, 7.0, 0.0), epsilonDouble)
-        assertEquals(6.0, mix(5.0, 7.0, 0.5), epsilonDouble)
-        assertEquals(7.0, mix(5.0, 7.0, 1.0), epsilonDouble)
+        assertEquals(5.0, mixLinear(5.0, 7.0, 0.0), epsilonDouble)
+        assertEquals(6.0, mixLinear(5.0, 7.0, 0.5), epsilonDouble)
+        assertEquals(7.0, mixLinear(5.0, 7.0, 1.0), epsilonDouble)
     }
 
     @Test

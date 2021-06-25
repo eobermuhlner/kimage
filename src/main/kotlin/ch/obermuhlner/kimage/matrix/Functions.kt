@@ -1,6 +1,8 @@
 package ch.obermuhlner.kimage.matrix
 
-import ch.obermuhlner.kimage.math.mix
+import ch.obermuhlner.kimage.math.clamp
+import ch.obermuhlner.kimage.math.mixBilinear
+import ch.obermuhlner.kimage.math.mixCubicHermite
 
 fun max(m1: Matrix, m2: Matrix): Matrix {
     val m = m1.create()
@@ -34,7 +36,8 @@ fun Matrix.averageError(other: Matrix): Double {
 
 enum class Scaling {
     Nearest,
-    Bilinear
+    Bilinear,
+    Bicubic
 }
 
 fun Matrix.scaleBy(scaleRows: Double, scaleColumns: Double, scaling: Scaling = Scaling.Bilinear): Matrix {
@@ -48,6 +51,7 @@ fun Matrix.scaleTo(newRows: Int, newColumns: Int, scaling: Scaling = Scaling.Bil
     return when (scaling) {
         Scaling.Nearest -> scaleNearestTo(newRows, newColumns)
         Scaling.Bilinear -> scaleBilinearTo(newRows, newColumns)
+        Scaling.Bicubic -> scaleBicubicTo(newRows, newColumns)
     }
 }
 
@@ -70,19 +74,65 @@ private fun Matrix.scaleBilinearTo(newRows: Int, newColumns: Int): Matrix {
     val m = create(newRows, newColumns)
     for (newRow in 0 until newRows) {
         for (newColumn in 0 until newColumns) {
-            val oldRow = newRow.toDouble() / newRows * (rows - 1)
-            val oldColumn = newColumn.toDouble() / newColumns * (columns - 1)
+            val oldRow = newRow.toDouble() / newRows * (rows - 1) - 0.5
+            val oldColumn = newColumn.toDouble() / newColumns * (columns - 1) - 0.5
             val oldRowInt = oldRow.toInt()
             val oldColumnInt = oldColumn.toInt()
+            val oldRowFract = oldRow - oldRowInt
+            val oldColumnFract = oldColumn - oldColumnInt
 
             val v00 = this[oldRowInt, oldColumnInt]
             val v01 = this[oldRowInt, oldColumnInt + 1]
             val v10 = this[oldRowInt + 1, oldColumnInt]
             val v11 = this[oldRowInt + 1, oldColumnInt + 1]
 
-            val newValue = mix(v00, v01, v10, v11, oldRow - oldRowInt, oldColumn - oldColumnInt)
+            val newValue = mixBilinear(v00, v01, v10, v11, oldRowFract, oldColumnFract)
 
             m[newRow, newColumn] = newValue
+        }
+    }
+
+    return m
+}
+
+private fun Matrix.scaleBicubicTo(newRows: Int, newColumns: Int): Matrix {
+    val m = create(newRows, newColumns)
+    for (newRow in 0 until newRows) {
+        for (newColumn in 0 until newColumns) {
+            val oldRow = newRow.toDouble() / newRows * (rows - 1) - 0.5
+            val oldColumn = newColumn.toDouble() / newColumns * (columns - 1) - 0.5
+            val oldRowInt = oldRow.toInt()
+            val oldColumnInt = oldColumn.toInt()
+            val oldRowFract = oldRow - oldRowInt
+            val oldColumnFract = oldColumn - oldColumnInt
+
+            val v00 = this[oldRowInt - 1, oldColumnInt - 1]
+            val v10 = this[oldRowInt + 0, oldColumnInt - 1]
+            val v20 = this[oldRowInt + 1, oldColumnInt - 1]
+            val v30 = this[oldRowInt + 2, oldColumnInt - 1]
+
+            val v01 = this[oldRowInt - 1, oldColumnInt + 0]
+            val v11 = this[oldRowInt + 0, oldColumnInt + 0]
+            val v21 = this[oldRowInt + 1, oldColumnInt + 0]
+            val v31 = this[oldRowInt + 2, oldColumnInt + 0]
+
+            val v02 = this[oldRowInt - 1, oldColumnInt + 1]
+            val v12 = this[oldRowInt + 0, oldColumnInt + 1]
+            val v22 = this[oldRowInt + 1, oldColumnInt + 1]
+            val v32 = this[oldRowInt + 2, oldColumnInt + 1]
+
+            val v03 = this[oldRowInt - 1, oldColumnInt + 2]
+            val v13 = this[oldRowInt + 0, oldColumnInt + 2]
+            val v23 = this[oldRowInt + 1, oldColumnInt + 2]
+            val v33 = this[oldRowInt + 2, oldColumnInt + 2]
+
+            val col0 = mixCubicHermite(v00, v10, v20, v30, oldRowFract)
+            val col1 = mixCubicHermite(v01, v11, v21, v31, oldRowFract)
+            val col2 = mixCubicHermite(v02, v12, v22, v32, oldRowFract)
+            val col3 = mixCubicHermite(v03, v13, v23, v33, oldRowFract)
+            val newValue = mixCubicHermite(col0, col1, col2, col3, oldColumnFract)
+
+            m[newRow, newColumn] = clamp(newValue, 0.0, 1.0)
         }
     }
 

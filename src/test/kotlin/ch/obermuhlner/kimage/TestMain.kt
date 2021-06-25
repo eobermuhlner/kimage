@@ -32,10 +32,18 @@ object TestMain {
         val image = ImageReader.readMatrixImage(File("images/lena512color.tiff"))
 
         for (scaling in Scaling.values()) {
-            ImageWriter.write(image.scaleBy(0.5, 0.5, scaling), File("scaled_50_$scaling.png"))
-            ImageWriter.write(image.scaleBy(2.0, 2.0, scaling), File("scaled_200_$scaling.png"))
-            ImageWriter.write(image.cropCenter(image.width/2, image.height/2, image.width / 10).scaleBy(10.0, 10.0, scaling), File("scaled_1000_$scaling.png"))
-            ImageWriter.write(image.cropCenter(image.width/2, image.height/2, image.width / 100).scaleBy(123.45, 123.45, scaling), File("scaled_12345_$scaling.png"))
+            example("scaled_50%_$scaling") {
+                image.scaleBy(0.5, 0.5, scaling)
+            }
+            example("scaled_200%_$scaling") {
+                image.scaleBy(2.0, 2.0, scaling)
+            }
+            example("scaled_1000%_$scaling") {
+                image.cropCenter(image.width/2, image.height/2, image.width / 10).scaleBy(10.0, 10.0, scaling)
+            }
+            example("scaled_12345%_$scaling") {
+                image.cropCenter(image.width/2, image.height/2, image.width / 100).scaleBy(123.45, 123.45, scaling)
+            }
         }
     }
 
