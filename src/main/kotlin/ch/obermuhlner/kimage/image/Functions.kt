@@ -65,12 +65,12 @@ operator fun Image.div(value: Double): Image {
     }
 }
 
-infix fun Image.max(other: Image): Image {
+fun max(image1: Image, image2: Image): Image {
     return MatrixImage(
-        this.width,
-        this.height,
-        this.channels) { channel, _, _ ->
-        max(this[channel], other[channel])
+        image1.width,
+        image1.height,
+        image1.channels) { channel, _, _ ->
+        max(image1[channel], image2[channel])
     }
 }
 
