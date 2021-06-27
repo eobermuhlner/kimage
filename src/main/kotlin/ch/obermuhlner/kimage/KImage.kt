@@ -20,7 +20,6 @@ object KImage {
     @JvmStatic
     fun main(args: Array<String>) = mainBody {
         ArgParser(args).parseInto(::KimageCli).run {
-            //example()
             execute()
         }
     }
@@ -37,7 +36,7 @@ class KimageCli(parser: ArgParser) {
         help = "enable verbose mode")
 
     private val parameters by parser.adding(
-        "-p", "--param",
+        "-p", "--param", "--arg",
         help = "add parameter key=value") {
         val split = split("=")
         Pair(split[0], split[1])
@@ -47,9 +46,17 @@ class KimageCli(parser: ArgParser) {
         "--single",
         help = "enable single mode").default(false)
 
+    private val helpMode by parser.flagging(
+        "--hh",
+        help = "get help about the current script").default(false)
+
     private val outputPrefix: String by parser.storing(
         "-o", "--output-prefix",
         help = "output prefix").default("output")
+
+    private val scriptDirectory: String by parser.storing(
+        "--script-dir",
+        help = "script directory").default("")
 
     private val outputDirectory: String by parser.storing(
         "-d", "--dir",
@@ -70,6 +77,9 @@ class KimageCli(parser: ArgParser) {
         }
 
         val scriptFileMap: MutableMap<String, File> = mutableMapOf()
+        if (scriptDirectory != "") {
+            fillScriptFiles(scriptFileMap, scriptDirectory)
+        }
         fillScriptFiles(scriptFileMap, File(KImage.javaClass.protectionDomain.codeSource.location.toURI()).absolutePath)
         fillScriptFiles(scriptFileMap, System.getProperty("user.home"))
         fillScriptFiles(scriptFileMap, System.getProperty("user.dir"))
@@ -105,37 +115,7 @@ class KimageCli(parser: ArgParser) {
 
             val inputFiles = filenames.map { File(it) }
 
-            if (filenames.isEmpty()) {
-                initCommonParameters(engine, false, inputFiles, parametersMap)
-
-                executeScript(engine, script, outputFile(File("kimage.png"), outputPrefix, outputDirectory))
-            } else {
-                if (singleMode || determinedSingleMode) {
-                    for (filename in filenames) {
-                        val inputFile = File(filename)
-                        if (inputFile.exists()) {
-                            println("Processing single file: $inputFile")
-
-                            val inputImage = ImageReader.readMatrixImage(inputFile)
-                            initCommonParameters(engine, true, inputFiles, parametersMap)
-                            initSingleFileParameters(engine, inputFile, inputImage)
-
-                            executeScript(engine, script, outputFile(inputFile, outputPrefix, outputDirectory))
-                        } else {
-                            println("File not found: $inputFile")
-                        }
-                        println()
-                    }
-                } else {
-                    if (verboseMode) {
-                        println("Processing files: $filenames")
-                    }
-
-                    initCommonParameters(engine, false, inputFiles, parametersMap)
-
-                    executeScript(engine, script, outputFile(inputFiles[0], outputPrefix, outputDirectory))
-                }
-            }
+            executeScript(engine, script, inputFiles, parametersMap, determinedSingleMode, helpMode)
         } catch (ex: Exception) {
             if (verboseMode) {
                 ex.printStackTrace()
@@ -144,6 +124,83 @@ class KimageCli(parser: ArgParser) {
                 println(ex.message)
             }
         }
+    }
+
+    private fun executeScript(
+        engine: ScriptEngine,
+        script: String,
+        inputFiles: List<File>,
+        parametersMap: Map<String, String>,
+        determinedSingleMode: Boolean,
+        helpMode: Boolean
+    ) {
+        val scriptInfo = executeScriptLowLevel(engine, script, inputFiles, parametersMap, determinedSingleMode)
+        if (scriptInfo != null) {
+            if (helpMode) {
+                when (scriptInfo) {
+                    is ScriptV0_1 -> {
+                        scriptInfo.help()
+                    }
+                }
+            } else {
+                when (scriptInfo) {
+                    is ScriptV0_1 -> {
+                        scriptInfo.execute(inputFiles, parametersMap)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun executeScriptLowLevel(
+        engine: ScriptEngine,
+        script: String,
+        inputFiles: List<File>,
+        parametersMap: Map<String, String>,
+        determinedSingleMode: Boolean
+    ): Script? {
+        if (filenames.isEmpty()) {
+            initCommonParameters(engine, false, inputFiles, parametersMap)
+
+            val scriptInfo = executeScriptLowLevel(engine, script, outputFile(File("kimage.png"), outputPrefix, outputDirectory))
+            if (scriptInfo != null) {
+                return scriptInfo
+            }
+        } else {
+            if (singleMode || determinedSingleMode) {
+                for (filename in filenames) {
+                    val inputFile = File(filename)
+                    if (inputFile.exists()) {
+                        println("Processing single file: $inputFile")
+
+                        val inputImage = ImageReader.readMatrixImage(inputFile)
+                        initCommonParameters(engine, true, inputFiles, parametersMap)
+                        initSingleFileParameters(engine, inputFile, inputImage)
+
+                        val scriptInfo = executeScriptLowLevel(engine, script, outputFile(inputFile, outputPrefix, outputDirectory))
+                        if (scriptInfo != null) {
+                            return scriptInfo
+                        }
+                    } else {
+                        println("File not found: $inputFile")
+                    }
+                    println()
+                }
+            } else {
+                if (verboseMode) {
+                    println("Processing files: $filenames")
+                }
+
+                initCommonParameters(engine, false, inputFiles, parametersMap)
+
+                val scriptInfo = executeScriptLowLevel(engine, script, outputFile(inputFiles[0], outputPrefix, outputDirectory))
+                if (scriptInfo != null) {
+                    return scriptInfo
+                }
+            }
+        }
+
+        return null
     }
 
     private fun fillScriptFiles(scriptFilesMap: MutableMap<String, File>, path: String?) {
@@ -238,7 +295,7 @@ class KimageCli(parser: ArgParser) {
         setVariable(engine, "inputImage", inputImage)
     }
 
-    private fun executeScript(engine: ScriptEngine, script: String, outputFile: File) {
+    private fun executeScriptLowLevel(engine: ScriptEngine, script: String, outputFile: File): Script? {
         val startMillis = System.currentTimeMillis()
         val result = engine.eval(script)
         val endMillis = System.currentTimeMillis()
@@ -259,8 +316,7 @@ class KimageCli(parser: ArgParser) {
                 ImageWriter.write(output, outputFile)
             }
             is Script -> {
-                output.help()
-                //output.runSingle(listOf())
+                return output
             }
             else -> {
                 if (output != null) {
@@ -268,6 +324,8 @@ class KimageCli(parser: ArgParser) {
                 }
             }
         }
+
+        return null
     }
 
     private fun outputFile(imageFile: File, prefix: String, directoryName: String): File {
@@ -359,6 +417,7 @@ class KimageCli(parser: ArgParser) {
             import ch.obermuhlner.kimage.filter.*
             import ch.obermuhlner.kimage.image.*
             import ch.obermuhlner.kimage.io.*
+            import ch.obermuhlner.kimage.math.*
             import java.io.*
             import kotlin.math.*
         """.trimIndent()
