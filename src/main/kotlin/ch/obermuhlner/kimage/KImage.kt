@@ -115,7 +115,7 @@ class KimageCli(parser: ArgParser) {
 
             val inputFiles = filenames.map { File(it) }
 
-            executeScript(engine, script, inputFiles, parametersMap, determinedSingleMode, helpMode)
+            executeScript(engine, command, script, inputFiles, parametersMap, determinedSingleMode, helpMode)
         } catch (ex: Exception) {
             if (verboseMode) {
                 ex.printStackTrace()
@@ -128,6 +128,7 @@ class KimageCli(parser: ArgParser) {
 
     private fun executeScript(
         engine: ScriptEngine,
+        scriptName: String,
         script: String,
         inputFiles: List<File>,
         parametersMap: Map<String, String>,
@@ -136,19 +137,13 @@ class KimageCli(parser: ArgParser) {
     ) {
         val scriptInfo = executeScriptLowLevel(engine, script, inputFiles, parametersMap, determinedSingleMode)
         if (scriptInfo != null) {
-            if (helpMode) {
-                when (scriptInfo) {
-                    is ScriptV0_1 -> {
-                        scriptInfo.help()
-                    }
-                }
-            } else {
-                when (scriptInfo) {
-                    is ScriptV0_1 -> {
-                        scriptInfo.execute(inputFiles, parametersMap)
-                    }
-                }
+            if (scriptInfo.name == "") {
+                scriptInfo.name = scriptName
             }
+            if (scriptInfo.name != scriptName) {
+                println("Warning: Script file name $scriptName does not match name declared in script ${scriptInfo.name}")
+            }
+            ScriptExecutor.executeScript(scriptInfo, parametersMap, inputFiles, helpMode, outputPrefix, outputDirectory)
         }
     }
 
@@ -162,7 +157,7 @@ class KimageCli(parser: ArgParser) {
         if (filenames.isEmpty()) {
             initCommonParameters(engine, false, inputFiles, parametersMap)
 
-            val scriptInfo = executeScriptLowLevel(engine, script, outputFile(File("kimage.png"), outputPrefix, outputDirectory))
+            val scriptInfo = executeScriptLowLevel(engine, script, ScriptExecutor.outputFile(File("kimage.png"), outputPrefix, outputDirectory))
             if (scriptInfo != null) {
                 return scriptInfo
             }
@@ -177,7 +172,7 @@ class KimageCli(parser: ArgParser) {
                         initCommonParameters(engine, true, inputFiles, parametersMap)
                         initSingleFileParameters(engine, inputFile, inputImage)
 
-                        val scriptInfo = executeScriptLowLevel(engine, script, outputFile(inputFile, outputPrefix, outputDirectory))
+                        val scriptInfo = executeScriptLowLevel(engine, script, ScriptExecutor.outputFile(inputFile, outputPrefix, outputDirectory))
                         if (scriptInfo != null) {
                             return scriptInfo
                         }
@@ -193,7 +188,7 @@ class KimageCli(parser: ArgParser) {
 
                 initCommonParameters(engine, false, inputFiles, parametersMap)
 
-                val scriptInfo = executeScriptLowLevel(engine, script, outputFile(inputFiles[0], outputPrefix, outputDirectory))
+                val scriptInfo = executeScriptLowLevel(engine, script, ScriptExecutor.outputFile(inputFiles[0], outputPrefix, outputDirectory))
                 if (scriptInfo != null) {
                     return scriptInfo
                 }
@@ -310,13 +305,20 @@ class KimageCli(parser: ArgParser) {
             output = result
         }
 
+        return when (output) {
+            is Script -> return output
+            else -> {
+                outputHandler(outputFile, output)
+                return null
+            }
+        }
+    }
+
+    private fun outputHandler(outputFile: File, output: Any?): Unit {
         when(output) {
             is Image -> {
                 println("Output file: $outputFile")
                 ImageWriter.write(output, outputFile)
-            }
-            is Script -> {
-                return output
             }
             else -> {
                 if (output != null) {
@@ -324,24 +326,6 @@ class KimageCli(parser: ArgParser) {
                 }
             }
         }
-
-        return null
-    }
-
-    private fun outputFile(imageFile: File, prefix: String, directoryName: String): File {
-        val directoryFile = when {
-            directoryName != "" -> File(directoryName)
-            imageFile.parent != null -> File(imageFile.parent)
-            else -> File(".")
-        }
-
-        var file = File(directoryFile, "${prefix}_" + imageFile.name)
-        var index = 1
-        while (file.exists()) {
-            file = File(directoryFile, "${prefix}_${index}_" + imageFile.name)
-            index++
-        }
-        return file
     }
 
     private fun example() {

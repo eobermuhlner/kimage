@@ -3,6 +3,7 @@ package ch.obermuhlner.kimage
 import ch.obermuhlner.kimage.image.Image
 import ch.obermuhlner.kimage.image.MatrixImage
 import ch.obermuhlner.kimage.io.ImageReader
+import ch.obermuhlner.kimage.io.ImageWriter
 import java.io.File
 
 @DslMarker
@@ -10,11 +11,69 @@ annotation class KotlinDSL
 
 @KotlinDSL
 sealed class Script(val version: Double) {
+    var name: String = ""
+}
+
+object ScriptExecutor {
+    fun executeScript(
+        script: Script,
+        arguments: Map<String, String>,
+        inputFiles: List<File>,
+        helpMode: Boolean,
+        outputPrefix: String,
+        outputDirectory: String
+    ) {
+        if (helpMode) {
+            when (script) {
+                is ScriptV0_1 -> {
+                    script.help()
+                }
+            }
+        } else {
+            when (script) {
+                is ScriptV0_1 -> {
+                    script.execute(inputFiles, arguments) { inputFile, output ->
+                        outputHandler(outputFile(inputFile, outputPrefix, outputDirectory), output)
+                    }
+                }
+            }
+        }
+    }
+
+    // TODO get rid of duplicate impl
+    private fun outputHandler(outputFile: File, output: Any?): Unit {
+        when(output) {
+            is Image -> {
+                println("Output file: $outputFile")
+                ImageWriter.write(output, outputFile)
+            }
+            Unit -> {}
+            null -> {}
+            else -> {
+                println("Output: $output")
+            }
+        }
+    }
+
+    fun outputFile(imageFile: File, prefix: String, directoryName: String): File {
+        val directoryFile = when {
+            directoryName != "" -> File(directoryName)
+            imageFile.parent != null -> File(imageFile.parent)
+            else -> File(".")
+        }
+
+        var file = File(directoryFile, "${prefix}_" + imageFile.name)
+        var index = 1
+        while (file.exists()) {
+            file = File(directoryFile, "${prefix}_${index}_" + imageFile.name)
+            index++
+        }
+        return file
+    }
 }
 
 @KotlinDSL
 class ScriptV0_1 : Script(0.1) {
-    var name: String = ""
     var description = ""
 
     private var scriptArguments: ScriptArguments = ScriptArguments()
@@ -26,11 +85,11 @@ class ScriptV0_1 : Script(0.1) {
         scriptArguments = ScriptArguments().apply(initializer)
     }
 
-    fun single(executable: ScriptSingle.() -> Unit) {
+    fun single(executable: ScriptSingle.() -> Any?) {
         scriptSingle = ScriptSingle(executable)
     }
 
-    fun multi(executable: ScriptMulti.() -> Unit) {
+    fun multi(executable: ScriptMulti.() -> Any?) {
         scriptMulti = ScriptMulti(executable)
     }
 
@@ -64,10 +123,10 @@ class ScriptV0_1 : Script(0.1) {
             println("  TYPE: ${arg.type}")
             when (arg) {
                 is ScriptIntArg -> {
-                    if (arg.min != Int.MIN_VALUE) {
+                    if (arg.min != null) {
                         println("  MIN: ${arg.min}")
                     }
-                    if (arg.max != Int.MAX_VALUE) {
+                    if (arg.max != null) {
                         println("  MAX: ${arg.max}")
                     }
                     if (arg.default != null) {
@@ -75,10 +134,10 @@ class ScriptV0_1 : Script(0.1) {
                     }
                 }
                 is ScriptDoubleArg -> {
-                    if (arg.min != Double.MAX_VALUE) {
+                    if (arg.min != null) {
                         println("  MIN: ${arg.min}")
                     }
-                    if (arg.max != -Double.MAX_VALUE) {
+                    if (arg.max != null) {
                         println("  MAX: ${arg.max}")
                     }
                     if (arg.default != null) {
@@ -98,26 +157,28 @@ class ScriptV0_1 : Script(0.1) {
         println()
     }
 
-    fun execute(inputFiles: List<File>, arguments: Map<String, String>) {
-        if (scriptMulti != null) {
-            executeMulti(inputFiles, arguments)
+    fun execute(inputFiles: List<File>, arguments: Map<String, String>, outputHandler: (File, Any?) -> Unit) {
+        return if (scriptMulti != null) {
+            executeMulti(inputFiles, arguments, outputHandler)
         } else if (scriptSingle != null) {
-            executeSingle(inputFiles, arguments)
+            executeSingle(inputFiles, arguments, outputHandler)
+        } else {
+            throw java.lang.RuntimeException("Script has no execution block.")
         }
     }
 
-    fun executeSingle(inputFiles: List<File>, arguments: Map<String, String>) {
+    fun executeSingle(inputFiles: List<File>, arguments: Map<String, String>, outputHandler: (File, Any?) -> Unit) {
         scriptSingle?.let {
             for (inputFile in inputFiles) {
                 val inputImage = ImageReader.readMatrixImage(inputFile)
-                it.executeSingleScript(inputFile, inputImage, scriptArguments, arguments)
+                it.executeSingleScript(inputFile, inputImage, scriptArguments, arguments, outputHandler)
             }
         }
     }
 
-    fun executeMulti(inputFiles: List<File>, arguments: Map<String, String>) {
+    fun executeMulti(inputFiles: List<File>, arguments: Map<String, String>, outputHandler: (File, Any?) -> Unit) {
         scriptMulti?.let {
-            it.executeMultiScript(inputFiles, scriptArguments, arguments)
+            it.executeMultiScript(inputFiles, scriptArguments, arguments, outputHandler)
         }
     }
 }
@@ -315,33 +376,36 @@ class ScriptStringArg : ScriptArg("string") {
 class ScriptArgumentException(message: String): RuntimeException(message)
 
 @KotlinDSL
-class ScriptSingle(val executable: ScriptSingle.() -> Unit) {
+class ScriptSingle(val executable: ScriptSingle.() -> Any?) {
     var inputFile: File = File(".")
     var inputImage: Image = MatrixImage(0, 0)
     val rawArguments: MutableMap<String, String> = mutableMapOf()
     var arguments: ExecutionArguments = ExecutionArguments(ScriptArguments(), mapOf())
 
-    fun executeSingleScript(inputFile: File, inputImage: Image, scriptArguments: ScriptArguments, arguments: Map<String, String>) {
+    fun executeSingleScript(inputFile: File, inputImage: Image, scriptArguments: ScriptArguments, arguments: Map<String, String>, outputHandler: (File, Any?) -> Unit) {
         this.inputFile = inputFile
         this.inputImage = inputImage
         this.rawArguments.putAll(arguments)
         this.arguments = ExecutionArguments(scriptArguments, arguments)
-        executable()
+
+        val output = executable()
+        outputHandler(inputFile, output)
     }
 }
 
 @KotlinDSL
-class ScriptMulti(val executable: ScriptMulti.() -> Unit) {
+class ScriptMulti(val executable: ScriptMulti.() -> Any?) {
     var inputFiles: List<File> = listOf()
     val rawArguments: MutableMap<String, String> = mutableMapOf()
     var arguments: ExecutionArguments = ExecutionArguments(ScriptArguments(), mapOf())
 
-    fun executeMultiScript(inputFiles: List<File>, scriptArguments: ScriptArguments, arguments: Map<String, String>) {
+    fun executeMultiScript(inputFiles: List<File>, scriptArguments: ScriptArguments, arguments: Map<String, String>, outputHandler: (File, Any?) -> Unit) {
         this.inputFiles = inputFiles
         this.rawArguments.putAll(arguments)
         this.arguments = ExecutionArguments(scriptArguments, arguments)
 
-        executable()
+        val output = executable()
+        outputHandler(inputFiles[0], output)
     }
 }
 

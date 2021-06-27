@@ -1,5 +1,4 @@
-package ch.obermuhlner.kimage
-
+import ch.obermuhlner.kimage.*
 import ch.obermuhlner.kimage.align.*
 import ch.obermuhlner.kimage.image.*
 import ch.obermuhlner.kimage.io.*
@@ -11,67 +10,71 @@ object TestScript {
 
     @JvmStatic
     fun main(args: Array<String>) {
-        //runSingleModeScript("images/align/orion1.png")
-        //runMultiModeScript("images/align/aligned_orion1.png", "images/align/aligned_orion2.png")
-
-        runMultiModeScriptDSL("images/align/orion1.png", "images/align/orion2.png", "images/animal.png")
+        //runScript(scriptAlign(), "images/align/orion1.png", "images/align/orion2.png", "images/animal.png")
+        runScript(scriptRemoveBackgroundMedian(), "images/align/orion1.png", "images/align/orion2.png", "images/animal.png")
     }
 
-    private fun runSingleModeScript(filepath: String) {
-        val file = File(filepath)
-        val image = ImageReader.read(file)
+    private fun scriptRemoveBackgroundMedian(): Script =
+        kimage(0.1) {
+            arguments {
+                double("removePercent") {
+                    default = 99.0
+                }
+                double("medianKernelPercent") {
+                    default = 1.0
+                }
+                double("blurKernelPercent") {
+                    default = 2.0
+                }
+            }
+            single {
+                val removePercent by arguments.double
+                val medianKernelPercent by arguments.double
+                val blurKernelPercent by arguments.double
+                val verboseMode = false
+                val debugMode = false
 
-        singleModeScript(inputFiles = listOf(file), inputFile = file, inputImage = image)
-    }
+                println("Arguments:")
+                println("  removePercent = $removePercent%")
+                println("  medianKernelPercent = $medianKernelPercent%")
+                println("  blurKernelPercent = $blurKernelPercent%")
 
-    private fun runMultiModeScript(vararg filepaths: String) {
-        val files: List<Any> = filepaths.map { File(it) }
+                val medianKernelSize = max(1, (min(inputImage.width, inputImage.height) * medianKernelPercent / 100.0).toInt())
+                val blurKernelSize = max(1, (min(inputImage.width, inputImage.height) * blurKernelPercent / 100.0).toInt())
 
-        multiModeScript(inputFiles = files)
-    }
+                if (verboseMode) {
+                    println("  -> calculated medianKernelSize = $medianKernelSize pixels")
+                    println("  -> calculated blurKernelSize = $blurKernelSize pixels")
+                }
 
-    fun singleModeScript(
-        kimageVersion: String = "0.1.0",
-        verboseMode: Boolean = true,
-        inputParameters: Map<String, String> = mapOf(),
-        outputDirectory: File = File("."),
-        outputPrefix: String = "output",
-        singleMode: Boolean = true,
-        multiMode: Boolean = false,
-        inputFiles: List<File>,
-        inputFile: File,
-        inputImage: Image
-    ) {
-        // BEGIN OF SCRIPT
+                if (verboseMode) {
+                    println("Running median filter ...")
+                }
+                val medianImage = inputImage.medianFilter(medianKernelSize)
+                if (debugMode) {
+                    val medianFile = File("median_" + inputFile.name)
+                    println("Writing $medianFile")
+                    ImageWriter.write(medianImage, medianFile)
+                }
 
-        require(singleMode)
+                if (verboseMode) {
+                    println("Running gaussian blur filter ...")
+                }
+                val backgroundImage = medianImage.gaussianBlurFilter(blurKernelSize)
+                if (debugMode) {
+                    val backgroundFile = File("background_" + inputFile.name)
+                    println("Writing $backgroundFile")
+                    ImageWriter.write(backgroundImage, backgroundFile)
+                }
 
+                if (verboseMode) {
+                    println("Subtracting $removePercent% background glow from original image ...")
+                }
+                inputImage - backgroundImage * (removePercent/100.0)
+            }
+        }
 
-        // END OF SCRIPT
-    }
-
-    fun multiModeScript(
-        kimageVersion: String = "0.1.0",
-        verboseMode: Boolean = true,
-        inputParameters: Map<String, String> = mapOf(),
-        outputDirectory: File = File("."),
-        outputPrefix: String = "output",
-        singleMode: Boolean = false,
-        multiMode: Boolean = true,
-        inputFiles: List<Any>
-    ) {
-        // BEGIN OF SCRIPT
-
-
-        // END OF SCRIPT
-
-        //ImageWriter.write(resultImage, File("testscript.png"))
-    }
-
-    fun runMultiModeScriptDSL(vararg filepaths: String) {
-
-        val script =
-
+    private fun scriptAlign(): Script =
         kimage(0.1) {
             name = "align"
             description = """
@@ -229,11 +232,67 @@ object TestScript {
             }
         }
 
-        when (script) {
-            is ScriptV0_1 -> {
-                script.help()
-                script.execute(filepaths.map { File(it) }, mapOf())
-            }
-        }
+    fun runScript(script: Script, vararg filepaths: String) {
+        runScript(script, mapOf(), *filepaths)
+    }
+
+    fun runScript(script: Script, arguments: Map<String, String>, vararg filepaths: String) {
+        runScript(script, arguments, filepaths.map { File(it) })
+    }
+
+    fun runScript(script: Script, arguments: Map<String, String>, files: List<File>) {
+        ScriptExecutor.executeScript(script, arguments, files, true, "output", "");
+        ScriptExecutor.executeScript(script, arguments, files, false, "output", "");
+    }
+
+    private fun runSingleModeScript(filepath: String) {
+        val file = File(filepath)
+        val image = ImageReader.read(file)
+
+        singleModeScript(inputFiles = listOf(file), inputFile = file, inputImage = image)
+    }
+
+    private fun runMultiModeScript(vararg filepaths: String) {
+        val files: List<Any> = filepaths.map { File(it) }
+
+        multiModeScript(inputFiles = files)
+    }
+
+    fun singleModeScript(
+        kimageVersion: String = "0.1.0",
+        verboseMode: Boolean = true,
+        inputParameters: Map<String, String> = mapOf(),
+        outputDirectory: File = File("."),
+        outputPrefix: String = "output",
+        singleMode: Boolean = true,
+        multiMode: Boolean = false,
+        inputFiles: List<File>,
+        inputFile: File,
+        inputImage: Image
+    ) {
+        // BEGIN OF SCRIPT
+
+        require(singleMode)
+
+
+        // END OF SCRIPT
+    }
+
+    fun multiModeScript(
+        kimageVersion: String = "0.1.0",
+        verboseMode: Boolean = true,
+        inputParameters: Map<String, String> = mapOf(),
+        outputDirectory: File = File("."),
+        outputPrefix: String = "output",
+        singleMode: Boolean = false,
+        multiMode: Boolean = true,
+        inputFiles: List<Any>
+    ) {
+        // BEGIN OF SCRIPT
+
+
+        // END OF SCRIPT
+
+        //ImageWriter.write(resultImage, File("testscript.png"))
     }
 }
