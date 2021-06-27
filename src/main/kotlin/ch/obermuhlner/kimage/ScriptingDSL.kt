@@ -413,7 +413,12 @@ class ScriptMulti(val executable: ScriptMulti.() -> Any?) {
         this.arguments = ExecutionArguments(scriptArguments, arguments, verboseMode, debugMode)
 
         val output = executable()
-        outputHandler(inputFiles[0], output)
+        val referenceFile = if (inputFiles.isEmpty()) {
+            File("noinput.png")
+        } else {
+            inputFiles[0]
+        }
+        outputHandler(referenceFile, output)
     }
 }
 

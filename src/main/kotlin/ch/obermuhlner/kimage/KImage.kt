@@ -170,7 +170,7 @@ class KimageCli(parser: ArgParser) {
         if (filenames.isEmpty()) {
             initCommonParameters(engine, false, inputFiles, parametersMap)
 
-            val scriptInfo = executeScriptLowLevel(engine, script, ScriptExecutor.outputFile(File("kimage.png"), outputPrefix, outputDirectory))
+            val scriptInfo = executeScriptLowLevel(engine, script, ScriptExecutor.outputFile(File("noinput.png"), outputPrefix, outputDirectory))
             if (scriptInfo != null) {
                 return scriptInfo
             }
