@@ -6,23 +6,28 @@ import ch.obermuhlner.kimage.io.*
 import java.io.*
 import kotlin.math.*
 
-require(multiMode)
+kimage(0.1) {
+    name = "stack-max"
+    description = """
+                Stacks multiple image by calculating a pixel-wise maximum.
+                
+                This stacking script is useful to find outliers and badly aligned images.
+                """
+    arguments {
+    }
 
-println("Stack multiple images using max")
+    multi {
+        println("Stack multiple images using max")
 
-val files = inputFiles as List<File>
-val parameters = inputParameters as Map<String, String>
+        var sumImage: Image = ImageReader.readMatrixImage(inputFiles[0])
 
-var sumImage: Image = ImageReader.readMatrixImage(files[0])
+        for (index in 1 until inputFiles.size) {
+            val inputFile = inputFiles[index]
+            println("Loading image: $inputFile")
+            val image = ImageReader.readMatrixImage(inputFile).crop(0, 0, sumImage.width, sumImage.height)
+            sumImage = max(sumImage, image)
+        }
 
-for (index in 1 until files.size) {
-    val inputFile = files[index]
-
-    println("Loading image: $inputFile")
-
-    val image = ImageReader.readMatrixImage(inputFile)
-
-    sumImage = sumImage max image
+        sumImage
+    }
 }
-
-sumImage
