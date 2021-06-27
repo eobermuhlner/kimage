@@ -34,6 +34,12 @@ class KimageCli(parser: ArgParser) {
     private val verboseMode by parser.flagging(
         "-v", "--verbose",
         help = "enable verbose mode")
+        .default(false)
+
+    private val debugMode by parser.flagging(
+        "--debug",
+        help = "enable debug mode")
+        .default(false)
 
     private val parameters by parser.adding(
         "-p", "--param", "--arg",
@@ -44,31 +50,38 @@ class KimageCli(parser: ArgParser) {
 
     private val singleMode by parser.flagging(
         "--single",
-        help = "enable single mode").default(false)
+        help = "enable single mode")
+        .default(false)
 
     private val helpMode by parser.flagging(
-        "--hh",
-        help = "get help about the current script").default(false)
-
-    private val outputPrefix: String by parser.storing(
-        "-o", "--output-prefix",
-        help = "output prefix").default("output")
+        "--docu", // TODO integrate with automatic --help
+        help = "get help about the current script")
+        .default(false)
 
     private val scriptDirectory: String by parser.storing(
         "--script-dir",
-        help = "script directory").default("")
+        help = "script directory")
+        .default("")
+
+    private val outputPrefix: String by parser.storing(
+        "-o", "--output-prefix",
+        help = "output prefix")
+        .default("output")
 
     private val outputDirectory: String by parser.storing(
         "-d", "--dir",
-        help = "output directory").default("")
+        help = "output directory")
+        .default("")
 
     private val command by parser.positional(
         "COMMAND",
-        help = "command to execute").default("")
+        help = "command to execute")
+        .default("")
 
     private val filenames by parser.positionalList(
         "FILES",
-        help = "image files to process", 0..Int.MAX_VALUE)
+        help = "image files to process",
+        0..Int.MAX_VALUE)
 
     fun execute() {
         if (versionMode) {
@@ -143,7 +156,7 @@ class KimageCli(parser: ArgParser) {
             if (scriptInfo.name != scriptName) {
                 println("Warning: Script file name $scriptName does not match name declared in script ${scriptInfo.name}")
             }
-            ScriptExecutor.executeScript(scriptInfo, parametersMap, inputFiles, helpMode, outputPrefix, outputDirectory)
+            ScriptExecutor.executeScript(scriptInfo, parametersMap, inputFiles, helpMode, verboseMode, debugMode, outputPrefix, outputDirectory)
         }
     }
 
@@ -306,10 +319,10 @@ class KimageCli(parser: ArgParser) {
         }
 
         return when (output) {
-            is Script -> return output
+            is Script -> output
             else -> {
                 outputHandler(outputFile, output)
-                return null
+                null
             }
         }
     }
@@ -319,11 +332,13 @@ class KimageCli(parser: ArgParser) {
             is Image -> {
                 println("Output file: $outputFile")
                 ImageWriter.write(output, outputFile)
+                println()
             }
+            Unit -> {}
+            null -> {}
             else -> {
-                if (output != null) {
-                    println("Output: $output")
-                }
+                println("Output: $output")
+                println()
             }
         }
     }

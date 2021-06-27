@@ -20,6 +20,8 @@ object ScriptExecutor {
         arguments: Map<String, String>,
         inputFiles: List<File>,
         helpMode: Boolean,
+        verboseMode: Boolean,
+        debugMode: Boolean,
         outputPrefix: String,
         outputDirectory: String
     ) {
@@ -32,7 +34,7 @@ object ScriptExecutor {
         } else {
             when (script) {
                 is ScriptV0_1 -> {
-                    script.execute(inputFiles, arguments) { inputFile, output ->
+                    script.execute(inputFiles, arguments, verboseMode, debugMode) { inputFile, output ->
                         outputHandler(outputFile(inputFile, outputPrefix, outputDirectory), output)
                     }
                 }
@@ -51,6 +53,7 @@ object ScriptExecutor {
             null -> {}
             else -> {
                 println("Output: $output")
+                println()
             }
         }
     }
@@ -157,28 +160,28 @@ class ScriptV0_1 : Script(0.1) {
         println()
     }
 
-    fun execute(inputFiles: List<File>, arguments: Map<String, String>, outputHandler: (File, Any?) -> Unit) {
+    fun execute(inputFiles: List<File>, arguments: Map<String, String>, verboseMode: Boolean, debugMode: Boolean, outputHandler: (File, Any?) -> Unit) {
         return if (scriptMulti != null) {
-            executeMulti(inputFiles, arguments, outputHandler)
+            executeMulti(inputFiles, arguments, verboseMode, debugMode, outputHandler)
         } else if (scriptSingle != null) {
-            executeSingle(inputFiles, arguments, outputHandler)
+            executeSingle(inputFiles, arguments, verboseMode, debugMode, outputHandler)
         } else {
             throw java.lang.RuntimeException("Script has no execution block.")
         }
     }
 
-    fun executeSingle(inputFiles: List<File>, arguments: Map<String, String>, outputHandler: (File, Any?) -> Unit) {
+    fun executeSingle(inputFiles: List<File>, arguments: Map<String, String>, verboseMode: Boolean, debugMode: Boolean, outputHandler: (File, Any?) -> Unit) {
         scriptSingle?.let {
             for (inputFile in inputFiles) {
                 val inputImage = ImageReader.readMatrixImage(inputFile)
-                it.executeSingleScript(inputFile, inputImage, scriptArguments, arguments, outputHandler)
+                it.executeSingleScript(inputFile, inputImage, scriptArguments, arguments, verboseMode, debugMode, outputHandler)
             }
         }
     }
 
-    fun executeMulti(inputFiles: List<File>, arguments: Map<String, String>, outputHandler: (File, Any?) -> Unit) {
+    fun executeMulti(inputFiles: List<File>, arguments: Map<String, String>, verboseMode: Boolean, debugMode: Boolean, outputHandler: (File, Any?) -> Unit) {
         scriptMulti?.let {
-            it.executeMultiScript(inputFiles, scriptArguments, arguments, outputHandler)
+            it.executeMultiScript(inputFiles, scriptArguments, arguments, verboseMode, debugMode, outputHandler)
         }
     }
 }
@@ -220,7 +223,12 @@ class ScriptArguments {
         arguments.add(ScriptStringArg().apply { this.name = name }.apply(initializer))
 }
 
-class ExecutionArguments(scriptArguments: ScriptArguments, argumentValues: Map<String, String>) {
+class ExecutionArguments(
+    scriptArguments: ScriptArguments,
+    argumentValues: Map<String, String>,
+    val verboseMode: Boolean,
+    val debugMode: Boolean
+    ) {
     val int: Map<String, Int>
     val double: Map<String, Double>
     val boolean: Map<String, Boolean>
@@ -380,13 +388,13 @@ class ScriptSingle(val executable: ScriptSingle.() -> Any?) {
     var inputFile: File = File(".")
     var inputImage: Image = MatrixImage(0, 0)
     val rawArguments: MutableMap<String, String> = mutableMapOf()
-    var arguments: ExecutionArguments = ExecutionArguments(ScriptArguments(), mapOf())
+    var arguments: ExecutionArguments = ExecutionArguments(ScriptArguments(), mapOf(), false, false)
 
-    fun executeSingleScript(inputFile: File, inputImage: Image, scriptArguments: ScriptArguments, arguments: Map<String, String>, outputHandler: (File, Any?) -> Unit) {
+    fun executeSingleScript(inputFile: File, inputImage: Image, scriptArguments: ScriptArguments, arguments: Map<String, String>, verboseMode: Boolean, debugMode: Boolean, outputHandler: (File, Any?) -> Unit) {
         this.inputFile = inputFile
         this.inputImage = inputImage
         this.rawArguments.putAll(arguments)
-        this.arguments = ExecutionArguments(scriptArguments, arguments)
+        this.arguments = ExecutionArguments(scriptArguments, arguments, verboseMode, debugMode)
 
         val output = executable()
         outputHandler(inputFile, output)
@@ -397,12 +405,12 @@ class ScriptSingle(val executable: ScriptSingle.() -> Any?) {
 class ScriptMulti(val executable: ScriptMulti.() -> Any?) {
     var inputFiles: List<File> = listOf()
     val rawArguments: MutableMap<String, String> = mutableMapOf()
-    var arguments: ExecutionArguments = ExecutionArguments(ScriptArguments(), mapOf())
+    var arguments: ExecutionArguments = ExecutionArguments(ScriptArguments(), mapOf(), false, false)
 
-    fun executeMultiScript(inputFiles: List<File>, scriptArguments: ScriptArguments, arguments: Map<String, String>, outputHandler: (File, Any?) -> Unit) {
+    fun executeMultiScript(inputFiles: List<File>, scriptArguments: ScriptArguments, arguments: Map<String, String>, verboseMode: Boolean, debugMode: Boolean, outputHandler: (File, Any?) -> Unit) {
         this.inputFiles = inputFiles
         this.rawArguments.putAll(arguments)
-        this.arguments = ExecutionArguments(scriptArguments, arguments)
+        this.arguments = ExecutionArguments(scriptArguments, arguments, verboseMode, debugMode)
 
         val output = executable()
         outputHandler(inputFiles[0], output)

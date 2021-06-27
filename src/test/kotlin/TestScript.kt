@@ -31,8 +31,6 @@ object TestScript {
                 val removePercent by arguments.double
                 val medianKernelPercent by arguments.double
                 val blurKernelPercent by arguments.double
-                val verboseMode = false
-                val debugMode = false
 
                 println("Arguments:")
                 println("  removePercent = $removePercent%")
@@ -42,34 +40,29 @@ object TestScript {
                 val medianKernelSize = max(1, (min(inputImage.width, inputImage.height) * medianKernelPercent / 100.0).toInt())
                 val blurKernelSize = max(1, (min(inputImage.width, inputImage.height) * blurKernelPercent / 100.0).toInt())
 
-                if (verboseMode) {
+                if (arguments.verboseMode) {
                     println("  -> calculated medianKernelSize = $medianKernelSize pixels")
                     println("  -> calculated blurKernelSize = $blurKernelSize pixels")
                 }
 
-                if (verboseMode) {
-                    println("Running median filter ...")
+                if (arguments.verboseMode) { println("Running median filter ...")
                 }
                 val medianImage = inputImage.medianFilter(medianKernelSize)
-                if (debugMode) {
+                if (arguments.debugMode) {
                     val medianFile = File("median_" + inputFile.name)
                     println("Writing $medianFile")
                     ImageWriter.write(medianImage, medianFile)
                 }
 
-                if (verboseMode) {
-                    println("Running gaussian blur filter ...")
-                }
+                if (arguments.verboseMode) println("Running gaussian blur filter ...")
                 val backgroundImage = medianImage.gaussianBlurFilter(blurKernelSize)
-                if (debugMode) {
+                if (arguments.debugMode) {
                     val backgroundFile = File("background_" + inputFile.name)
                     println("Writing $backgroundFile")
                     ImageWriter.write(backgroundImage, backgroundFile)
                 }
 
-                if (verboseMode) {
-                    println("Subtracting $removePercent% background glow from original image ...")
-                }
+                if (arguments.verboseMode) println("Subtracting $removePercent% background glow from original image ...")
                 inputImage - backgroundImage * (removePercent/100.0)
             }
         }
@@ -136,14 +129,6 @@ object TestScript {
                     description = "The prefix of the badly aligned output files."
                     default = "badaligned"
                 }
-                boolean("saveCheck") {
-                    description = "Controls whether the check file containing the feature to match is saved for manual analysis."
-                    default = false
-                }
-                boolean("saveDelta") {
-                    description = "Controls whether a delta file for every aligned image is saved for manual analysis."
-                    default = false
-                }
             }
 
             multi {
@@ -171,8 +156,6 @@ object TestScript {
                 val prefix: String by arguments.string
                 val saveBad: Boolean by arguments.boolean
                 val prefixBad: String by arguments.string
-                val saveCheck: Boolean by arguments.boolean
-                val saveDelta: Boolean by arguments.boolean
 
                 println("Arguments:")
                 println("  checkRadius = $checkRadius")
@@ -182,11 +165,9 @@ object TestScript {
                 println("  prefix = $prefix")
                 println("  saveBad = $saveBad")
                 println("  prefixBad = $prefixBad")
-                println("  saveCheck = $saveCheck")
-                println("  saveDelta = $saveDelta")
                 println()
 
-                if (saveCheck) {
+                if (arguments.debugMode) {
                     val checkImage = baseImage.cropCenter(checkRadius, centerX, centerY)
                     val checkFile = File("check_" + baseInputFile.name)
                     println("Saving $checkFile for manual analysis")
@@ -198,7 +179,7 @@ object TestScript {
                     println("Loading image: $inputFile")
 
                     val image = ImageReader.readMatrixImage(inputFile)
-                    println("Aligning image: $image")
+                    if (arguments.verboseMode) println("Aligning image: $image")
 
                     val alignment = imageAligner.align(baseImage, image, centerX = centerX, centerY = centerY, maxOffset = searchRadius)
                     println("Alignment: $alignment")
@@ -220,7 +201,7 @@ object TestScript {
                         }
                     }
 
-                    if (saveDelta) {
+                    if (arguments.debugMode) {
                         val deltaFile = File("delta_$prefix" + inputFile.name)
                         println("Saving $deltaFile for manual analysis")
                         val deltaImage = deltaRGB(baseImage, alignedImage)
@@ -241,8 +222,8 @@ object TestScript {
     }
 
     fun runScript(script: Script, arguments: Map<String, String>, files: List<File>) {
-        ScriptExecutor.executeScript(script, arguments, files, true, "output", "");
-        ScriptExecutor.executeScript(script, arguments, files, false, "output", "");
+        ScriptExecutor.executeScript(script, arguments, files, true, true, true , "output", "");
+        ScriptExecutor.executeScript(script, arguments, files, false, true, true, "output", "");
     }
 
     private fun runSingleModeScript(filepath: String) {
