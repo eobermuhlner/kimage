@@ -154,7 +154,7 @@ class KimageCli(parser: ArgParser) {
                 scriptInfo.name = scriptName
             }
             if (scriptInfo.name != scriptName) {
-                println("Warning: Script file name $scriptName does not match name declared in script ${scriptInfo.name}")
+                println("Warning: Script file name '$scriptName' does not match name declared in script '${scriptInfo.name}'")
             }
             ScriptExecutor.executeScript(scriptInfo, parametersMap, inputFiles, helpMode, verboseMode, debugMode, outputPrefix, outputDirectory)
         }
