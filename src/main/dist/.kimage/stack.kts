@@ -15,11 +15,12 @@ kimage(0.1) {
                 Stacks multiple image using one of several algorithms.
                 """
     arguments {
-        string("method") { """
+        string("method") {
+            description = """
                         Method used to calculate the stacked image.
                         
-                        The method `sigmaclip-median` removes outliers before using `median`on the remaining values.
-                        The method `sigmaclip-average` removes outliers before using `average`on the remaining values.
+                        The method `sigmaclip-median` removes outliers before using `median` on the remaining values.
+                        The method `sigmaclip-average` removes outliers before using `average` on the remaining values.
                         """
             allowed = listOf("median", "average", "max", "min", "sigmaclip-median", "sigmaclip-average")
             default = "sigmaclip-median"
