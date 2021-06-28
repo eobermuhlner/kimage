@@ -23,7 +23,7 @@ kimage(0.1) {
             println("Loading image: $it")
             ImageReader.readMatrixImage(it) as Image
         } .reduce { sum, img ->
-            sum + img.crop(0, 0, stacked.width, stacked.height)
+            sum + img.crop(0, 0, sum.width, sum.height)
         }
 
         sumImage / inputFiles.size.toDouble()
