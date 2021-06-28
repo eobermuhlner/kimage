@@ -18,6 +18,8 @@ kimage(0.1) {
                 
                 The feature to match is defined by the centerX/centerY coordinates in the base image and the check radius.
                 The searchRadius defines how far the matching feature is searched.
+                
+                Use the --debug option to save intermediate images for manual analysis.
                 """
     arguments {
         int("checkRadius") {
