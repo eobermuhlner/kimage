@@ -12,9 +12,12 @@ object TestScript {
 
     @JvmStatic
     fun main(args: Array<String>) {
-        //runScript(scriptAlign(), "images/align/orion1.png", "images/align/orion2.png", "images/animal.png")
-        runScript(scriptRemoveBackgroundMedian(), "images/align/orion1.png", "images/align/orion2.png", "images/animal.png")
-        //runScript(scriptStack(), "images/align/orion1.png", "images/align/orion2.png", "images/animal.png")
+        val orionImages = arrayOf("images/align/orion1.png", "images/align/orion2.png", "images/align/orion3.png", "images/align/orion4.png", "images/align/orion5.png", "images/align/orion6.png", "images/align/orion7.png")
+        val alignedOrionImages = arrayOf("images/align/aligned_orion1.png", "images/align/aligned_orion2.png", "images/align/aligned_orion3.png", "images/align/aligned_orion4.png", "images/align/aligned_orion5.png", "images/align/aligned_orion6.png", "images/align/aligned_orion7.png")
+
+        //runScript(scriptAlign(), *orionImages)
+        runScript(scriptStack(), *orionImages)
+        //runScript(scriptRemoveBackgroundMedian(), "images/align/orion1.png")
     }
 
     private fun scriptRemoveBackgroundMedian(): Script =
