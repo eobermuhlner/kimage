@@ -9,7 +9,7 @@ import kotlin.math.*
 kimage(0.1) {
     name = "stack-average"
     description = """
-                Stacks multiple image by calculating a pixel-wise average.
+                Stacks multiple images by calculating a pixel-wise average.
                 
                 This stacking script is useful if there are no outliers. 
                 """

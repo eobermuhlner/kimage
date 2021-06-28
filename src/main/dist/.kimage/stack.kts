@@ -12,7 +12,7 @@ import kotlin.math.*
 kimage(0.1) {
     name = "stack"
     description = """
-                Stacks multiple image using one of several algorithms.
+                Stacks multiple images using one of several algorithms.
                 """
     arguments {
         string("method") {

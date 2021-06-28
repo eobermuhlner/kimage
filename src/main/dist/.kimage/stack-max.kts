@@ -9,7 +9,7 @@ import kotlin.math.*
 kimage(0.1) {
     name = "stack-max"
     description = """
-                Stacks multiple image by calculating a pixel-wise maximum.
+                Stacks multiple images by calculating a pixel-wise maximum.
                 
                 This stacking script is useful to find outliers and badly aligned images.
                 """
