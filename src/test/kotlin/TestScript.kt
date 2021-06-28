@@ -3,9 +3,7 @@ import ch.obermuhlner.kimage.align.*
 import ch.obermuhlner.kimage.huge.HugeFloatArray
 import ch.obermuhlner.kimage.image.*
 import ch.obermuhlner.kimage.io.*
-import ch.obermuhlner.kimage.math.average
-import ch.obermuhlner.kimage.math.median
-import ch.obermuhlner.kimage.math.sigmaClip
+import ch.obermuhlner.kimage.math.*
 
 import java.io.*
 import kotlin.math.*
@@ -15,44 +13,89 @@ object TestScript {
     @JvmStatic
     fun main(args: Array<String>) {
         //runScript(scriptAlign(), "images/align/orion1.png", "images/align/orion2.png", "images/animal.png")
-        //runScript(scriptRemoveBackgroundMedian(), "images/align/orion1.png", "images/align/orion2.png", "images/animal.png")
-        runScript(scriptStack(), "images/align/orion1.png", "images/align/orion2.png", "images/animal.png")
+        runScript(scriptRemoveBackgroundMedian(), "images/align/orion1.png", "images/align/orion2.png", "images/animal.png")
+        //runScript(scriptStack(), "images/align/orion1.png", "images/align/orion2.png", "images/animal.png")
     }
 
     private fun scriptRemoveBackgroundMedian(): Script =
         kimage(0.1) {
+            name = "remove-background-median"
+            description = """
+                Removes the background from the input image by subtracting a blurred median of the input.
+                
+                This script is useful for astrophotography if the image contains mainly stars and not too much nebulas.
+                The size of the median filter can be increased to remove stars and nebulas completely.
+                
+                Use the --debug option to save intermediate images for manual analysis.
+                """
             arguments {
                 double("removePercent") {
+                    description = """
+                        The percentage of the calculated background that will be removed.
+                        """
                     default = 99.0
                 }
-                double("medianKernelPercent") {
-                    default = 1.0
+                double("medianFilterPercent") {
+                    description = """
+                        The size of the median filter in percent of the image size.
+                        """
+                    default = 0.0
                 }
-                double("blurKernelPercent") {
-                    default = 2.0
+                double("blurFilterPercent") {
+                    description = """
+                        The size of the blur filter in percent of the image size.
+                        """
+                    default = 0.0
+                }
+                int("medianFilterSize") {
+                    description = """
+                        The size of the median filter in pixels.
+                        If this value is 0 then the `medianFilterPercent` is used to calculate it.
+                        If the `medianFilterPercent` is 0.0 then the median filter size is calculated automatically from the image size.
+                        """
+                    default = 0
+                }
+                int("blurFilterSize") {
+                    description = """
+                        The size of the blur filter in pixels.
+                        If this value is 0 then the `blurFilterPercent` is used to calculate it.
+                        If the `blurFilterPercent` is 0.0 then the blur filter size is calculated automatically from the image size.
+                        """
+                    default = 0
                 }
             }
             single {
-                val removePercent by arguments.double
-                val medianKernelPercent by arguments.double
-                val blurKernelPercent by arguments.double
+                val removePercent: Double by arguments.double
+                val medianFilterPercent: Double by arguments.double
+                val blurFilterPercent: Double by arguments.double
+                var medianFilterSize: Int by arguments.int
+                var blurFilterSize: Int by arguments.int
+
+                val inputImageSize = min(inputImage.width, inputImage.height)
+                if (medianFilterSize == 0) {
+                    medianFilterSize = if (medianFilterPercent != 0.0) {
+                        max(3, (inputImageSize * medianFilterPercent / 100.0).toInt())
+                    } else {
+                        max(3, inputImageSize.toDouble().pow(0.8).toInt())
+                    }
+                }
+                if (blurFilterSize == 0) {
+                    blurFilterSize = if (blurFilterPercent != 0.0) {
+                        max(3, (inputImageSize * blurFilterPercent / 100.0).toInt())
+                    } else {
+                        max(3, medianFilterSize)
+                    }
+                }
 
                 println("Arguments:")
                 println("  removePercent = $removePercent%")
-                println("  medianKernelPercent = $medianKernelPercent%")
-                println("  blurKernelPercent = $blurKernelPercent%")
+                println("  medianFilterPercent = $medianFilterPercent%")
+                println("  blurFilterPercent = $blurFilterPercent%")
+                println("  medianFilterSize = $medianFilterSize")
+                println("  blurFilterSize = $blurFilterSize")
 
-                val medianKernelSize = max(1, (min(inputImage.width, inputImage.height) * medianKernelPercent / 100.0).toInt())
-                val blurKernelSize = max(1, (min(inputImage.width, inputImage.height) * blurKernelPercent / 100.0).toInt())
-
-                if (arguments.verboseMode) {
-                    println("  -> calculated medianKernelSize = $medianKernelSize pixels")
-                    println("  -> calculated blurKernelSize = $blurKernelSize pixels")
-                }
-
-                if (arguments.verboseMode) { println("Running median filter ...")
-                }
-                val medianImage = inputImage.medianFilter(medianKernelSize)
+                if (arguments.verboseMode) println("Running median filter ...")
+                val medianImage = inputImage.medianFilter(medianFilterSize)
                 if (arguments.debugMode) {
                     val medianFile = File("median_" + inputFile.name)
                     println("Writing $medianFile")
@@ -60,7 +103,7 @@ object TestScript {
                 }
 
                 if (arguments.verboseMode) println("Running gaussian blur filter ...")
-                val backgroundImage = medianImage.gaussianBlurFilter(blurKernelSize)
+                val backgroundImage = medianImage.gaussianBlurFilter(blurFilterSize)
                 if (arguments.debugMode) {
                     val backgroundFile = File("background_" + inputFile.name)
                     println("Writing $backgroundFile")
@@ -82,6 +125,8 @@ object TestScript {
                 
                 The feature to match is defined by the centerX/centerY coordinates in the base image and the check radius.
                 The searchRadius defines how far the matching feature is searched.
+
+                Use the --debug option to save intermediate images for manual analysis.
                 """
             arguments {
                 int("checkRadius") {
@@ -303,7 +348,7 @@ object TestScript {
                 val values = FloatArray(inputFiles.size)
                 for (channelIndex in channels.indices) {
                     val channel = channels[channelIndex]
-                    print("Stacking channel: $channel")
+                    println("Stacking channel: $channel")
                     val matrix = baseImage[channel]
                     val resultMatrix = resultImage[channel]
                     for (matrixIndex in 0 until matrix.size) {
