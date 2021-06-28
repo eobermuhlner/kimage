@@ -88,12 +88,12 @@ kimage(0.1) {
         }
         println()
 
-        println("Stacking ${inputFiles.size} images using $method")
+        println("Stacking ${inputFiles.size} images using $method.")
         val resultImage = MatrixImage(baseImage.width, baseImage.height, channels)
         val values = FloatArray(inputFiles.size)
         for (channelIndex in channels.indices) {
             val channel = channels[channelIndex]
-            print("Stacking channel: $channel")
+            println("Stacking channel: $channel")
             val matrix = baseImage[channel]
             val resultMatrix = resultImage[channel]
             for (matrixIndex in 0 until matrix.size) {
