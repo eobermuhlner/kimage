@@ -110,7 +110,7 @@ kimage(0.1) {
         println("  prefixBad = $prefixBad")
         println()
 
-        if (arguments.debugMode) {
+        if (debugMode) {
             val checkImage = baseImage.cropCenter(checkRadius, centerX, centerY)
             val checkFile = File("check_" + baseInputFile.name)
             println("Saving $checkFile for manual analysis")
@@ -122,7 +122,7 @@ kimage(0.1) {
             println("Loading image: $inputFile")
 
             val image = ImageReader.readMatrixImage(inputFile)
-            if (arguments.verboseMode) println("Aligning image: $image")
+            if (verboseMode) println("Aligning image: $image")
 
             val alignment = imageAligner.align(baseImage, image, centerX = centerX, centerY = centerY, maxOffset = searchRadius)
             println("Alignment: $alignment")
@@ -144,7 +144,7 @@ kimage(0.1) {
                 }
             }
 
-            if (arguments.debugMode) {
+            if (debugMode) {
                 val deltaFile = File("delta_$prefix" + inputFile.name)
                 println("Saving $deltaFile for manual analysis")
                 val deltaImage = deltaRGB(baseImage, alignedImage)

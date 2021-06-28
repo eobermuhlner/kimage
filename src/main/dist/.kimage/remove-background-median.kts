@@ -82,23 +82,23 @@ kimage(0.1) {
         println("  medianFilterSize = $medianFilterSize")
         println("  blurFilterSize = $blurFilterSize")
 
-        if (arguments.verboseMode) println("Running median filter ...")
+        if (verboseMode) println("Running median filter ...")
         val medianImage = inputImage.medianFilter(medianFilterSize)
-        if (arguments.debugMode) {
+        if (debugMode) {
             val medianFile = File("median_" + inputFile.name)
             println("Writing $medianFile")
             ImageWriter.write(medianImage, medianFile)
         }
 
-        if (arguments.verboseMode) println("Running gaussian blur filter ...")
+        if (verboseMode) println("Running gaussian blur filter ...")
         val backgroundImage = medianImage.gaussianBlurFilter(blurFilterSize)
-        if (arguments.debugMode) {
+        if (debugMode) {
             val backgroundFile = File("background_" + inputFile.name)
             println("Writing $backgroundFile")
             ImageWriter.write(backgroundImage, backgroundFile)
         }
 
-        if (arguments.verboseMode) println("Subtracting $removePercent% background glow from original image ...")
+        if (verboseMode) println("Subtracting $removePercent% background glow from original image ...")
         inputImage - backgroundImage * (removePercent/100.0)
     }
 }
