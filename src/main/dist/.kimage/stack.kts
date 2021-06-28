@@ -54,13 +54,15 @@ kimage(0.1) {
         println("  iterations = $iterations")
         println()
 
+        val sigmaClipHistogram = Histogram(inputFiles.size)
+
         val stackingMethod: (FloatArray) -> Float = when(method) {
             "median" -> { array -> array.median() }
             "average" -> { array -> array.average() }
             "max" -> { array -> array.maxOrNull()!! }
             "min" -> { array -> array.minOrNull()!! }
-            "sigmaclip-median" -> { array -> array.sigmaClip(kappa = kappa.toFloat(), iterations = iterations).median() }
-            "sigmaclip-average" -> { array -> array.sigmaClip(kappa = kappa.toFloat(), iterations = iterations).average() }
+            "sigmaclip-median" -> { array -> array.sigmaClip(kappa = kappa.toFloat(), iterations = iterations, histogram = sigmaClipHistogram).median() }
+            "sigmaclip-average" -> { array -> array.sigmaClip(kappa = kappa.toFloat(), iterations = iterations, histogram = sigmaClipHistogram).average() }
             else -> throw IllegalArgumentException("Unknown method: " + method)
         }
 
@@ -88,7 +90,7 @@ kimage(0.1) {
         }
         println()
 
-        println("Stacking ${inputFiles.size} images using $method.")
+        println("Stacking ${inputFiles.size} images using $method")
         val resultImage = MatrixImage(baseImage.width, baseImage.height, channels)
         val values = FloatArray(inputFiles.size)
         for (channelIndex in channels.indices) {
@@ -106,6 +108,16 @@ kimage(0.1) {
             }
         }
         println()
+
+        if (sigmaClipHistogram.n > 0) {
+            println("Sigma-Clip Histogram")
+            for (i in sigmaClipHistogram.indices) {
+                val length = 40 * sigmaClipHistogram[i] / sigmaClipHistogram.n
+                val line = String.format("%3d : %10d %s", i, sigmaClipHistogram[i], "#".repeat(length))
+                println("  $line")
+            }
+            println()
+        }
 
         resultImage
     }

@@ -16,7 +16,8 @@ object TestScript {
         val alignedOrionImages = arrayOf("images/align/aligned_orion1.png", "images/align/aligned_orion2.png", "images/align/aligned_orion3.png", "images/align/aligned_orion4.png", "images/align/aligned_orion5.png", "images/align/aligned_orion6.png", "images/align/aligned_orion7.png")
 
         //runScript(scriptAlign(), *orionImages)
-        runScript(scriptStack(), *orionImages)
+        //runScript(scriptStack(), mapOf("kappa" to "2.0"), *orionImages)
+        runScript(scriptStack(), mapOf("kappa" to "2.0"), *alignedOrionImages)
         //runScript(scriptRemoveBackgroundMedian(), "images/align/orion1.png")
     }
 
@@ -255,7 +256,7 @@ object TestScript {
                     }
 
                     if (arguments.debugMode) {
-                        val deltaFile = File("delta_$prefix" + inputFile.name)
+                        val deltaFile = File("delta_${prefix}_" + inputFile.name)
                         println("Saving $deltaFile for manual analysis")
                         val deltaImage = deltaRGB(baseImage, alignedImage)
                         ImageWriter.write(deltaImage, deltaFile)
@@ -312,13 +313,15 @@ object TestScript {
                 println("  iterations = $iterations")
                 println()
 
+                val sigmaClipHistogram = Histogram(inputFiles.size)
+
                 val stackingMethod: (FloatArray) -> Float = when(method) {
                     "median" -> { array -> array.median() }
                     "average" -> { array -> array.average() }
                     "max" -> { array -> array.maxOrNull()!! }
                     "min" -> { array -> array.minOrNull()!! }
-                    "sigmaclip-median" -> { array -> array.sigmaClip(kappa = kappa.toFloat(), iterations = iterations).median() }
-                    "sigmaclip-average" -> { array -> array.sigmaClip(kappa = kappa.toFloat(), iterations = iterations).average() }
+                    "sigmaclip-median" -> { array -> array.sigmaClip(kappa = kappa.toFloat(), iterations = iterations, histogram = sigmaClipHistogram).median() }
+                    "sigmaclip-average" -> { array -> array.sigmaClip(kappa = kappa.toFloat(), iterations = iterations, histogram = sigmaClipHistogram).average() }
                     else -> throw IllegalArgumentException("Unknown method: " + method)
                 }
 
@@ -364,6 +367,16 @@ object TestScript {
                     }
                 }
                 println()
+
+                if (sigmaClipHistogram.n > 0) {
+                    println("Sigma-Clip Histogram")
+                    for (i in sigmaClipHistogram.indices) {
+                        val length = 40 * sigmaClipHistogram[i] / sigmaClipHistogram.n
+                        val line = String.format("%3d : %10d %s", i, sigmaClipHistogram[i], "#".repeat(length))
+                        println("  $line")
+                    }
+                    println()
+                }
 
                 resultImage
             }
