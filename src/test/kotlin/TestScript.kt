@@ -16,8 +16,9 @@ object TestScript {
         val alignedOrionImages = arrayOf("images/align/aligned_orion1.png", "images/align/aligned_orion2.png", "images/align/aligned_orion3.png", "images/align/aligned_orion4.png", "images/align/aligned_orion5.png", "images/align/aligned_orion6.png", "images/align/aligned_orion7.png")
 
         //runScript(scriptAlign(), *orionImages)
+        runScript(scriptStackMax(), mapOf(), *orionImages)
         //runScript(scriptStack(), mapOf("kappa" to "2.0"), *orionImages)
-        runScript(scriptStack(), mapOf("kappa" to "2.0"), *alignedOrionImages)
+        //runScript(scriptStack(), mapOf("kappa" to "2.0"), *alignedOrionImages)
         //runScript(scriptRemoveBackgroundMedian(), "images/align/orion1.png")
     }
 
@@ -266,6 +267,30 @@ object TestScript {
                 }
             }
         }
+
+    fun scriptStackMax(): Script =
+        kimage(0.1) {
+            name = "stack-max"
+            description = """
+                Stacks multiple images by calculating a pixel-wise maximum.
+                
+                This stacking script is useful to find outliers and badly aligned images.
+                """
+            arguments {
+            }
+
+            multi {
+                println("Stack multiple images using max")
+
+                inputFiles.map {
+                    println("Loading image: $it")
+                    ImageReader.readMatrixImage(it) as Image
+                } .reduce { stacked, img ->
+                    max(stacked, img.crop(0, 0, stacked.width, stacked.height))
+                }
+            }
+        }
+
 
     fun scriptStack() =
         kimage(0.1) {

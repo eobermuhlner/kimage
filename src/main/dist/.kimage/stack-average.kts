@@ -19,13 +19,11 @@ kimage(0.1) {
     multi {
         println("Stack multiple images using average")
 
-        var sumImage: Image = ImageReader.readMatrixImage(inputFiles[0])
-
-        for (index in 1 until inputFiles.size) {
-            val inputFile = inputFiles[index]
-            println("Loading image: $inputFile")
-            val image = ImageReader.readMatrixImage(inputFile).crop(0, 0, sumImage.width, sumImage.height)
-            sumImage += image
+        val sumImage = inputFiles.map {
+            println("Loading image: $it")
+            ImageReader.readMatrixImage(it) as Image
+        } .reduce { sum, img ->
+            sum + img.crop(0, 0, stacked.width, stacked.height)
         }
 
         sumImage / inputFiles.size.toDouble()
