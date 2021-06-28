@@ -36,11 +36,11 @@ class Histogram(private val binCount: Int = 256) {
     }
 
     fun add(value: Double) {
-        add(value * binCount)
+        add((value * binCount).toInt())
     }
 
     fun remove(value: Double) {
-        remove(value * binCount)
+        remove((value * binCount).toInt())
     }
 
     fun add(value: Int) {
