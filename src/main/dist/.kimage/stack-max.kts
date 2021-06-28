@@ -19,15 +19,15 @@ kimage(0.1) {
     multi {
         println("Stack multiple images using max")
 
-        var sumImage: Image = ImageReader.readMatrixImage(inputFiles[0])
+        var stackedImage: Image = ImageReader.readMatrixImage(inputFiles[0])
 
         for (index in 1 until inputFiles.size) {
             val inputFile = inputFiles[index]
             println("Loading image: $inputFile")
-            val image = ImageReader.readMatrixImage(inputFile).crop(0, 0, sumImage.width, sumImage.height)
-            sumImage = max(sumImage, image)
+            val image = ImageReader.readMatrixImage(inputFile).crop(0, 0, stackedImage.width, stackedImage.height)
+            stackedImage = max(stackedImage, image)
         }
 
-        sumImage
+        stackedImage
     }
 }
