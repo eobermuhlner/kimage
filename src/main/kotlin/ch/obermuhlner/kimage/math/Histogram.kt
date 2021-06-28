@@ -4,7 +4,9 @@ import ch.obermuhlner.kimage.matrix.Matrix
 
 class Histogram(private val binCount: Int = 256) {
     private val bins = IntArray(binCount)
-    private var n = 0
+    private var entryCount = 0
+
+    val n get() = entryCount
 
     val indices: IntRange = bins.indices
 
@@ -14,7 +16,7 @@ class Histogram(private val binCount: Int = 256) {
         for (i in indices) {
             bins[i] = 0
         }
-        n = 0
+        entryCount = 0
     }
 
     fun add(matrix: Matrix, rowStart: Int, columnStart: Int, rows: Int, columns: Int) {
@@ -34,15 +36,23 @@ class Histogram(private val binCount: Int = 256) {
     }
 
     fun add(value: Double) {
-        val index = clamp((value * binCount).toInt(), 0, binCount - 1)
-        bins[index]++
-        n++
+        add(value * binCount)
     }
 
     fun remove(value: Double) {
-        val index = clamp((value * binCount).toInt(), 0, binCount - 1)
-        bins[index]--
-        n--
+        remove(value * binCount)
+    }
+
+    fun add(value: Int) {
+        val index = clamp(value, 0, binCount-1)
+        bins[index]++
+        entryCount++
+    }
+
+    fun remove(value: Int) {
+        val index = clamp(value, 0, binCount-1)
+        bins[index]++
+        entryCount--
     }
 
     fun estimateMean(): Double {
@@ -50,11 +60,11 @@ class Histogram(private val binCount: Int = 256) {
         for (i in indices) {
             sum += bins[i] * (i.toDouble() + 0.5) / (binCount - 1).toDouble()
         }
-        return sum / n
+        return sum / entryCount
     }
 
     fun estimateMedian(): Double {
-        val nHalf = n / 2
+        val nHalf = entryCount / 2
         var cumulativeN = 0
         for (i in indices) {
             if (cumulativeN + bins[i] >= nHalf) {
