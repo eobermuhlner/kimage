@@ -229,50 +229,40 @@ class ExecutionArguments(
     val verboseMode: Boolean,
     val debugMode: Boolean
     ) {
-    val int: Map<String, Int>
-    val double: Map<String, Double>
-    val boolean: Map<String, Boolean>
-    val string: Map<String, String>
+    val int = mutableMapOf<String, Int>()
+    val double = mutableMapOf<String, Double>()
+    val boolean = mutableMapOf<String, Boolean>()
+    val string = mutableMapOf<String, String>()
 
     init {
-        val intMap = mutableMapOf<String, Int>()
-        val doubleMap = mutableMapOf<String, Double>()
-        val booleanMap = mutableMapOf<String, Boolean>()
-        val stringMap = mutableMapOf<String, String>()
-
         for (argument in scriptArguments.arguments) {
             when (argument) {
                 is ScriptIntArg -> {
                     val value = argument.toValue(argumentValues[argument.name])
                     if (value != null) {
-                        intMap[argument.name] = value
+                        int[argument.name] = value
                     }
                 }
                 is ScriptDoubleArg -> {
                     val value = argument.toValue(argumentValues[argument.name])
                     if (value != null) {
-                        doubleMap[argument.name] = value
+                        double[argument.name] = value
                     }
                 }
                 is ScriptBooleanArg -> {
                     val value = argument.toValue(argumentValues[argument.name])
                     if (value != null) {
-                        booleanMap[argument.name] = value
+                        boolean[argument.name] = value
                     }
                 }
                 is ScriptStringArg -> {
                     val value = argument.toValue(argumentValues[argument.name])
                     if (value != null) {
-                        stringMap[argument.name] = value
+                        string[argument.name] = value
                     }
                 }
             }
         }
-
-        int = intMap
-        double = doubleMap
-        boolean = booleanMap
-        string = stringMap
     }
 }
 
