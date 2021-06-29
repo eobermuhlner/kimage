@@ -4,34 +4,51 @@ import ch.obermuhlner.kimage.Scaling
 import ch.obermuhlner.kimage.math.clamp
 import ch.obermuhlner.kimage.math.mixBilinear
 import ch.obermuhlner.kimage.math.mixCubicHermite
+import kotlin.math.abs
 
 fun Matrix.contentToString(multiline: Boolean = false): String {
-        val str = StringBuilder()
+    val str = StringBuilder()
 
+    str.append("[")
+    for (row in 0 until rows) {
+        if (row != 0) {
+            str.append(" ")
+        }
         str.append("[")
-        for (row in 0 until rows) {
-            if (row != 0) {
-                str.append(" ")
+        for (column in 0 until columns) {
+            if (column != 0) {
+                str.append(" ,")
             }
-            str.append("[")
-            for (column in 0 until columns) {
-                if (column != 0) {
-                    str.append(" ,")
-                }
-                str.append(this[row, column])
-            }
-            str.append("]")
-            if (multiline && row != rows - 1) {
-                str.appendLine()
-            }
+            str.append(this[row, column])
         }
         str.append("]")
-        if (multiline) {
+        if (multiline && row != rows - 1) {
             str.appendLine()
         }
-
-        return str.toString()
     }
+    str.append("]")
+    if (multiline) {
+        str.appendLine()
+    }
+
+    return str.toString()
+}
+
+fun Matrix.contentEquals(other: Matrix, epsilon: Double = 1E-10): Boolean {
+    if (rows != other.rows || columns != other.columns) {
+        return false
+    }
+
+    for (row in 0 until rows) {
+        for (column in 0 until columns) {
+            if (abs(this[row, column] - other[row, column]) > epsilon) {
+                return false
+            }
+        }
+    }
+
+    return true
+}
 
 fun max(m1: Matrix, m2: Matrix): Matrix {
     val m = m1.create()
@@ -82,8 +99,8 @@ private fun Matrix.scaleNearestTo(newRows: Int, newColumns: Int): Matrix {
     val m = create(newRows, newColumns)
     for (newRow in 0 until newRows) {
         for (newColumn in 0 until newColumns) {
-            val oldRow = (newRow.toDouble() / newRows * (rows - 1)).toInt()
-            val oldColumn = (newColumn.toDouble() / newColumns * (columns - 1)).toInt()
+            val oldRow = (newRow.toDouble() / newRows * rows).toInt()
+            val oldColumn = (newColumn.toDouble() / newColumns * columns).toInt()
 
             val newValue = this[oldRow, oldColumn]
             m[newRow, newColumn] = newValue

@@ -17,6 +17,8 @@ class DoubleMatrix(override val rows: Int, override val columns: Int) : Matrix {
         return data.iterator()
     }
 
+    override fun equals(other: Any?): Boolean = (other is Matrix) && contentEquals(other)
+
     override fun toString(): String {
         return "DoubleMatrix($rows, $columns)"
     }

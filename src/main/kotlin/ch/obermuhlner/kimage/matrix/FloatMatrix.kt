@@ -13,6 +13,8 @@ class FloatMatrix(override val rows: Int, override val columns: Int) : Matrix {
         data[index] = value.toFloat()
     }
 
+    override fun equals(other: Any?): Boolean = (other is Matrix) && contentEquals(other)
+
     override fun toString(): String {
         return "FloatMatrix($rows, $columns)"
     }

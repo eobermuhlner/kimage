@@ -45,6 +45,8 @@ class CroppedMatrix(
         column + offsetColumn
     }
 
+    override fun equals(other: Any?): Boolean = (other is Matrix) && contentEquals(other)
+
     override fun toString(): String {
         return "CroppedMatrix($rows, $columns, offset=($offsetRow, $offsetColumn), $matrix)"
     }
