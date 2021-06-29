@@ -17,4 +17,8 @@ class DoubleMatrix(override val rows: Int, override val columns: Int) : Matrix {
         return data.iterator()
     }
 
+    override fun toString(): String {
+        return "DoubleMatrix($rows, $columns)"
+    }
+
 }

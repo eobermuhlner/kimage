@@ -44,4 +44,9 @@ class CroppedMatrix(
     } else {
         column + offsetColumn
     }
+
+    override fun toString(): String {
+        return "CroppedMatrix($rows, $columns, offset=($offsetRow, $offsetColumn), $matrix)"
+    }
+
 }
