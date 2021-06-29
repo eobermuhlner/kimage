@@ -1,6 +1,7 @@
 package ch.obermuhlner.kimage.math
 
 import kotlin.NoSuchElementException
+import kotlin.math.abs
 import kotlin.math.sqrt
 
 fun clamp(x: Double, min: Double, max: Double): Double {
@@ -382,6 +383,82 @@ fun DoubleArray.sigmaClip(kappa: Double = 2.0, iterations: Int = 1, offset: Int 
     val array = copyOfRange(offset, offset+length)
 
     return array.sigmaClipInplace(kappa, iterations, 0, length, standardDeviationType, center, histogram)
+}
+
+fun FloatArray.winsorizeHuberInplace(offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population): FloatArray {
+    val winsorEpsilon = 0.0005
+    val winsorKappa = 1.5f
+    val winsorSigmaFactor = 1.345f
+    var median = medianInplace(offset, length)
+    var sigma = stddev(standardDeviationType, offset, length)
+    do {
+        val low = median - sigma * winsorKappa
+        val high = median + sigma * winsorKappa
+        winsorizeLimitsInplace(low, high, offset, length)
+
+        median = medianInplace(offset, length)
+        val lastSigma = sigma
+        sigma = winsorSigmaFactor * stddev(standardDeviationType, offset, length)
+        val change = abs(sigma - lastSigma) / lastSigma
+    } while (change > winsorEpsilon)
+
+    return this
+}
+
+fun DoubleArray.winsorizeHuberInplace(offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population): DoubleArray {
+    val winsorEpsilon = 0.0005
+    val winsorKappa = 1.5f
+    val winsorSigmaFactor = 1.345f
+    var median = medianInplace(offset, length)
+    var sigma = stddev(standardDeviationType, offset, length)
+    do {
+        val low = median - sigma * winsorKappa
+        val high = median + sigma * winsorKappa
+        winsorizeLimitsInplace(low, high, offset, length)
+
+        median = medianInplace(offset, length)
+        val lastSigma = sigma
+        sigma = winsorSigmaFactor * stddev(standardDeviationType, offset, length)
+        val change = abs(sigma - lastSigma) / lastSigma
+    } while (change > winsorEpsilon)
+
+    return this
+}
+
+fun FloatArray.winsorizeSigmaInplace(kappa: Float, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population): FloatArray {
+    val sigma = stddev(standardDeviationType, offset, length)
+
+    val m = median(offset, length)
+
+    val low = m - kappa * sigma
+    val high = m + kappa * sigma
+
+    return winsorizeLimitsInplace(low, high, offset, length)
+}
+
+fun DoubleArray.winsorizeSigmaInplace(kappa: Double, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population): DoubleArray {
+    val sigma = stddev(standardDeviationType, offset, length)
+
+    val m = median(offset, length)
+
+    val low = m - kappa * sigma
+    val high = m + kappa * sigma
+
+    return winsorizeLimitsInplace(low, high, offset, length)
+}
+
+fun FloatArray.winsorizeLimitsInplace(lowThreshold: Float, highThreshold: Float, offset: Int = 0, length: Int = size-offset): FloatArray {
+    for (i in offset until (offset+length)) {
+        this[i] = clamp(this[i], lowThreshold, highThreshold)
+    }
+    return this
+}
+
+fun DoubleArray.winsorizeLimitsInplace(lowThreshold: Double, highThreshold: Double, offset: Int = 0, length: Int = size-offset): DoubleArray {
+    for (i in offset until (offset+length)) {
+        this[i] = clamp(this[i], lowThreshold, highThreshold)
+    }
+    return this
 }
 
 private class ArrayFloatIterator(private val array: FloatArray, private val offset: Int, private val length: Int) : FloatIterator() {
