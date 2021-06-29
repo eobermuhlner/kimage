@@ -5,6 +5,34 @@ import ch.obermuhlner.kimage.math.clamp
 import ch.obermuhlner.kimage.math.mixBilinear
 import ch.obermuhlner.kimage.math.mixCubicHermite
 
+fun Matrix.contentToString(multiline: Boolean = false): String {
+        val str = StringBuilder()
+
+        str.append("[")
+        for (row in 0 until rows) {
+            if (row != 0) {
+                str.append(" ")
+            }
+            str.append("[")
+            for (column in 0 until columns) {
+                if (column != 0) {
+                    str.append(" ,")
+                }
+                str.append(this[row, column])
+            }
+            str.append("]")
+            if (multiline && row != rows - 1) {
+                str.appendLine()
+            }
+        }
+        str.append("]")
+        if (multiline) {
+            str.appendLine()
+        }
+
+        return str.toString()
+    }
+
 fun max(m1: Matrix, m2: Matrix): Matrix {
     val m = m1.create()
     for (row in 0 until m1.rows) {
