@@ -44,9 +44,9 @@ kimage(0.1) {
     multi {
         println("Stack multiple images")
 
-        val method by arguments.string
-        val kappa by arguments.double
-        val iterations by arguments.int
+        val method: String by arguments
+        val kappa: Double by arguments
+        val iterations: Int by arguments
 
         println("Arguments:")
         println("  method = $method")

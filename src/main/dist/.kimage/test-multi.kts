@@ -45,12 +45,12 @@ kimage(0.1) {
     }
 
     multi {
-        val intArg by arguments.int
-        val doubleArg by arguments.double
-        val booleanArg by arguments.boolean
-        val stringArg by arguments.string
-        val allowedStringArg by arguments.string
-        val regexStringArg by arguments.string
+        val intArg: Int by arguments
+        val doubleArg: Double by arguments
+        val booleanArg: Boolean by arguments
+        val stringArg: String by arguments
+        val allowedStringArg: String by arguments
+        val regexStringArg: String by arguments
 
         println("Test multi image script")
         println()

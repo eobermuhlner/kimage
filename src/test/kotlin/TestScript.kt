@@ -70,11 +70,11 @@ object TestScript {
                 }
             }
             single {
-                val removePercent: Double by arguments.double
-                val medianFilterPercent: Double by arguments.double
-                val blurFilterPercent: Double by arguments.double
-                var medianFilterSize: Int by arguments.int
-                var blurFilterSize: Int by arguments.int
+                val removePercent: Double by arguments
+                val medianFilterPercent: Double by arguments
+                val blurFilterPercent: Double by arguments
+                var medianFilterSize: Int by arguments
+                var blurFilterSize: Int by arguments
 
                 val inputImageSize = min(inputImage.width, inputImage.height)
                 if (medianFilterSize == 0) {
@@ -199,18 +199,18 @@ object TestScript {
                 val defaultCheckRadius = sqrt(baseImageMinSize.toDouble()).toInt()
                 val defaultSearchRadius = min(baseImageMinSize, defaultCheckRadius * 4)
 
-                val checkRadius: Int by arguments.int.withDefault { defaultCheckRadius }
-                val searchRadius: Int by arguments.int.withDefault { defaultSearchRadius }
+                val checkRadius: Int by arguments.withDefault { defaultCheckRadius }
+                val searchRadius: Int by arguments.withDefault { defaultSearchRadius }
 
                 val imageAligner = ImageAligner(checkRadius)
                 val (autoCenterX, autoCenterY) = imageAligner.findInterestingCropCenter(baseImage)
 
-                val centerX: Int by arguments.int.withDefault { autoCenterX }
-                val centerY: Int by arguments.int.withDefault { autoCenterY }
-                val errorThreshold: Double by arguments.double
-                val prefix: String by arguments.string
-                val saveBad: Boolean by arguments.boolean
-                val prefixBad: String by arguments.string
+                val centerX: Int by arguments.withDefault { autoCenterX }
+                val centerY: Int by arguments.withDefault { autoCenterY }
+                val errorThreshold: Double by arguments
+                val prefix: String by arguments
+                val saveBad: Boolean by arguments
+                val prefixBad: String by arguments
 
                 println("Arguments:")
                 println("  checkRadius = $checkRadius")
@@ -328,9 +328,9 @@ object TestScript {
             multi {
                 println("Stack multiple images")
 
-                val method by arguments.string
-                val kappa by arguments.double
-                val iterations by arguments.int
+                val method: String by arguments
+                val kappa: Double by arguments
+                val iterations: Int by arguments
 
                 println("Arguments:")
                 println("  method = $method")

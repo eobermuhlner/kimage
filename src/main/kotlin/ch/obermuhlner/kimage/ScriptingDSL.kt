@@ -376,7 +376,7 @@ class ScriptSingle(val executable: ScriptSingle.() -> Any?) {
     var inputFile: File = File(".")
     var inputImage: Image = MatrixImage(0, 0)
     val rawArguments: MutableMap<String, String> = mutableMapOf()
-    var arguments: ExecutionArguments = ExecutionArguments(ScriptArguments(), mapOf())
+    var arguments: MutableMap<String, Any> = mutableMapOf()
     var verboseMode: Boolean = false
     var debugMode: Boolean = false
 
@@ -384,7 +384,7 @@ class ScriptSingle(val executable: ScriptSingle.() -> Any?) {
         this.inputFile = inputFile
         this.inputImage = inputImage
         this.rawArguments.putAll(arguments)
-        this.arguments = ExecutionArguments(scriptArguments, arguments)
+        this.arguments = processArguments(scriptArguments, arguments)
         this.verboseMode = verboseMode
         this.debugMode = debugMode
 
@@ -397,14 +397,14 @@ class ScriptSingle(val executable: ScriptSingle.() -> Any?) {
 class ScriptMulti(val executable: ScriptMulti.() -> Any?) {
     var inputFiles: List<File> = listOf()
     val rawArguments: MutableMap<String, String> = mutableMapOf()
-    var arguments: ExecutionArguments = ExecutionArguments(ScriptArguments(), mapOf())
+    var arguments: MutableMap<String, Any> = mutableMapOf()
     var verboseMode: Boolean = false
     var debugMode: Boolean = false
 
     fun executeMultiScript(inputFiles: List<File>, scriptArguments: ScriptArguments, arguments: Map<String, String>, verboseMode: Boolean, debugMode: Boolean, outputHandler: (File, Any?) -> Unit) {
         this.inputFiles = inputFiles
         this.rawArguments.putAll(arguments)
-        this.arguments = ExecutionArguments(scriptArguments, arguments)
+        this.arguments = processArguments(scriptArguments, arguments)
         this.verboseMode = verboseMode
         this.debugMode = debugMode
 
@@ -416,6 +416,41 @@ class ScriptMulti(val executable: ScriptMulti.() -> Any?) {
         }
         outputHandler(referenceFile, output)
     }
+}
+
+private fun processArguments(scriptArguments: ScriptArguments, rawArguments: Map<String, String>): MutableMap<String, Any> {
+    val processed = mutableMapOf<String, Any>()
+
+    for (argument in scriptArguments.arguments) {
+        when (argument) {
+            is ScriptIntArg -> {
+                val value = argument.toValue(rawArguments[argument.name])
+                if (value != null) {
+                    processed[argument.name] = value
+                }
+            }
+            is ScriptDoubleArg -> {
+                val value = argument.toValue(rawArguments[argument.name])
+                if (value != null) {
+                    processed[argument.name] = value
+                }
+            }
+            is ScriptBooleanArg -> {
+                val value = argument.toValue(rawArguments[argument.name])
+                if (value != null) {
+                    processed[argument.name] = value
+                }
+            }
+            is ScriptStringArg -> {
+                val value = argument.toValue(rawArguments[argument.name])
+                if (value != null) {
+                    processed[argument.name] = value
+                }
+            }
+        }
+    }
+
+    return processed
 }
 
 fun kimage(version: Double, initializer: ScriptV0_1.() -> Unit): Script {

@@ -53,11 +53,11 @@ kimage(0.1) {
         }
     }
     single {
-        val removePercent: Double by arguments.double
-        val medianFilterPercent: Double by arguments.double
-        val blurFilterPercent: Double by arguments.double
-        var medianFilterSize: Int by arguments.int
-        var blurFilterSize: Int by arguments.int
+        val removePercent: Double by arguments
+        val medianFilterPercent: Double by arguments
+        val blurFilterPercent: Double by arguments
+        var medianFilterSize: Int by arguments
+        var blurFilterSize: Int by arguments
 
         val inputImageSize = min(inputImage.width, inputImage.height)
         if (medianFilterSize == 0) {

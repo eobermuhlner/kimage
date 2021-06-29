@@ -87,18 +87,18 @@ kimage(0.1) {
         val defaultCheckRadius = sqrt(baseImageMinSize.toDouble()).toInt()
         val defaultSearchRadius = min(baseImageMinSize, defaultCheckRadius * 4)
 
-        val checkRadius: Int by arguments.int.withDefault { defaultCheckRadius }
-        val searchRadius: Int by arguments.int.withDefault { defaultSearchRadius }
+        val checkRadius: Int by arguments.withDefault { defaultCheckRadius }
+        val searchRadius: Int by arguments.withDefault { defaultSearchRadius }
 
         val imageAligner = ImageAligner(checkRadius)
         val (autoCenterX, autoCenterY) = imageAligner.findInterestingCropCenter(baseImage)
 
-        val centerX: Int by arguments.int.withDefault { autoCenterX }
-        val centerY: Int by arguments.int.withDefault { autoCenterY }
-        val errorThreshold: Double by arguments.double
-        val prefix: String by arguments.string
-        val saveBad: Boolean by arguments.boolean
-        val prefixBad: String by arguments.string
+        val centerX: Int by arguments.withDefault { autoCenterX }
+        val centerY: Int by arguments.withDefault { autoCenterY }
+        val errorThreshold: Double by arguments
+        val prefix: String by arguments
+        val saveBad: Boolean by arguments
+        val prefixBad: String by arguments
 
         println("Arguments:")
         println("  checkRadius = $checkRadius")
