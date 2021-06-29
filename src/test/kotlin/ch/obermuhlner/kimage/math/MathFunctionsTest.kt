@@ -6,7 +6,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import kotlin.math.sqrt
 
-internal class ImageFunctionsTest {
+internal class MathFunctionsTest {
 
     private val epsilonFloat: Float = 1E-8f
     private val epsilonDouble: Double = 1.0E-10
@@ -364,4 +364,43 @@ internal class ImageFunctionsTest {
         array.sigmaClip()
         assertArrayEquals(floatArrayOf(1f, 2f, 3f, 4f, 90f, 91f), array, epsilonFloat)
     }
+
+    @Test
+    fun testFloatArrayWinsorizeLimitsInplace() {
+        assertArrayEquals(floatArrayOf(2.5f, 2.5f, 3f, 4f, 10f, 10f), floatArrayOf(1f, 2f, 3f, 4f, 90f, 91f).winsorizeLimitsInplace(2.5f, 10f), epsilonFloat)
+    }
+
+    @Test
+    fun testDoubleArrayWinsorizeLimitsInplace() {
+        assertArrayEquals(doubleArrayOf(2.5, 2.5, 3.0, 4.0, 10.0, 10.0), doubleArrayOf(1.0, 2.0, 3.0, 4.0, 90.0, 91.0).winsorizeLimitsInplace(2.5, 10.0), epsilonDouble)
+    }
+
+    @Test
+    fun testFloatArrayWinsorizeSigmaInplace() {
+        val array = floatArrayOf(1f, 2f, 3f, 4f, 90f, 91f)
+        val median = array.median()
+        val sigma = array.stddev()
+        val high = median + sigma
+        assertArrayEquals(floatArrayOf(1f, 2f, 3f, 4f, high, high), array.winsorizeSigmaInplace(1.0f), epsilonFloat)
+    }
+
+    @Test
+    fun testDoubleArrayWinsorizeSigmaInplace() {
+        val array = doubleArrayOf(1.0, 2.0, 3.0, 4.0, 90.0, 91.0)
+        val median = array.median()
+        val sigma = array.stddev()
+        val high = median + sigma
+        assertArrayEquals(doubleArrayOf(1.0, 2.0, 3.0, 4.0, high, high), array.winsorizeSigmaInplace(1.0), epsilonDouble)
+    }
+
+    @Test
+    fun testFloatArrayHuberWinsorizeInplace() {
+        assertArrayEquals(floatArrayOf(1f, 2f, 3f, 4f, 24.780285f, 24.780285f), floatArrayOf(1f, 2f, 3f, 4f, 90f, 91f).winsorizeHuberInplace(), epsilonFloat)
+    }
+
+    @Test
+    fun testDoubleArrayHuberWinsorizeInplace() {
+        assertArrayEquals(doubleArrayOf(1.0, 2.0, 3.0, 4.0, 24.780283953932145, 24.780283953932145), doubleArrayOf(1.0, 2.0, 3.0, 4.0, 90.0, 91.0).winsorizeHuberInplace(), epsilonDouble)
+    }
+
 }
