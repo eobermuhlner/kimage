@@ -51,7 +51,7 @@ class Histogram(private val binCount: Int = 256) {
 
     fun remove(value: Int) {
         val index = clamp(value, 0, binCount-1)
-        bins[index]++
+        bins[index]--
         entryCount--
     }
 
