@@ -11,6 +11,7 @@ internal class MathFunctionsTest {
     private val epsilonFloat: Float = 1E-8f
     private val epsilonDouble: Double = 1.0E-10
 
+
     @Test
     fun testFloatMix() {
         assertEquals(5.0f, mixLinear(5f, 7f, 0.0f), epsilonFloat)

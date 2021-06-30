@@ -259,7 +259,7 @@ object TestScript {
                     if (debugMode) {
                         val deltaFile = File("delta_${prefix}_" + inputFile.name)
                         println("Saving $deltaFile for manual analysis")
-                        val deltaImage = deltaRGB(baseImage, alignedImage)
+                        val deltaImage = deltaChannel(baseImage, alignedImage)
                         ImageWriter.write(deltaImage, deltaFile)
                     }
 
@@ -396,7 +396,7 @@ object TestScript {
                 if (sigmaClipHistogram.n > 0) {
                     println("Sigma-Clip Histogram")
                     for (i in sigmaClipHistogram.indices) {
-                        val length = 40 * sigmaClipHistogram[i] / sigmaClipHistogram.n
+                        val length = (40.0 * sigmaClipHistogram[i] / sigmaClipHistogram.n).toInt()
                         val line = String.format("%3d : %10d %s", i, sigmaClipHistogram[i], "#".repeat(length))
                         println("  $line")
                     }

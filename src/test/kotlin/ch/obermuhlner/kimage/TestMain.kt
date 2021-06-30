@@ -11,21 +11,151 @@ import kotlin.random.Random
 object TestMain {
     @JvmStatic
     fun main(args: Array<String>) {
-//        exampleFilters("lena512color.tiff")
-//
-//        exampleChannelManipulation("animal.png")
-//        exampleFilters("animal.png")
-//
-//        exampleChannelManipulation("orion.png")
-//        exampleFilters("orion.png")
-//
-//        exampleImages()
-//        exampleMedianExperiments()
-//
-//        exampleScale("lena512color.tiff")
+        exampleFilters("lena512color.tiff")
 
-        //exampleError()
+        exampleChannelManipulation("animal.png")
+        exampleFilters("animal.png")
+
+        exampleChannelManipulation("orion.png")
+        exampleFilters("orion.png")
+
+        exampleImages()
+        exampleMedianExperiments()
+
+        exampleScale("lena512color.tiff")
+
+        exampleInterpolate("colors.png")
+        exampleInterpolate("orion.png")
+        exampleInterpolate("lena512color.tiff")
+
+        exampleError()
         exampleAlign()
+    }
+
+    private fun exampleInterpolate(imageName: String) {
+        val image = ImageReader.readMatrixImage(File("images/$imageName"))
+
+        val inset = 50
+        // estimated nice power values for n points
+        // 2 -> 2.0
+        // 3 -> 8.0
+        // 4 -> 10.0
+        // 5 -> 15.0
+        // 9 -> 30.0
+        // 25 -> 100.0
+
+        val points2 = listOf(
+            inset to inset,
+            image.width-inset to image.height-inset)
+
+        val points3 = listOf(
+            image.width/2 to inset,
+            inset to image.height - inset,
+            image.width-inset to image.height-inset)
+
+        val points4 = listOf(
+            inset to inset,
+            image.width-inset to inset,
+            inset to image.height-inset,
+            image.width-inset to image.height-inset)
+
+        val points5 = listOf(
+            image.width/2 to image.height/2,
+            inset to inset,
+            image.width-inset to inset,
+            inset to image.height-inset,
+            image.width-inset to image.height-inset)
+
+        val grid3x3 = pointGrid(image, 3, 3)
+        val grid5x5 = pointGrid(image, 5, 5)
+        val grid10x10 = pointGrid(image, 10, 10)
+
+        example("interpolate_2", imageName) {
+            image.interpolate(points2)
+        }
+        example("interpolate_2_subtract", imageName) {
+            image - image.interpolate(points2)
+        }
+        example("interpolate_3", imageName) {
+            image.interpolate(points3)
+        }
+        example("interpolate_3_subtract", imageName) {
+            image - image.interpolate(points3)
+        }
+        example("interpolate_4", imageName) {
+            image.interpolate(points4)
+        }
+        example("interpolate_4_subtract", imageName) {
+            image - image.interpolate(points4)
+        }
+        example("interpolate_5", imageName) {
+            image.interpolate(points5)
+        }
+        example("interpolate_5_subtract", imageName) {
+            image - image.interpolate(points5)
+        }
+        example("interpolate_3x3", imageName) {
+            image.interpolate(grid3x3)
+        }
+        example("interpolate_3x3_subtract", imageName) {
+            image - image.interpolate(grid3x3)
+        }
+        example("interpolate_5x5", imageName) {
+            image.interpolate(grid5x5)
+        }
+        example("interpolate_5x5_subtract", imageName) {
+            image - image.interpolate(grid5x5)
+        }
+        example("interpolate_10x10", imageName) {
+            image.interpolate(grid10x10)
+        }
+        example("interpolate_10x10_subtract", imageName) {
+            image - image.interpolate(grid10x10)
+        }
+        example("interpolate_clipped5x5", imageName) {
+            image.interpolate(sigmaClipPointGrid(image, grid5x5))
+        }
+        example("interpolate_clipped5x5_subtract", imageName) {
+            image - image.interpolate(sigmaClipPointGrid(image, grid5x5))
+        }
+        example("interpolate_clipped5x5_delta", imageName) {
+            deltaChannel(image, image.interpolate(sigmaClipPointGrid(image, grid5x5)))
+        }
+        example("interpolate_clipped10x10", imageName) {
+            image.interpolate(sigmaClipPointGrid(image, grid10x10))
+        }
+        example("interpolate_clipped10x10_subtract", imageName) {
+            image - image.interpolate(sigmaClipPointGrid(image, grid10x10))
+        }
+
+    }
+
+    private fun pointGrid(image: Image, xCount: Int, yCount: Int): List<Pair<Int, Int>> {
+        val grid = mutableListOf<Pair<Int, Int>>()
+        val width = image.width
+        val height = image.height
+        for (x in 0 until xCount) {
+            for (y in 0 until yCount) {
+                val xCenter = (width.toDouble() / xCount * (x + 0.5)).toInt()
+                val yCenter = (height.toDouble() / yCount * (y + 0.5)).toInt()
+                grid.add(Pair(xCenter, yCenter))
+            }
+        }
+        return grid
+    }
+
+    private fun sigmaClipPointGrid(image: Image, grid: List<Pair<Int, Int>>): List<Pair<Int, Int>> {
+        val gridWithMedian = grid.map {
+            val median = image.cropCenter(100, it.first, it.second).values().fastMedian()
+            Pair(it, median)
+        }
+        val gridMedian = gridWithMedian.map { it.second }.median()
+        val gridSigma = gridWithMedian.map { it.second }.stddev()
+
+        val low = gridMedian - gridSigma * 0.5
+        val high = gridMedian + gridSigma * 0.5
+
+        return gridWithMedian.filter { it.second in low..high } .map { it.first }
     }
 
     private fun exampleScale(imageName: String) {
@@ -95,7 +225,7 @@ object TestMain {
         for (y in insetWidth until image.height - insetWidth step radius) {
             for (x in insetHeight until image.width - insetHeight step radius) {
                 val croppedImage = image.crop(x, y, radius, radius)
-                val stddev = croppedImage[Channel.Red].stddev()
+                val stddev = croppedImage.values().stddev()
                 if (stddev > bestStdDev) {
                     //println("stddev $x, $y : $stddev")
                     bestStdDev = stddev
@@ -168,8 +298,8 @@ object TestMain {
             false
         ), File("${name}_cropped_other.png"))
 
-        val min = errorImage[Channel.Red].min()
-        val max = errorImage[Channel.Red].max()
+        val min = errorImage.values().min()
+        val max = errorImage.values().max()
         println("min: $min")
         println("max: $max")
 
@@ -213,7 +343,7 @@ object TestMain {
 
             ImageWriter.write(alignedImage, File("images/output/aligned_" + inputFile.name))
 
-            val delta = deltaRGB(baseImage, alignedImage)
+            val delta = deltaChannel(baseImage, alignedImage)
             ImageWriter.write(delta, File("images/output/delta_aligned_" + inputFile.name))
         }
     }

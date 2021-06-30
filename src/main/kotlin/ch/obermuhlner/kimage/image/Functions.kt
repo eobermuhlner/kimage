@@ -3,9 +3,10 @@ package ch.obermuhlner.kimage.image
 import ch.obermuhlner.kimage.Scaling
 import ch.obermuhlner.kimage.io.ImageFormat
 import ch.obermuhlner.kimage.io.ImageWriter
+import ch.obermuhlner.kimage.math.clamp
 import ch.obermuhlner.kimage.matrix.*
 import java.io.File
-import kotlin.math.abs
+import kotlin.math.*
 
 fun deltaRGB(image1: Image, image2: Image, factor: Double = 10.0): Image {
     return MatrixImage(
@@ -16,18 +17,22 @@ fun deltaRGB(image1: Image, image2: Image, factor: Double = 10.0): Image {
     }
 }
 
-fun deltaChannel(image1: Image, image2: Image, factor: Double = 10.0, channel: Channel = Channel.Luminance): Image {
-    val delta = image1[channel] - image2[channel]
-    val red = delta.onEach { v -> if (v < 0.0) -v * factor else v * factor * 0.5 }
-    val green = delta.onEach { v -> abs(v) * factor * 0.5 }
-    val blue = delta.onEach { v -> if (v > 0.0) v * factor else -v * factor * 0.5 }
+fun deltaChannel(image1: Image, image2: Image, factor: Double = 5.0, channel: Channel = Channel.Luminance): Image {
+    val f = 0.2
+    var delta = (image1[channel] - image2[channel]) * factor
+    delta = delta.onEach { v -> exaggerate(v) }
+    val red = delta.onEach   { v -> if (v < 0.0) -v     else v * f }
+    val green = delta.onEach { v -> if (v < 0.0) -v * f else v * f }
+    val blue = delta.onEach  { v -> if (v < 0.0) -v * f else v     }
     return MatrixImage(
         image1.width,
-        image2.height,
+        image1.height,
         Channel.Red to red,
         Channel.Green to green,
         Channel.Blue to blue)
 }
+
+private fun exaggerate(x: Double): Double = -1/(x+0.5)+2
 
 operator fun Image.plus(other: Image): Image {
     return MatrixImage(
@@ -92,6 +97,33 @@ fun Image.stretchClassic(min: Double, max: Double, func: (Double) -> Double = { 
     }
 }
 
+fun Image.values(channels: List<Channel> = this.channels): Iterable<Double> =
+    ImageValueIterable(this, channels)
+
+private class CompositeIterator<T>(iterators: List<Iterator<T>>): Iterator<T> {
+    val iterators = iterators.filter { it.hasNext() } .toMutableList()
+
+    override fun hasNext(): Boolean = iterators.isNotEmpty()
+
+    override fun next(): T {
+        if (!hasNext()) {
+            throw NoSuchElementException()
+        }
+
+        val element = iterators.first().next()
+
+        if (!iterators.first().hasNext()) {
+            iterators.removeFirst()
+        }
+
+        return element
+    }
+}
+
+private class ImageValueIterable(private val image: Image, private val channels: List<Channel>) : Iterable<Double> {
+    override fun iterator(): Iterator<Double> = CompositeIterator(channels.map { image[it].iterator() })
+}
+
 fun Image.averageError(other: Image, channels: List<Channel> = this.channels): Double {
     var sum = 0.0
     for (channel in channels) {
@@ -124,6 +156,27 @@ fun Image.scaleTo(newWidth: Int, newHeight: Int, scaling: Scaling = Scaling.Bicu
         newHeight,
         this.channels) { channel, _, _ ->
         this[channel].scaleTo(newHeight, newWidth, scaling)
+    }
+}
+
+fun Image.interpolate(fixPoints: List<Pair<Int, Int>>, power: Double = estimatePowerForInterpolation(fixPoints.size)): Image {
+    val fixPointsRowColumn = fixPoints.map { Pair(it.second, it.first) }
+    val medianRadius = min(width, height) / max(sqrt(fixPoints.size.toDouble()).toInt()+1, 2)
+    return MatrixImage(
+        width,
+        height,
+        this.channels) { channel, _, _ ->
+        this[channel].interpolate(fixPointsRowColumn,  { medianAround(this[channel], it.first, it.second, medianRadius) }, power = power)
+    }
+}
+
+fun Image.interpolate(fixPoints: List<Pair<Int, Int>>, fixValues: List<Double>, power: Double = estimatePowerForInterpolation(fixPoints.size)): Image {
+    val fixPointsRowColumn = fixPoints.map { Pair(it.second, it.first) }
+    return MatrixImage(
+        width,
+        height,
+        this.channels) { channel, _, _ ->
+        this[channel].interpolate(fixPointsRowColumn,  fixValues, power = power)
     }
 }
 

@@ -25,7 +25,7 @@ class ImageAligner(
         for (y in insetWidth until image.height - insetWidth step radiusStepY) {
             for (x in insetHeight until image.width - insetHeight step radiusStepX) {
                 val croppedImage = image.cropCenter(radiusX, radiusY, x, y)
-                val stddev = croppedImage[Channel.Red].stddev()
+                val stddev = croppedImage.values().stddev()
                 if (stddev > bestStdDev) {
                     //ImageWriter.write(croppedImage, File("check_${stddev}.png"))
                     //println("stddev $x, $y : $stddev")

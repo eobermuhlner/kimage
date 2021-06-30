@@ -1,10 +1,10 @@
 package ch.obermuhlner.kimage.matrix
 
 import ch.obermuhlner.kimage.Scaling
-import ch.obermuhlner.kimage.math.clamp
-import ch.obermuhlner.kimage.math.mixBilinear
-import ch.obermuhlner.kimage.math.mixCubicHermite
+import ch.obermuhlner.kimage.math.*
 import kotlin.math.abs
+import kotlin.math.pow
+import kotlin.math.sqrt
 
 fun Matrix.contentToString(multiline: Boolean = false): String {
     val str = StringBuilder()
@@ -178,3 +178,67 @@ private fun Matrix.scaleBicubicTo(newRows: Int, newColumns: Int): Matrix {
 
     return m
 }
+
+fun Matrix.interpolate(fixPoints: List<Pair<Int, Int>>, valueFunc: (Pair<Int, Int>) -> Double = { valueAt(this, it.first, it.second) }, power: Double = estimatePowerForInterpolation(fixPoints.size)): Matrix {
+    val fixValues = fixPoints.map { valueFunc(it) }
+    return interpolate(fixPoints, fixValues, power)
+}
+
+fun Matrix.interpolate(fixPoints: List<Pair<Int, Int>>, fixValues: List<Double>, power: Double = estimatePowerForInterpolation(fixPoints.size)): Matrix {
+    val m = create()
+
+    for (row in 0 until rows) {
+        for (column in 0 until columns) {
+            m[row, column] = interpolate(row, column, fixPoints, fixValues, power)
+        }
+    }
+
+    return m
+}
+
+fun valueAt(matrix: Matrix, row: Int, column: Int): Double {
+    return matrix[row, column]
+}
+
+fun medianAround(matrix: Matrix, row: Int, column: Int, radius: Int = 10): Double {
+    return matrix.croppedMatrix(row - radius, column - radius, radius+radius+1, radius+radius+1).median()
+}
+
+private fun interpolate(row: Int, column: Int, fixPoints: List<Pair<Int, Int>>, fixValues: List<Double>, power: Double = estimatePowerForInterpolation(fixPoints.size)): Double {
+    require(fixPoints.size == fixValues.size)
+
+    val distances = DoubleArray(fixPoints.size)
+    var totalDistance = 0.0
+    for (i in fixPoints.indices) {
+        val fixRow = fixPoints[i].first
+        val fixColumn = fixPoints[i].second
+
+        val dRow = (row-fixRow).toDouble()
+        val dColumn = (column-fixColumn).toDouble()
+        val distance = sqrt(dRow*dRow + dColumn*dColumn)
+        distances[i] = distance
+        totalDistance += distance
+    }
+
+    val factors = DoubleArray(fixPoints.size)
+    var totalFactor = 0.0
+    for (i in fixPoints.indices) {
+        var factor = 1.0 - distances[i] / totalDistance
+        factor = factor.pow(power)
+        factors[i] = factor
+        totalFactor += factor
+    }
+
+    var mixedValue = 0.0
+    for (i in fixPoints.indices) {
+        val fixValue = fixValues[i]
+        val factor = factors[i] / totalFactor
+        mixedValue += fixValue * factor
+    }
+
+    return mixedValue
+}
+
+fun estimatePowerForInterpolation(n: Int): Double = n.toDouble().pow(1.6)
+
+
