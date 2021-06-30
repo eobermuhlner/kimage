@@ -147,7 +147,7 @@ kimage(0.1) {
             if (debugMode) {
                 val deltaFile = File("delta_$prefix" + inputFile.name)
                 println("Saving $deltaFile for manual analysis")
-                val deltaImage = deltaRGB(baseImage, alignedImage)
+                val deltaImage = deltaChannel(baseImage, alignedImage)
                 ImageWriter.write(deltaImage, deltaFile)
             }
 
