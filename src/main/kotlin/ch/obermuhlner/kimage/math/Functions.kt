@@ -148,9 +148,17 @@ fun Iterator<Float>.average(): Float {
     return sum / count
 }
 
-fun Iterable<Float>.average(): Float {
-    val (sum, count) = iterator().sumAndCountFloat()
+fun Iterator<Double>.average(): Double {
+    val (sum, count) = sumAndCountDouble()
     return sum / count
+}
+
+fun Iterable<Float>.average(): Float {
+    return iterator().average()
+}
+
+fun Iterable<Double>.average(): Double {
+    return iterator().average()
 }
 
 fun FloatArray.average(offset: Int = 0, length: Int = size-offset): Float {
@@ -344,9 +352,12 @@ fun FloatArray.sigmaClipInplace(kappa: Float = 2f, iterations: Int = 1, offset: 
 
     for (i in 0 until iterations) {
         val sigma = stddev(standardDeviationType, offset, currentLength)
-        val m = center(this, offset, currentLength)
+        val center = center(this, offset, currentLength)
 
-        currentLength = sigmaClipInplace(kappa, m, sigma, offset, currentLength, keepLast)
+        val low = center - kappa * sigma
+        val high = center + kappa * sigma
+
+        currentLength = sigmaClipInplace(low, high, offset, currentLength, keepLast)
     }
     histogram?.add(currentLength)
 
@@ -358,23 +369,19 @@ fun DoubleArray.sigmaClipInplace(kappa: Double = 2.0, iterations: Int = 1, offse
 
     for (i in 0 until iterations) {
         val sigma = stddev(standardDeviationType, offset, currentLength)
-        val m = center(this, offset, currentLength)
+        val center = center(this, offset, currentLength)
 
-        currentLength = sigmaClipInplace(kappa, m, sigma, offset, currentLength, keepLast)
+        val low = center - kappa * sigma
+        val high = center + kappa * sigma
+
+        currentLength = sigmaClipInplace(low, high, offset, currentLength, keepLast)
     }
     histogram?.add(currentLength)
 
     return currentLength
 }
 
-private fun FloatArray.sigmaClipInplace(kappa: Float = 2f, m: Float, sigma: Float, offset: Int = 0, length: Int = size-offset, keepLast: Boolean = true): Int {
-    if (keepLast && length == 1) {
-        return 1
-    }
-
-    val low = m - kappa * sigma
-    val high = m + kappa * sigma
-
+fun FloatArray.sigmaClipInplace(low: Float, high: Float, offset: Int = 0, length: Int = size-offset, keepLast: Boolean = true): Int {
     var targetLength = 0
     for (source in offset until (offset+length)) {
         if (this[source] in low..high) {
@@ -382,10 +389,11 @@ private fun FloatArray.sigmaClipInplace(kappa: Float = 2f, m: Float, sigma: Floa
         }
     }
 
-    if (keepLast && length == 0) {
+    if (keepLast && length > 0 && targetLength == 0) {
+        val center = low + (high - low) / 2
         var best = this[offset]
         for (source in offset+1 until (offset + length)) {
-            if (abs(m - this[source]) < abs(m - best)) {
+            if (abs(center - this[source]) < abs(center - best)) {
                 best = this[source]
             }
         }
@@ -396,14 +404,7 @@ private fun FloatArray.sigmaClipInplace(kappa: Float = 2f, m: Float, sigma: Floa
     return targetLength
 }
 
-private fun DoubleArray.sigmaClipInplace(kappa: Double = 2.0, m: Double, sigma: Double, offset: Int = 0, length: Int = size-offset, keepLast: Boolean = true): Int {
-    if (keepLast && length == 1) {
-        return 1
-    }
-
-    val low = m - kappa * sigma
-    val high = m + kappa * sigma
-
+fun DoubleArray.sigmaClipInplace(low: Double, high: Double, offset: Int = 0, length: Int = size - offset, keepLast: Boolean = true): Int {
     var targetLength = 0
     for (source in offset until (offset+length)) {
         if (this[source] in low..high) {
@@ -411,10 +412,11 @@ private fun DoubleArray.sigmaClipInplace(kappa: Double = 2.0, m: Double, sigma: 
         }
     }
 
-    if (keepLast && length == 0) {
+    if (keepLast && length > 0 && targetLength == 0) {
+        val center = low + (high - low) / 2
         var best = this[offset]
         for (source in offset+1 until (offset + length)) {
-            if (abs(m - this[source]) < abs(m - best)) {
+            if (abs(center - this[source]) < abs(center - best)) {
                 best = this[source]
             }
         }

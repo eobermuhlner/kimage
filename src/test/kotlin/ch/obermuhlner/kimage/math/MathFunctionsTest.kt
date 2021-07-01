@@ -144,6 +144,16 @@ internal class MathFunctionsTest {
     }
 
     @Test
+    fun testFloatIterableAverage() {
+        assertEquals(2f, listOf(1f, 2f, 3f).average(), epsilonFloat)
+    }
+
+    @Test
+    fun testDoubleIterableAverage() {
+        assertEquals(2.0, listOf(1.0, 2.0, 3.0).average(), epsilonDouble)
+    }
+
+    @Test
     fun testFloatArrayMedianInplace() {
         assertEquals(Float.NaN, floatArrayOf().medianInplace())
         assertEquals(Float.NaN, floatArrayOf(2f, 1f, 3f).medianInplace(length = 0))
@@ -346,15 +356,40 @@ internal class MathFunctionsTest {
 
     @Test
     fun testFloatArraySigmaClip() {
+        assertArrayEquals(floatArrayOf(), floatArrayOf().sigmaClip(), epsilonFloat)
+        assertArrayEquals(floatArrayOf(3f), floatArrayOf(3f).sigmaClip(), epsilonFloat)
+
         assertArrayEquals(floatArrayOf(1f, 2f, 3f, 4f), floatArrayOf(1f, 2f, 3f, 4f, 90f, 91f).sigmaClip(), epsilonFloat)
 
         assertArrayEquals(floatArrayOf(1f, 2f, 3f, 4f, 20f, 50f), floatArrayOf(1f, 2f, 3f, 4f, 20f, 50f, 60f).sigmaClip(iterations = 1), epsilonFloat)
         assertArrayEquals(floatArrayOf(1f, 2f, 3f, 4f, 20f), floatArrayOf(1f, 2f, 3f, 4f, 20f, 50f, 60f).sigmaClip(iterations = 2), epsilonFloat)
         assertArrayEquals(floatArrayOf(1f, 2f, 3f, 4f), floatArrayOf(1f, 2f, 3f, 4f, 20f, 50f, 60f).sigmaClip(iterations = 3), epsilonFloat)
 
+        assertArrayEquals(floatArrayOf(1f), floatArrayOf(1f, 60f).sigmaClip(kappa = 0.1f), epsilonFloat)
+        assertArrayEquals(floatArrayOf(), floatArrayOf(1f, 60f).sigmaClip(kappa = 0.1f, keepLast = false), epsilonFloat)
+
         val array = floatArrayOf(1f, 2f, 3f, 4f, 90f, 91f)
         array.sigmaClip()
         assertArrayEquals(floatArrayOf(1f, 2f, 3f, 4f, 90f, 91f), array, epsilonFloat)
+    }
+
+    @Test
+    fun testDoubleArraySigmaClip() {
+        assertArrayEquals(doubleArrayOf(), doubleArrayOf().sigmaClip(), epsilonDouble)
+        assertArrayEquals(doubleArrayOf(3.0), doubleArrayOf(3.0).sigmaClip(), epsilonDouble)
+
+        assertArrayEquals(doubleArrayOf(1.0, 2.0, 3.0, 4.0), doubleArrayOf(1.0, 2.0, 3.0, 4.0, 90.0, 91.0).sigmaClip(), epsilonDouble)
+
+        assertArrayEquals(doubleArrayOf(1.0, 2.0, 3.0, 4.0, 20.0, 50.0), doubleArrayOf(1.0, 2.0, 3.0, 4.0, 20.0, 50.0, 60.0).sigmaClip(iterations = 1), epsilonDouble)
+        assertArrayEquals(doubleArrayOf(1.0, 2.0, 3.0, 4.0, 20.0), doubleArrayOf(1.0, 2.0, 3.0, 4.0, 20.0, 50.0, 60.0).sigmaClip(iterations = 2), epsilonDouble)
+        assertArrayEquals(doubleArrayOf(1.0, 2.0, 3.0, 4.0), doubleArrayOf(1.0, 2.0, 3.0, 4.0, 20.0, 50.0, 60.0).sigmaClip(iterations = 3), epsilonDouble)
+
+        assertArrayEquals(doubleArrayOf(1.0), doubleArrayOf(1.0, 60.0).sigmaClip(kappa = 0.1), epsilonDouble)
+        assertArrayEquals(doubleArrayOf(), doubleArrayOf(1.0, 60.0).sigmaClip(kappa = 0.1, keepLast = false), epsilonDouble)
+
+        val array = doubleArrayOf(1.0, 2.0, 3.0, 4.0, 90.0, 91.0)
+        array.sigmaClip()
+        assertArrayEquals(doubleArrayOf(1.0, 2.0, 3.0, 4.0, 90.0, 91.0), array, epsilonDouble)
     }
 
     @Test
