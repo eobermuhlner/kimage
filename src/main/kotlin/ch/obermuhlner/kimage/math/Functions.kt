@@ -327,47 +327,51 @@ fun Iterable<Double>.fastMedian(min: Double, max: Double, binCount: Int = 100): 
     return histogram.estimateMedian() * (max - min) + min
 }
 
-fun FloatArray.sigmaClip(kappa: Float = 2f, iterations: Int = 1, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population, center: (FloatArray, Int, Int) -> Float = FloatArray::median, histogram: Histogram? = null): FloatArray {
+fun FloatArray.sigmaClip(kappa: Float = 2f, iterations: Int = 1, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population, center: (FloatArray, Int, Int) -> Float = FloatArray::median, keepLast: Boolean = true, histogram: Histogram? = null): FloatArray {
     val array = copyOfRange(offset, offset+length)
-    val clippedLength = array.sigmaClipInplace(kappa, iterations, 0, length, standardDeviationType, center, histogram)
+    val clippedLength = array.sigmaClipInplace(kappa, iterations, 0, length, standardDeviationType, center, keepLast, histogram)
     return array.copyOfRange(0, clippedLength)
 }
 
-fun DoubleArray.sigmaClip(kappa: Double = 2.0, iterations: Int = 1, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population, center: (DoubleArray, Int, Int) -> Double = DoubleArray::median, histogram: Histogram? = null): DoubleArray {
+fun DoubleArray.sigmaClip(kappa: Double = 2.0, iterations: Int = 1, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population, center: (DoubleArray, Int, Int) -> Double = DoubleArray::median, keepLast: Boolean = true, histogram: Histogram? = null): DoubleArray {
     val array = copyOfRange(offset, offset+length)
-    val clippedLength = array.sigmaClipInplace(kappa, iterations, 0, length, standardDeviationType, center, histogram)
+    val clippedLength = array.sigmaClipInplace(kappa, iterations, 0, length, standardDeviationType, center, keepLast, histogram)
     return array.copyOfRange(0, clippedLength)
 }
 
-fun FloatArray.sigmaClipInplace(kappa: Float = 2f, iterations: Int = 1, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population, center: (FloatArray, Int, Int) -> Float = FloatArray::median, histogram: Histogram? = null): Int {
+fun FloatArray.sigmaClipInplace(kappa: Float = 2f, iterations: Int = 1, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population, center: (FloatArray, Int, Int) -> Float = FloatArray::median, keepLast: Boolean = true, histogram: Histogram? = null): Int {
     var currentLength = length
 
     for (i in 0 until iterations) {
         val sigma = stddev(standardDeviationType, offset, currentLength)
         val m = center(this, offset, currentLength)
 
-        currentLength = sigmaClipInplace(kappa, m, sigma, offset, currentLength)
+        currentLength = sigmaClipInplace(kappa, m, sigma, offset, currentLength, keepLast)
     }
     histogram?.add(currentLength)
 
     return currentLength
 }
 
-fun DoubleArray.sigmaClipInplace(kappa: Double = 2.0, iterations: Int = 1, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population, center: (DoubleArray, Int, Int) -> Double = DoubleArray::median, histogram: Histogram? = null): Int {
+fun DoubleArray.sigmaClipInplace(kappa: Double = 2.0, iterations: Int = 1, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population, center: (DoubleArray, Int, Int) -> Double = DoubleArray::median, keepLast: Boolean = true, histogram: Histogram? = null): Int {
     var currentLength = length
 
     for (i in 0 until iterations) {
         val sigma = stddev(standardDeviationType, offset, currentLength)
         val m = center(this, offset, currentLength)
 
-        currentLength = sigmaClipInplace(kappa, m, sigma, offset, currentLength)
+        currentLength = sigmaClipInplace(kappa, m, sigma, offset, currentLength, keepLast)
     }
     histogram?.add(currentLength)
 
     return currentLength
 }
 
-private fun FloatArray.sigmaClipInplace(kappa: Float = 2f, m: Float, sigma: Float, offset: Int = 0, length: Int = size-offset): Int {
+private fun FloatArray.sigmaClipInplace(kappa: Float = 2f, m: Float, sigma: Float, offset: Int = 0, length: Int = size-offset, keepLast: Boolean = true): Int {
+    if (keepLast && length == 1) {
+        return 1
+    }
+
     val low = m - kappa * sigma
     val high = m + kappa * sigma
 
@@ -376,12 +380,27 @@ private fun FloatArray.sigmaClipInplace(kappa: Float = 2f, m: Float, sigma: Floa
         if (this[source] in low..high) {
             this[offset + targetLength++] = this[source]
         }
+    }
+
+    if (keepLast && length == 0) {
+        var best = this[offset]
+        for (source in offset+1 until (offset + length)) {
+            if (abs(m - this[source]) < abs(m - best)) {
+                best = this[source]
+            }
+        }
+        this[offset] = best
+        targetLength = 1
     }
 
     return targetLength
 }
 
-private fun DoubleArray.sigmaClipInplace(kappa: Double = 2.0, m: Double, sigma: Double, offset: Int = 0, length: Int = size-offset): Int {
+private fun DoubleArray.sigmaClipInplace(kappa: Double = 2.0, m: Double, sigma: Double, offset: Int = 0, length: Int = size-offset, keepLast: Boolean = true): Int {
+    if (keepLast && length == 1) {
+        return 1
+    }
+
     val low = m - kappa * sigma
     val high = m + kappa * sigma
 
@@ -390,6 +409,17 @@ private fun DoubleArray.sigmaClipInplace(kappa: Double = 2.0, m: Double, sigma: 
         if (this[source] in low..high) {
             this[offset + targetLength++] = this[source]
         }
+    }
+
+    if (keepLast && length == 0) {
+        var best = this[offset]
+        for (source in offset+1 until (offset + length)) {
+            if (abs(m - this[source]) < abs(m - best)) {
+                best = this[source]
+            }
+        }
+        this[offset] = best
+        targetLength = 1
     }
 
     return targetLength
