@@ -345,15 +345,6 @@ internal class MathFunctionsTest {
     }
 
     @Test
-    fun testFloatArraySigmaClipInplace() {
-        assertArrayEquals(floatArrayOf(1f, 2f, 3f, 4f), floatArrayOf(1f, 2f, 3f, 4f, 90f, 91f).sigmaClipInplace(), epsilonFloat)
-
-        assertArrayEquals(floatArrayOf(1f, 2f, 3f, 4f, 20f, 50f), floatArrayOf(1f, 2f, 3f, 4f, 20f, 50f, 60f).sigmaClipInplace(iterations = 1), epsilonFloat)
-        assertArrayEquals(floatArrayOf(1f, 2f, 3f, 4f, 20f), floatArrayOf(1f, 2f, 3f, 4f, 20f, 50f, 60f).sigmaClipInplace(iterations = 2), epsilonFloat)
-        assertArrayEquals(floatArrayOf(1f, 2f, 3f, 4f), floatArrayOf(1f, 2f, 3f, 4f, 20f, 50f, 60f).sigmaClipInplace(iterations = 3), epsilonFloat)
-    }
-
-    @Test
     fun testFloatArraySigmaClip() {
         assertArrayEquals(floatArrayOf(1f, 2f, 3f, 4f), floatArrayOf(1f, 2f, 3f, 4f, 90f, 91f).sigmaClip(), epsilonFloat)
 
@@ -367,13 +358,13 @@ internal class MathFunctionsTest {
     }
 
     @Test
-    fun testFloatArrayWinsorizeLimitsInplace() {
-        assertArrayEquals(floatArrayOf(2.5f, 2.5f, 3f, 4f, 10f, 10f), floatArrayOf(1f, 2f, 3f, 4f, 90f, 91f).winsorizeLimitsInplace(2.5f, 10f), epsilonFloat)
+    fun testFloatArrayWinsorizeInplace() {
+        assertArrayEquals(floatArrayOf(2.5f, 2.5f, 3f, 4f, 10f, 10f), floatArrayOf(1f, 2f, 3f, 4f, 90f, 91f).winsorizeInplace(2.5f, 10f), epsilonFloat)
     }
 
     @Test
-    fun testDoubleArrayWinsorizeLimitsInplace() {
-        assertArrayEquals(doubleArrayOf(2.5, 2.5, 3.0, 4.0, 10.0, 10.0), doubleArrayOf(1.0, 2.0, 3.0, 4.0, 90.0, 91.0).winsorizeLimitsInplace(2.5, 10.0), epsilonDouble)
+    fun testDoubleArrayWinsorizeInplace() {
+        assertArrayEquals(doubleArrayOf(2.5, 2.5, 3.0, 4.0, 10.0, 10.0), doubleArrayOf(1.0, 2.0, 3.0, 4.0, 90.0, 91.0).winsorizeInplace(2.5, 10.0), epsilonDouble)
     }
 
     @Test
@@ -382,7 +373,7 @@ internal class MathFunctionsTest {
         val median = array.median()
         val sigma = array.stddev()
         val high = median + sigma
-        assertArrayEquals(floatArrayOf(1f, 2f, 3f, 4f, high, high), array.winsorizeSigmaInplace(1.0f), epsilonFloat)
+        assertArrayEquals(floatArrayOf(1f, 2f, 3f, 4f, high, high), array.sigmaWinsorizeInplace(1.0f), epsilonFloat)
     }
 
     @Test
@@ -391,17 +382,12 @@ internal class MathFunctionsTest {
         val median = array.median()
         val sigma = array.stddev()
         val high = median + sigma
-        assertArrayEquals(doubleArrayOf(1.0, 2.0, 3.0, 4.0, high, high), array.winsorizeSigmaInplace(1.0), epsilonDouble)
+        assertArrayEquals(doubleArrayOf(1.0, 2.0, 3.0, 4.0, high, high), array.sigmaWinsorizeInplace(1.0), epsilonDouble)
     }
 
     @Test
     fun testFloatArrayHuberWinsorizeInplace() {
-        assertArrayEquals(floatArrayOf(1f, 2f, 3f, 4f, 24.780285f, 24.780285f), floatArrayOf(1f, 2f, 3f, 4f, 90f, 91f).winsorizeHuberInplace(), epsilonFloat)
-    }
-
-    @Test
-    fun testDoubleArrayHuberWinsorizeInplace() {
-        assertArrayEquals(doubleArrayOf(1.0, 2.0, 3.0, 4.0, 24.780283953932145, 24.780283953932145), doubleArrayOf(1.0, 2.0, 3.0, 4.0, 90.0, 91.0).winsorizeHuberInplace(), epsilonDouble)
+        assertArrayEquals(floatArrayOf(1f, 2f, 3f, 4f, 24.780285f, 24.780285f), floatArrayOf(1f, 2f, 3f, 4f, 90f, 91f).huberWinsorizeInplace(), epsilonFloat)
     }
 
 }

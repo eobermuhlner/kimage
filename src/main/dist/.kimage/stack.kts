@@ -12,18 +12,20 @@ import kotlin.math.*
 kimage(0.1) {
     name = "stack"
     description = """
-                Stacks multiple images using one of several algorithms.
+                Stacks multiple image using one of several algorithms.
                 """
     arguments {
         string("method") {
             description = """
                         Method used to calculate the stacked image.
                         
-                        The method `sigmaclip-median` removes outliers before using `median` on the remaining values.
-                        The method `sigmaclip-average` removes outliers before using `average` on the remaining values.
+                        The method `sigma-clip-median` removes outliers before using `median` on the remaining values.
+                        The method `sigma-clip-average` removes outliers before using `average` on the remaining values.
+                        The method `sigma-winsorize-median` replaces outliers with the nearest value in sigma range before using `median`.
+                        The method `sigma-winsorize-average` replaces outliers with the nearest value in sigma range before using `average`.
                         """
-            allowed = listOf("median", "average", "max", "min", "sigmaclip-median", "sigmaclip-average")
-            default = "sigmaclip-median"
+            allowed = listOf("median", "average", "max", "min", "sigma-clip-median", "sigma-clip-average", "sigma-winsorize-median", "sigma-winsorize-average", "winsorized-sigma-clip-median", "winsorized-sigma-clip-average")
+            default = "sigma-clip-median"
         }
         double("kappa") {
             description = """
@@ -54,15 +56,38 @@ kimage(0.1) {
         println("  iterations = $iterations")
         println()
 
-        val sigmaClipHistogram = Histogram(inputFiles.size)
+        val sigmaClipHistogram = Histogram(inputFiles.size + 1)
 
         val stackingMethod: (FloatArray) -> Float = when(method) {
             "median" -> { array -> array.median() }
             "average" -> { array -> array.average() }
             "max" -> { array -> array.maxOrNull()!! }
             "min" -> { array -> array.minOrNull()!! }
-            "sigmaclip-median" -> { array -> array.sigmaClip(kappa = kappa.toFloat(), iterations = iterations, histogram = sigmaClipHistogram).median() }
-            "sigmaclip-average" -> { array -> array.sigmaClip(kappa = kappa.toFloat(), iterations = iterations, histogram = sigmaClipHistogram).average() }
+            "sigma-clip-median" -> { array ->
+                val clippedLength = array.sigmaClipInplace(kappa.toFloat(), iterations, histogram = sigmaClipHistogram)
+                array.medianInplace(0, clippedLength)
+            }
+            "sigma-clip-average" -> { array ->
+                val clippedLength = array.sigmaClipInplace(kappa.toFloat(), iterations, histogram = sigmaClipHistogram
+                )
+                array.average(0, clippedLength)
+            }
+            "sigma-winsorize-median" -> { array ->
+                array.sigmaWinsorizeInplace(kappa.toFloat())
+                array.medianInplace()
+            }
+            "sigma-winsorize-average" -> { array ->
+                array.sigmaWinsorizeInplace(kappa.toFloat())
+                array.average()
+            }
+            "winsorized-sigma-clip-median" -> { array ->
+                val clippedLength = array.huberWinsorizedSigmaClipInplace(kappa = kappa.toFloat(), iterations, histogram = sigmaClipHistogram)
+                array.medianInplace(0, clippedLength)
+            }
+            "winsorized-sigma-clip-average" -> { array ->
+                val clippedLength = array.huberWinsorizedSigmaClipInplace(kappa = kappa.toFloat(), iterations, histogram = sigmaClipHistogram)
+                array.average(0, clippedLength)
+            }
             else -> throw IllegalArgumentException("Unknown method: " + method)
         }
 
@@ -112,7 +137,7 @@ kimage(0.1) {
         if (sigmaClipHistogram.n > 0) {
             println("Sigma-Clip Histogram")
             for (i in sigmaClipHistogram.indices) {
-                val length = (40.0 * sigmaClipHistogram[i] / sigmaClipHistogram.n).toInt()
+                val length = (60.0 * sigmaClipHistogram[i] / sigmaClipHistogram.n).toInt()
                 val line = String.format("%3d : %10d %s", i, sigmaClipHistogram[i], "#".repeat(length))
                 println("  $line")
             }

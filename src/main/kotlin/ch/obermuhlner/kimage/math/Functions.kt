@@ -327,105 +327,118 @@ fun Iterable<Double>.fastMedian(min: Double, max: Double, binCount: Int = 100): 
     return histogram.estimateMedian() * (max - min) + min
 }
 
-fun FloatArray.sigmaClipInplace(kappa: Float = 2f, iterations: Int = 1, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population, center: (FloatArray, Int, Int) -> Float = FloatArray::median, histogram: Histogram? = null): FloatArray {
-    var currentLength = length
-
-    for (i in 0 until iterations) {
-        val sigma = stddev(standardDeviationType, offset, currentLength)
-        val m = center(this, offset, currentLength)
-
-        val low = m - kappa * sigma
-        val high = m + kappa * sigma
-
-        var targetLength = 0
-        for (source in offset until (offset+currentLength)) {
-            if (this[source] in low..high) {
-                this[offset + targetLength++] = this[source]
-            }
-        }
-        currentLength = targetLength
-    }
-    histogram?.add(currentLength)
-
-    return copyOfRange(offset, offset+currentLength)
-}
-
 fun FloatArray.sigmaClip(kappa: Float = 2f, iterations: Int = 1, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population, center: (FloatArray, Int, Int) -> Float = FloatArray::median, histogram: Histogram? = null): FloatArray {
     val array = copyOfRange(offset, offset+length)
-
-    return array.sigmaClipInplace(kappa, iterations, 0, length, standardDeviationType, center, histogram)
-}
-
-fun DoubleArray.sigmaClipInplace(kappa: Double = 2.0, iterations: Int = 1, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population, center: (DoubleArray, Int, Int) -> Double = DoubleArray::median, histogram: Histogram? = null): DoubleArray {
-    var currentLength = length
-
-    for (i in 0 until iterations) {
-        val sigma = stddev(standardDeviationType, offset, currentLength)
-        val m = center(this, offset, currentLength)
-
-        val low = m - kappa * sigma
-        val high = m + kappa * sigma
-
-        var targetLength = 0
-        for (source in offset until (offset+currentLength)) {
-            if (this[source] in low..high) {
-                this[offset + targetLength++] = this[source]
-            }
-        }
-        currentLength = targetLength
-    }
-    histogram?.add(currentLength)
-
-    return copyOfRange(offset, offset+currentLength)
+    val clippedLength = array.sigmaClipInplace(kappa, iterations, 0, length, standardDeviationType, center, histogram)
+    return array.copyOfRange(0, clippedLength)
 }
 
 fun DoubleArray.sigmaClip(kappa: Double = 2.0, iterations: Int = 1, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population, center: (DoubleArray, Int, Int) -> Double = DoubleArray::median, histogram: Histogram? = null): DoubleArray {
     val array = copyOfRange(offset, offset+length)
-
-    return array.sigmaClipInplace(kappa, iterations, 0, length, standardDeviationType, center, histogram)
+    val clippedLength = array.sigmaClipInplace(kappa, iterations, 0, length, standardDeviationType, center, histogram)
+    return array.copyOfRange(0, clippedLength)
 }
 
-fun FloatArray.winsorizeHuberInplace(offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population): FloatArray {
-    val winsorEpsilon = 0.0005
-    val winsorKappa = 1.5f
-    val winsorSigmaFactor = 1.345f
+fun FloatArray.sigmaClipInplace(kappa: Float = 2f, iterations: Int = 1, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population, center: (FloatArray, Int, Int) -> Float = FloatArray::median, histogram: Histogram? = null): Int {
+    var currentLength = length
+
+    for (i in 0 until iterations) {
+        val sigma = stddev(standardDeviationType, offset, currentLength)
+        val m = center(this, offset, currentLength)
+
+        currentLength = sigmaClipInplace(kappa, m, sigma, offset, currentLength)
+    }
+    histogram?.add(currentLength)
+
+    return currentLength
+}
+
+fun DoubleArray.sigmaClipInplace(kappa: Double = 2.0, iterations: Int = 1, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population, center: (DoubleArray, Int, Int) -> Double = DoubleArray::median, histogram: Histogram? = null): Int {
+    var currentLength = length
+
+    for (i in 0 until iterations) {
+        val sigma = stddev(standardDeviationType, offset, currentLength)
+        val m = center(this, offset, currentLength)
+
+        currentLength = sigmaClipInplace(kappa, m, sigma, offset, currentLength)
+    }
+    histogram?.add(currentLength)
+
+    return currentLength
+}
+
+private fun FloatArray.sigmaClipInplace(kappa: Float = 2f, m: Float, sigma: Float, offset: Int = 0, length: Int = size-offset): Int {
+    val low = m - kappa * sigma
+    val high = m + kappa * sigma
+
+    var targetLength = 0
+    for (source in offset until (offset+length)) {
+        if (this[source] in low..high) {
+            this[offset + targetLength++] = this[source]
+        }
+    }
+
+    return targetLength
+}
+
+private fun DoubleArray.sigmaClipInplace(kappa: Double = 2.0, m: Double, sigma: Double, offset: Int = 0, length: Int = size-offset): Int {
+    val low = m - kappa * sigma
+    val high = m + kappa * sigma
+
+    var targetLength = 0
+    for (source in offset until (offset+length)) {
+        if (this[source] in low..high) {
+            this[offset + targetLength++] = this[source]
+        }
+    }
+
+    return targetLength
+}
+
+fun FloatArray.huberWinsorizeInplace(offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population): FloatArray {
+    val huberEpsilon = 0.0005
+    val huberKappa = 1.5f
+    val huberSigmaFactor = 1.345f
     var median = medianInplace(offset, length)
     var sigma = stddev(standardDeviationType, offset, length)
     do {
-        val low = median - sigma * winsorKappa
-        val high = median + sigma * winsorKappa
-        winsorizeLimitsInplace(low, high, offset, length)
+        val low = median - sigma * huberKappa
+        val high = median + sigma * huberKappa
+        winsorizeInplace(low, high, offset, length)
 
         median = medianInplace(offset, length)
         val lastSigma = sigma
-        sigma = winsorSigmaFactor * stddev(standardDeviationType, offset, length)
+        sigma = huberSigmaFactor * stddev(standardDeviationType, offset, length)
         val change = abs(sigma - lastSigma) / lastSigma
-    } while (change > winsorEpsilon)
+    } while (change > huberEpsilon)
 
     return this
 }
 
-fun DoubleArray.winsorizeHuberInplace(offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population): DoubleArray {
-    val winsorEpsilon = 0.0005
-    val winsorKappa = 1.5f
-    val winsorSigmaFactor = 1.345f
-    var median = medianInplace(offset, length)
-    var sigma = stddev(standardDeviationType, offset, length)
-    do {
-        val low = median - sigma * winsorKappa
-        val high = median + sigma * winsorKappa
-        winsorizeLimitsInplace(low, high, offset, length)
-
-        median = medianInplace(offset, length)
-        val lastSigma = sigma
-        sigma = winsorSigmaFactor * stddev(standardDeviationType, offset, length)
-        val change = abs(sigma - lastSigma) / lastSigma
-    } while (change > winsorEpsilon)
-
-    return this
+fun FloatArray.huberWinsorizedSigmaClipInplace(kappa: Float, iterations: Int = 1, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population, histogram: Histogram? = null): Int {
+    huberWinsorizeInplace(offset, length, standardDeviationType)
+    return sigmaClipInplace(kappa, iterations, offset, length, standardDeviationType, histogram = histogram)
 }
 
-fun FloatArray.winsorizeSigmaInplace(kappa: Float, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population): FloatArray {
+fun FloatArray.huberWinsorizedSigmaClip(kappa: Float, iterations: Int = 1, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population, histogram: Histogram? = null): FloatArray {
+    val array = copyOfRange(offset, offset+length)
+    val clippedLength = array.huberWinsorizedSigmaClipInplace(kappa, iterations, 0, length, standardDeviationType, histogram)
+    return array.copyOfRange(0, clippedLength)
+}
+
+fun FloatArray.sigmaWinsorize(kappa: Float, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population): FloatArray {
+    val array = copyOfRange(offset, offset+length)
+
+    return array.sigmaWinsorizeInplace(kappa, 0, length, standardDeviationType)
+}
+
+fun DoubleArray.sigmaWinsorize(kappa: Double, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population): DoubleArray {
+    val array = copyOfRange(offset, offset+length)
+
+    return array.sigmaWinsorizeInplace(kappa, 0, length, standardDeviationType)
+}
+
+fun FloatArray.sigmaWinsorizeInplace(kappa: Float, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population): FloatArray {
     val sigma = stddev(standardDeviationType, offset, length)
 
     val m = median(offset, length)
@@ -433,10 +446,10 @@ fun FloatArray.winsorizeSigmaInplace(kappa: Float, offset: Int = 0, length: Int 
     val low = m - kappa * sigma
     val high = m + kappa * sigma
 
-    return winsorizeLimitsInplace(low, high, offset, length)
+    return winsorizeInplace(low, high, offset, length)
 }
 
-fun DoubleArray.winsorizeSigmaInplace(kappa: Double, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population): DoubleArray {
+fun DoubleArray.sigmaWinsorizeInplace(kappa: Double, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population): DoubleArray {
     val sigma = stddev(standardDeviationType, offset, length)
 
     val m = median(offset, length)
@@ -444,17 +457,17 @@ fun DoubleArray.winsorizeSigmaInplace(kappa: Double, offset: Int = 0, length: In
     val low = m - kappa * sigma
     val high = m + kappa * sigma
 
-    return winsorizeLimitsInplace(low, high, offset, length)
+    return winsorizeInplace(low, high, offset, length)
 }
 
-fun FloatArray.winsorizeLimitsInplace(lowThreshold: Float, highThreshold: Float, offset: Int = 0, length: Int = size-offset): FloatArray {
+fun FloatArray.winsorizeInplace(lowThreshold: Float, highThreshold: Float, offset: Int = 0, length: Int = size-offset): FloatArray {
     for (i in offset until (offset+length)) {
         this[i] = clamp(this[i], lowThreshold, highThreshold)
     }
     return this
 }
 
-fun DoubleArray.winsorizeLimitsInplace(lowThreshold: Double, highThreshold: Double, offset: Int = 0, length: Int = size-offset): DoubleArray {
+fun DoubleArray.winsorizeInplace(lowThreshold: Double, highThreshold: Double, offset: Int = 0, length: Int = size-offset): DoubleArray {
     for (i in offset until (offset+length)) {
         this[i] = clamp(this[i], lowThreshold, highThreshold)
     }
