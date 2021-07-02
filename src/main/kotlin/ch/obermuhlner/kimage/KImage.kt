@@ -23,69 +23,82 @@ object KImage {
             execute()
         }
     }
+
+    const val VERSION: String = "0.1.0"
 }
 
 class KimageCli(parser: ArgParser) {
 
     private val versionMode by parser.flagging(
         "--version",
-        help = "print version")
+        help = "print version"
+    )
 
     private val verboseMode by parser.flagging(
         "-v", "--verbose",
-        help = "enable verbose mode")
+        help = "enable verbose mode"
+    )
         .default(false)
 
     private val debugMode by parser.flagging(
         "--debug",
-        help = "enable debug mode")
+        help = "enable debug mode"
+    )
         .default(false)
 
     private val parameters by parser.adding(
         "-p", "--param", "--arg",
-        help = "add parameter key=value") {
+        help = "add parameter key=value"
+    ) {
         val split = split("=")
         Pair(split[0], split[1])
     }
 
     private val singleMode by parser.flagging(
         "--single",
-        help = "enable single mode")
+        help = "enable single mode"
+    )
         .default(false)
 
     private val helpMode by parser.flagging(
         "--docu", // TODO integrate with automatic --help
-        help = "get help about the current script")
+        help = "get help about the current script"
+    )
         .default(false)
 
     private val scriptDirectory: String by parser.storing(
         "--script-dir",
-        help = "script directory")
+        help = "script directory"
+    )
         .default("")
 
     private val outputPrefix: String by parser.storing(
         "-o", "--output-prefix",
-        help = "output prefix")
-        .default("output")
+        help = "output prefix"
+    )
+        .default("")
 
     private val outputDirectory: String by parser.storing(
         "-d", "--dir",
-        help = "output directory")
+        help = "output directory"
+    )
         .default("")
 
     private val command by parser.positional(
         "COMMAND",
-        help = "command to execute")
+        help = "command to execute"
+    )
         .default("")
 
-    private val filenames by parser.positionalList(
+    private val fileNames by parser.positionalList(
         "FILES",
         help = "image files to process",
-        0..Int.MAX_VALUE)
+        0..Int.MAX_VALUE
+    )
 
     fun execute() {
         if (versionMode) {
-            println(Companion.VERSION)
+            println(KImage.VERSION)
             return
         }
 
@@ -105,110 +118,35 @@ class KimageCli(parser: ArgParser) {
             return
         }
 
-        val (originalScript, extension) = when {
-            scriptFileMap.containsKey(command) -> Pair(scriptFileMap[command]!!.readText(), scriptFileMap[command]!!.extension)
-            File(command).exists() -> Pair(File(command).readText(), File(command).extension)
-            else -> Pair(command, "kts")
+        val (commandName, script, extension) = when {
+            scriptFileMap.containsKey(command) -> Triple(
+                command,
+                scriptFileMap[command]!!.readText(),
+                scriptFileMap[command]!!.extension
+            )
+            File(command).exists() -> Triple(
+                File(command).nameWithoutExtension,
+                File(command).readText(),
+                File(command).extension
+            )
+            else -> Triple("output", command, "kts")
         }
 
         val parametersMap: Map<String, String> = mapOf(*parameters.toTypedArray())
 
-        try {
-            val script = addImportsToScript(originalScript, extension)
-
-            val determinedSingleMode = script.contains("require(singleMode)") || originalScript == command
-
-            val manager = ScriptEngineManager()
-            val engine = manager.getEngineByExtension(extension)
-
-            if (engine == null) {
-                println("Script language not supported: $extension")
-                return
-            }
-
-            val inputFiles = filenames.map { File(it) }
-
-            executeScript(engine, command, script, inputFiles, parametersMap, determinedSingleMode, helpMode)
-        } catch (ex: Exception) {
-            if (verboseMode) {
-                ex.printStackTrace()
-            } else {
-                println("Failed to execute:")
-                println(ex.message)
-            }
-        }
-    }
-
-    private fun executeScript(
-        engine: ScriptEngine,
-        scriptName: String,
-        script: String,
-        inputFiles: List<File>,
-        parametersMap: Map<String, String>,
-        determinedSingleMode: Boolean,
-        helpMode: Boolean
-    ) {
-        val scriptInfo = executeScriptLowLevel(engine, script, inputFiles, parametersMap, determinedSingleMode)
-        if (scriptInfo != null) {
-            if (scriptInfo.name == "") {
-                scriptInfo.name = scriptName
-            }
-            if (scriptInfo.name != scriptName) {
-                println("Warning: Script file name '$scriptName' does not match name declared in script '${scriptInfo.name}'")
-            }
-            ScriptExecutor.executeScript(scriptInfo, parametersMap, inputFiles, helpMode, verboseMode, debugMode, outputPrefix, outputDirectory)
-        }
-    }
-
-    private fun executeScriptLowLevel(
-        engine: ScriptEngine,
-        script: String,
-        inputFiles: List<File>,
-        parametersMap: Map<String, String>,
-        determinedSingleMode: Boolean
-    ): Script? {
-        if (filenames.isEmpty()) {
-            initCommonParameters(engine, false, inputFiles, parametersMap)
-
-            val scriptInfo = executeScriptLowLevel(engine, script, ScriptExecutor.outputFile(File("noinput.png"), outputPrefix, outputDirectory))
-            if (scriptInfo != null) {
-                return scriptInfo
-            }
-        } else {
-            if (singleMode || determinedSingleMode) {
-                for (filename in filenames) {
-                    val inputFile = File(filename)
-                    if (inputFile.exists()) {
-                        println("Processing single file: $inputFile")
-
-                        val inputImage = ImageReader.readMatrixImage(inputFile)
-                        initCommonParameters(engine, true, inputFiles, parametersMap)
-                        initSingleFileParameters(engine, inputFile, inputImage)
-
-                        val scriptInfo = executeScriptLowLevel(engine, script, ScriptExecutor.outputFile(inputFile, outputPrefix, outputDirectory))
-                        if (scriptInfo != null) {
-                            return scriptInfo
-                        }
-                    } else {
-                        println("File not found: $inputFile")
-                    }
-                    println()
-                }
-            } else {
-                if (verboseMode) {
-                    println("Processing files: $filenames")
-                }
-
-                initCommonParameters(engine, false, inputFiles, parametersMap)
-
-                val scriptInfo = executeScriptLowLevel(engine, script, ScriptExecutor.outputFile(inputFiles[0], outputPrefix, outputDirectory))
-                if (scriptInfo != null) {
-                    return scriptInfo
-                }
-            }
-        }
-
-        return null
+        KImageExecution(
+            commandName,
+            command == script,
+            script,
+            extension,
+            parametersMap,
+            fileNames,
+            if (outputPrefix == "") commandName else outputPrefix,
+            outputDirectory,
+            helpMode,
+            verboseMode,
+            debugMode
+        ).execute()
     }
 
     private fun fillScriptFiles(scriptFilesMap: MutableMap<String, File>, path: String?) {
@@ -251,6 +189,114 @@ class KimageCli(parser: ArgParser) {
             scriptFilesMap[name] = file
         }
     }
+}
+
+class KImageExecution(
+    private val commandName: String,
+    private val lowLevelExecution: Boolean,
+    private val originalScript: String,
+    private val extension: String,
+    private val parametersMap: Map<String, String>,
+    private val filenames: List<String>,
+    private val outputPrefix: String,
+    private val outputDirectory: String,
+    private val helpMode: Boolean,
+    private val verboseMode: Boolean,
+    private val debugMode: Boolean
+) {
+    fun execute() {
+        try {
+            val script = addImportsToScript(originalScript, extension)
+
+            val determinedSingleMode = script.contains("require(singleMode)") || lowLevelExecution
+
+            val manager = ScriptEngineManager()
+            val engine = manager.getEngineByExtension(extension)
+
+            if (engine == null) {
+                println("Script language not supported: $extension")
+                return
+            }
+
+            val inputFiles = filenames.map { File(it) }
+
+            executeScript(engine, script, inputFiles, determinedSingleMode)
+        } catch (ex: Exception) {
+            println("Failed to execute $commandName:")
+            ex.printStackTrace()
+        }
+    }
+
+    private fun executeScript(
+        engine: ScriptEngine,
+        script: String,
+        inputFiles: List<File>,
+        determinedSingleMode: Boolean
+    ) {
+        val scriptInfo = executeScriptLowLevel(engine, script, inputFiles, parametersMap, determinedSingleMode)
+        if (scriptInfo != null) {
+            if (scriptInfo.name == "") {
+                scriptInfo.name = commandName
+            }
+            if (scriptInfo.name != commandName) {
+                println("Warning: Script file name '$commandName' does not match name declared in script '${scriptInfo.name}'")
+            }
+            ScriptExecutor.executeScript(scriptInfo, parametersMap, inputFiles, helpMode, verboseMode, debugMode, outputPrefix, outputDirectory)
+        }
+    }
+
+    private fun executeScriptLowLevel(
+        engine: ScriptEngine,
+        script: String,
+        inputFiles: List<File>,
+        parametersMap: Map<String, String>,
+        singleMode: Boolean
+    ): Script? {
+        if (filenames.isEmpty()) {
+            initCommonParameters(engine, false, inputFiles, parametersMap)
+
+            val scriptInfo = executeScriptLowLevel(engine, script, ScriptExecutor.outputFile(File("noinput.png"), outputPrefix, outputDirectory))
+            if (scriptInfo != null) {
+                return scriptInfo
+            }
+        } else {
+            if (singleMode) {
+                for (filename in filenames) {
+                    val inputFile = File(filename)
+                    if (inputFile.exists()) {
+                        if (verboseMode) {
+                            println("Processing single file: $inputFile")
+                        }
+
+                        val inputImage = ImageReader.readMatrixImage(inputFile)
+                        initCommonParameters(engine, true, inputFiles, parametersMap)
+                        initSingleFileParameters(engine, inputFile, inputImage)
+
+                        val scriptInfo = executeScriptLowLevel(engine, script, ScriptExecutor.outputFile(inputFile, outputPrefix, outputDirectory))
+                        if (scriptInfo != null) {
+                            return scriptInfo
+                        }
+                    } else {
+                        println("File not found: $inputFile")
+                    }
+                    println()
+                }
+            } else {
+                if (verboseMode) {
+                    println("Processing files: $filenames")
+                }
+
+                initCommonParameters(engine, false, inputFiles, parametersMap)
+
+                val scriptInfo = executeScriptLowLevel(engine, script, ScriptExecutor.outputFile(inputFiles[0], outputPrefix, outputDirectory))
+                if (scriptInfo != null) {
+                    return scriptInfo
+                }
+            }
+        }
+
+        return null
+    }
 
     private fun addImportsToScript(originalScript: String, extension: String): String {
         return if (extension != "kts" || originalScript.contains(IMPORT_REGEX)) {
@@ -266,7 +312,7 @@ class KimageCli(parser: ArgParser) {
         inputFiles: List<File>,
         parametersMap: Map<String, String>
     ) {
-        setVariable(engine, "kimageVersion", VERSION)
+        setVariable(engine, "kimageVersion", KImage.VERSION)
         setVariable(engine, "verboseMode", verboseMode)
         setVariable(engine, "outputDirectory", outputDirectory)
         setVariable(engine, "outputPrefix", outputPrefix)
@@ -277,8 +323,8 @@ class KimageCli(parser: ArgParser) {
 
         engine.put("inputParameters", parametersMap)
         if (verboseMode) {
-            parameters.forEach {
-                println("  inputParameters[${it.first}] = ${it.second}")
+            parametersMap.forEach {
+                println("  inputParameters[${it.key}] = ${it.value}")
             }
         }
     }
@@ -408,8 +454,6 @@ class KimageCli(parser: ArgParser) {
     }
 
     companion object {
-        private const val VERSION: String = "0.1.0"
-
         private val IMPORT_STATEMENTS = """
             import ch.obermuhlner.kimage.*
             import ch.obermuhlner.kimage.align.*
