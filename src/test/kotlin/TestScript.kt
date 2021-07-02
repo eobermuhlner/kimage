@@ -20,7 +20,7 @@ object TestScript {
         //runScript(scriptStack(), mapOf("kappa" to "2.0"), *orionImages)
         //runScript(scriptStack(), mapOf("kappa" to "2.0"), *alignedOrionImages)
         //runScript(scriptRemoveBackgroundMedian(), "images/align/orion1.png")
-        //runScript(scriptHistogram(), "images/lena512color.tiff")
+        runScript(scriptHistogram(), "images/align/output_orion1.png")
         runScript(scriptColorStretch(), "images/align/output_orion1.png")
 
     }
@@ -466,42 +466,12 @@ object TestScript {
                 val width: Int by arguments
                 val height: Int by arguments
 
-                val channels = listOf(Channel.Red, Channel.Green, Channel.Blue)
-
                 println("Arguments:")
                 println("  width = $width")
                 println("  height = $height")
                 println()
 
-                val channelHistograms = mutableMapOf<Channel, Histogram>()
-                var maxCount = 0
-                for (channel in channels) {
-                    val histogram = Histogram(width)
-                    channelHistograms[channel] = histogram
-
-                    inputImage[channel].forEach { histogram.add(it) }
-                    maxCount = max(maxCount, histogram.max())
-                }
-
-                val output = MatrixImage(width, height)
-
-                for (channel in channels) {
-                    val histogram = channelHistograms[channel]!!
-                    if (verboseMode) {
-                        println("Histogram $channel")
-                        histogram.print()
-                        println()
-                    }
-
-                    for (x in 0 until width) {
-                        val histY = (height.toDouble() * histogram[x] / maxCount).toInt()
-                        for (y in (height-histY) until height) {
-                            output[channel][y, x] = 1.0
-                        }
-                    }
-                }
-
-                output
+                inputImage.histogramImage(width, height)
             }
         }
 
@@ -528,7 +498,7 @@ object TestScript {
                     description = """
                         The curve shape used to modify the contrast.
                         """
-                    allowed = listOf("linear", "s-curve", "bright+", "dark+", "bright-", "dark-", "custom1", "custom2")
+                    allowed = listOf("linear", "s-curve", "s-curve-bright", "s-curve-dark", "bright+", "dark+", "bright-", "dark-", "custom1", "custom2")
                     default = "s-curve"
                 }
                 double("custom1X") {
@@ -556,6 +526,9 @@ object TestScript {
                 val custom2X: Double by arguments
                 val custom2Y: Double by arguments
 
+                val histogramWidth = 256
+                val histogramHeight = 150
+
                 println("Arguments:")
                 println("  brightness = $brightness")
                 println("  curve = $curve")
@@ -580,6 +553,18 @@ object TestScript {
                 }
 
                 var image = inputImage
+
+                if (debugMode) {
+                    println("Image average: ${image.values().average()}")
+                    println("Image median: ${image.values().fastMedian()}")
+                    println("Image stddev: ${image.values().stddev()}")
+
+                    val histogramInputFile = File("hist_input_" + inputFile.name)
+                    println("Saving $histogramInputFile for manual analysis")
+                    ImageWriter.write(image.histogramImage(histogramWidth, histogramHeight), histogramInputFile)
+                    println()
+                }
+
                 if (power1 != 1.0) {
                     image = image.onEach { v -> v.pow(1.0 / power1) }
                 }
@@ -587,51 +572,74 @@ object TestScript {
                     image = image.onEach { v -> v.pow(1.0 / power2) }
                 }
 
-                val spline: SplineInterpolator = when(curve) {
+                if (debugMode) {
+                    println("Image average: ${image.values().average()}")
+                    println("Image median: ${image.values().fastMedian()}")
+                    println("Image stddev: ${image.values().stddev()}")
+
+                    val histogramBrightnessFile = File("hist_brightness_" + inputFile.name)
+                    println("Saving $histogramBrightnessFile (after brightness correction) for manual analysis")
+                    ImageWriter.write(image.histogramImage(histogramWidth, histogramHeight), histogramBrightnessFile)
+                    println()
+                }
+
+                val (curvePointsX, curvePointsY) = when(curve) {
                     "linear" -> {
-                        SplineInterpolator.createMonotoneCubicSpline(
+                        Pair(
                             listOf(0.0, 1.0),
                             listOf(0.0, 1.0)
                         )
                     }
                     "s-curve" -> {
-                        SplineInterpolator.createMonotoneCubicSpline(
+                        Pair(
+                            listOf(0.0, 0.3, 0.7, 1.0),
+                            listOf(0.0, 0.2, 0.8, 1.0)
+                        )
+                    }
+                    "s-curve-bright" -> {
+                        Pair(
                             listOf(0.0, 0.2,  0.7, 1.0),
                             listOf(0.0, 0.18, 0.8, 1.0)
                         )
                     }
+                    "s-curve-dark" -> {
+                        Pair(
+                            listOf(0.0, 0.3, 0.7, 1.0),
+                            listOf(0.0, 0.2, 0.72, 1.0)
+                        )
+                    }
                     "bright+" -> {
-                        SplineInterpolator.createMonotoneCubicSpline(
+                        Pair(
                             listOf(0.0, 0.6, 1.0),
                             listOf(0.0, 0.7, 1.0)
                         )
                     }
                     "dark+" -> {
-                        SplineInterpolator.createMonotoneCubicSpline(
+                        Pair(
                             listOf(0.0, 0.4, 1.0),
                             listOf(0.0, 0.5, 1.0)
                         )
                     }
                     "bright-" -> {
-                        SplineInterpolator.createMonotoneCubicSpline(
+                        Pair(
                             listOf(0.0, 0.6, 1.0),
                             listOf(0.0, 0.5, 1.0)
                         )
                     }
                     "dark-" -> {
-                        SplineInterpolator.createMonotoneCubicSpline(
+                        Pair(
                             listOf(0.0, 0.4, 1.0),
                             listOf(0.0, 0.3, 1.0)
                         )
                     }
                     "custom1" -> {
-                        SplineInterpolator.createMonotoneCubicSpline(
+                        Pair(
                             listOf(0.0, custom1X, 1.0),
                             listOf(0.0, custom1Y, 1.0)
                         )
                     }
                     "custom2" -> {
-                        SplineInterpolator.createMonotoneCubicSpline(
+                        Pair(
                             listOf(0.0, custom1X, custom2X, 1.0),
                             listOf(0.0, custom1X, custom2Y, 1.0)
                         )
@@ -639,7 +647,25 @@ object TestScript {
                     else -> throw IllegalArgumentException("Unknown curve: $curve")
                 }
 
+                println("Curve Points:")
+                println("  X: $curvePointsX")
+                println("  Y: $curvePointsY")
+                println()
+
+                val spline: SplineInterpolator = SplineInterpolator.createMonotoneCubicSpline(curvePointsX, curvePointsY)
+
                 image = image.onEach { v -> spline.interpolate(v) }
+
+                if (debugMode) {
+                    println("Image average: ${image.values().average()}")
+                    println("Image median: ${image.values().fastMedian()}")
+                    println("Image stddev: ${image.values().stddev()}")
+
+                    val histogramOutputFile = File("hist_output_" + inputFile.name)
+                    println("Saving $histogramOutputFile (after brightness correction) for manual analysis")
+                    ImageWriter.write(image.histogramImage(histogramWidth, histogramHeight), histogramOutputFile)
+                    println()
+                }
 
                 image
             }

@@ -28,7 +28,7 @@ kimage(0.1) {
             description = """
                         The curve shape used to modify the contrast.
                         """
-            allowed = listOf("linear", "s-curve", "bright+", "dark+", "bright-", "dark-", "custom1", "custom2")
+            allowed = listOf("linear", "s-curve", "s-curve-bright", "s-curve-dark", "bright+", "dark+", "bright-", "dark-", "custom1", "custom2")
             default = "s-curve"
         }
         double("custom1X") {
@@ -96,8 +96,20 @@ kimage(0.1) {
             }
             "s-curve" -> {
                 SplineInterpolator.createMonotoneCubicSpline(
+                    listOf(0.0, 0.3, 0.7, 1.0),
+                    listOf(0.0, 0.2, 0.8, 1.0)
+                )
+            }
+            "s-curve-bright" -> {
+                SplineInterpolator.createMonotoneCubicSpline(
                     listOf(0.0, 0.2,  0.7, 1.0),
                     listOf(0.0, 0.18, 0.8, 1.0)
+                )
+            }
+            "s-curve-dark" -> {
+                SplineInterpolator.createMonotoneCubicSpline(
+                    listOf(0.0, 0.3, 0.7, 1.0),
+                    listOf(0.0, 0.2, 0.72, 1.0)
                 )
             }
             "bright+" -> {
