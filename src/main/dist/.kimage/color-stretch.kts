@@ -56,6 +56,9 @@ kimage(0.1) {
         val custom2X: Double by arguments
         val custom2Y: Double by arguments
 
+        val histogramWidth = 256
+        val histogramHeight = 150
+
         println("Arguments:")
         println("  brightness = $brightness")
         println("  curve = $curve")
@@ -80,6 +83,18 @@ kimage(0.1) {
         }
 
         var image = inputImage
+
+        if (debugMode) {
+            println("Image average: ${image.values().average()}")
+            println("Image median: ${image.values().fastMedian()}")
+            println("Image stddev: ${image.values().stddev()}")
+
+            val histogramInputFile = File("hist_input_" + inputFile.name)
+            println("Saving $histogramInputFile for manual analysis")
+            ImageWriter.write(image.histogramImage(histogramWidth, histogramHeight), histogramInputFile)
+            println()
+        }
+
         if (power1 != 1.0) {
             image = image.onEach { v -> v.pow(1.0 / power1) }
         }
@@ -87,63 +102,74 @@ kimage(0.1) {
             image = image.onEach { v -> v.pow(1.0 / power2) }
         }
 
-        val spline: SplineInterpolator = when(curve) {
+        if (debugMode) {
+            println("Image average: ${image.values().average()}")
+            println("Image median: ${image.values().fastMedian()}")
+            println("Image stddev: ${image.values().stddev()}")
+
+            val histogramBrightnessFile = File("hist_brightness_" + inputFile.name)
+            println("Saving $histogramBrightnessFile (after brightness correction) for manual analysis")
+            ImageWriter.write(image.histogramImage(histogramWidth, histogramHeight), histogramBrightnessFile)
+            println()
+        }
+
+        val (curvePointsX, curvePointsY) = when(curve) {
             "linear" -> {
-                SplineInterpolator.createMonotoneCubicSpline(
+                Pair(
                     listOf(0.0, 1.0),
                     listOf(0.0, 1.0)
                 )
             }
             "s-curve" -> {
-                SplineInterpolator.createMonotoneCubicSpline(
+                Pair(
                     listOf(0.0, 0.3, 0.7, 1.0),
                     listOf(0.0, 0.2, 0.8, 1.0)
                 )
             }
             "s-curve-bright" -> {
-                SplineInterpolator.createMonotoneCubicSpline(
+                Pair(
                     listOf(0.0, 0.2,  0.7, 1.0),
                     listOf(0.0, 0.18, 0.8, 1.0)
                 )
             }
             "s-curve-dark" -> {
-                SplineInterpolator.createMonotoneCubicSpline(
+                Pair(
                     listOf(0.0, 0.3, 0.7, 1.0),
                     listOf(0.0, 0.2, 0.72, 1.0)
                 )
             }
             "bright+" -> {
-                SplineInterpolator.createMonotoneCubicSpline(
+                Pair(
                     listOf(0.0, 0.6, 1.0),
                     listOf(0.0, 0.7, 1.0)
                 )
             }
             "dark+" -> {
-                SplineInterpolator.createMonotoneCubicSpline(
+                Pair(
                     listOf(0.0, 0.4, 1.0),
                     listOf(0.0, 0.5, 1.0)
                 )
             }
             "bright-" -> {
-                SplineInterpolator.createMonotoneCubicSpline(
+                Pair(
                     listOf(0.0, 0.6, 1.0),
                     listOf(0.0, 0.5, 1.0)
                 )
             }
             "dark-" -> {
-                SplineInterpolator.createMonotoneCubicSpline(
+                Pair(
                     listOf(0.0, 0.4, 1.0),
                     listOf(0.0, 0.3, 1.0)
                 )
             }
             "custom1" -> {
-                SplineInterpolator.createMonotoneCubicSpline(
+                Pair(
                     listOf(0.0, custom1X, 1.0),
                     listOf(0.0, custom1Y, 1.0)
                 )
             }
             "custom2" -> {
-                SplineInterpolator.createMonotoneCubicSpline(
+                Pair(
                     listOf(0.0, custom1X, custom2X, 1.0),
                     listOf(0.0, custom1X, custom2Y, 1.0)
                 )
@@ -151,7 +177,25 @@ kimage(0.1) {
             else -> throw IllegalArgumentException("Unknown curve: $curve")
         }
 
+        println("Curve Points:")
+        println("  X: $curvePointsX")
+        println("  Y: $curvePointsY")
+        println()
+
+        val spline: SplineInterpolator = SplineInterpolator.createMonotoneCubicSpline(curvePointsX, curvePointsY)
+
         image = image.onEach { v -> spline.interpolate(v) }
+
+        if (debugMode) {
+            println("Image average: ${image.values().average()}")
+            println("Image median: ${image.values().fastMedian()}")
+            println("Image stddev: ${image.values().stddev()}")
+
+            val histogramOutputFile = File("hist_output_" + inputFile.name)
+            println("Saving $histogramOutputFile (after brightness correction) for manual analysis")
+            ImageWriter.write(image.histogramImage(histogramWidth, histogramHeight), histogramOutputFile)
+            println()
+        }
 
         image
     }
