@@ -352,10 +352,10 @@ fun FloatArray.sigmaClipInplace(kappa: Float = 2f, iterations: Int = 1, offset: 
 
     for (i in 0 until iterations) {
         val sigma = stddev(standardDeviationType, offset, currentLength)
-        val center = center(this, offset, currentLength)
+        val mid = center(this, offset, currentLength)
 
-        val low = center - kappa * sigma
-        val high = center + kappa * sigma
+        val low = mid - kappa * sigma
+        val high = mid + kappa * sigma
 
         currentLength = sigmaClipInplace(low, high, offset, currentLength, keepLast)
     }
@@ -369,10 +369,10 @@ fun DoubleArray.sigmaClipInplace(kappa: Double = 2.0, iterations: Int = 1, offse
 
     for (i in 0 until iterations) {
         val sigma = stddev(standardDeviationType, offset, currentLength)
-        val center = center(this, offset, currentLength)
+        val mid = center(this, offset, currentLength)
 
-        val low = center - kappa * sigma
-        val high = center + kappa * sigma
+        val low = mid - kappa * sigma
+        val high = mid + kappa * sigma
 
         currentLength = sigmaClipInplace(low, high, offset, currentLength, keepLast)
     }
