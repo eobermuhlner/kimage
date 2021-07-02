@@ -55,6 +55,10 @@ class Histogram(private val binCount: Int = 256) {
         entryCount--
     }
 
+    fun max(): Int {
+        return indices.map { this[it] }.maxOrNull()!!
+    }
+
     fun estimateMean(): Double {
         var sum = 0.0
         for (i in indices) {
