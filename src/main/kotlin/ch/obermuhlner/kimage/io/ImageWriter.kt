@@ -2,8 +2,6 @@ package ch.obermuhlner.kimage.io
 
 import ch.obermuhlner.kimage.image.Image
 import ch.obermuhlner.kimage.image.awt.AwtBufferedImage
-import ch.obermuhlner.kimage.image.tiff.TiffImage
-import mil.nga.tiff.TiffWriter
 import java.io.File
 import javax.imageio.ImageIO
 
@@ -22,19 +20,12 @@ object ImageWriter {
     }
 
     fun write(image: Image, output: File, format: ImageFormat) {
-        when  {
-            image is TiffImage && image.writable -> {
-                TiffWriter.writeTiff(output, image.tiffImage)
-            }
-            image is AwtBufferedImage -> {
+        when(image)  {
+            is AwtBufferedImage -> {
                 ImageIO.write(image.bufferedImage, format.name, output)
             }
             else -> {
-                if (format == ImageFormat.TIF) {
-                    write(TiffImage.from(image), output, format)
-                } else {
-                    write(AwtBufferedImage.from(image), output, format)
-                }
+                write(AwtBufferedImage.from(image), output, format)
             }
         }
     }
