@@ -16,10 +16,13 @@ object TestScript {
         val alignedOrionImages = arrayOf("images/align/aligned_orion1.png", "images/align/aligned_orion2.png", "images/align/aligned_orion3.png", "images/align/aligned_orion4.png", "images/align/aligned_orion5.png", "images/align/aligned_orion6.png", "images/align/aligned_orion7.png")
 
         //runScript(scriptAlign(), *orionImages)
-        runScript(scriptStackMax(), mapOf(), *orionImages)
+        //runScript(scriptStackMax(), mapOf(), *orionImages)
         //runScript(scriptStack(), mapOf("kappa" to "2.0"), *orionImages)
         //runScript(scriptStack(), mapOf("kappa" to "2.0"), *alignedOrionImages)
         //runScript(scriptRemoveBackgroundMedian(), "images/align/orion1.png")
+        runScript(scriptHistogram(), "images/lena512.bmp")
+        runScript(scriptColorStretch(), "images/align/output_sigma-clip-median_aligned_orion1.png")
+
     }
 
     private fun scriptRemoveBackgroundMedian(): Script =
@@ -291,7 +294,6 @@ object TestScript {
             }
         }
 
-
     fun scriptStack() =
         kimage(0.1) {
             name = "stack"
@@ -436,6 +438,82 @@ object TestScript {
             }
         }
 
+    fun scriptHistogram(): Script =
+        kimage(0.1) {
+            name = "histogram"
+            description = """
+                Creates a histogram image.
+                """
+            arguments {
+            }
+
+            single {
+                val width = 512
+                val height = 300
+
+                val channels = listOf(Channel.Red, Channel.Green, Channel.Blue)
+
+                val channelHistograms = mutableMapOf<Channel, Histogram>()
+                var maxCount = 0
+                for (channel in channels) {
+                    val histogram = Histogram(width)
+                    channelHistograms[channel] = histogram
+
+                    inputImage[channel].forEach { histogram.add(it) }
+                    maxCount = max(maxCount, histogram.max())
+                }
+
+                val output = MatrixImage(width, height)
+
+                for (x in 0 until width) {
+                    for (channel in channels) {
+                        val histogram = channelHistograms[channel]!!
+                        val histY = (height.toDouble() * histogram[x] / maxCount).toInt()
+                        for (y in (height-histY) until height) {
+                            output[channel][y, x] = 1.0
+                        }
+                    }
+                }
+
+                output
+            }
+        }
+
+    // https://clarkvision.com/articles/astrophotography-rnc-color-stretch/
+    fun scriptColorStretch(): Script =
+        kimage(0.1) {
+            name = "color-stretch"
+            description = """
+                Stretches the colors of an image to fill the entire range.
+                """
+            arguments {
+            }
+
+            single {
+                println("Color stretching")
+
+                val v1 = 2.0
+                val v2 = 1.0
+
+                var image = inputImage
+                image = image.onEach { v -> v.pow(1.0/v1) }
+                image = image.onEach { v -> v.pow(1.0/v2) }
+
+//                val spline1: SplineInterpolator = SplineInterpolator.createMonotoneCubicSpline(
+//                    listOf(0.0, 0.2,  0.7, 1.0),
+//                    listOf(0.0, 0.18, 0.8, 1.0)
+//                )
+//                image = image.onEach { v -> spline1.interpolate(v) }
+
+                val spline2: SplineInterpolator = SplineInterpolator.createMonotoneCubicSpline(
+                    listOf(0.0, 0.5, 1.0),
+                    listOf(0.0, 0.6, 1.0)
+                )
+                image = image.onEach { v -> spline2.interpolate(v) }
+
+                image
+            }
+        }
 
 
     fun runScript(script: Script, vararg filepaths: String) {
