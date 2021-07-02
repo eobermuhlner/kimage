@@ -3,7 +3,7 @@ package ch.obermuhlner.kimage.image
 import ch.obermuhlner.kimage.Scaling
 import ch.obermuhlner.kimage.io.ImageFormat
 import ch.obermuhlner.kimage.io.ImageWriter
-import ch.obermuhlner.kimage.math.clamp
+import ch.obermuhlner.kimage.math.Histogram
 import ch.obermuhlner.kimage.matrix.*
 import java.io.File
 import kotlin.math.*
@@ -34,6 +34,38 @@ fun deltaChannel(image1: Image, image2: Image, factor: Double = 5.0, channel: Ch
 
 // exaggerates low values but never reaches 1.0
 private fun exaggerate(x: Double): Double = -1/(x+0.5)+2
+
+fun Image.histogramImage(
+    histogramWidth: Int,
+    histogramHeight: Int,
+    histogramFunction: (Channel) -> Histogram = { Histogram(histogramWidth) },
+    channels: List<Channel> = this.channels
+): Image {
+    val result = MatrixImage(histogramWidth, histogramHeight)
+
+    val channelHistograms = mutableMapOf<Channel, Histogram>()
+    var maxCount = 0
+    for (channel in channels) {
+        val histogram = histogramFunction(channel)
+        channelHistograms[channel] = histogram
+
+        this[channel].forEach { histogram.add(it) }
+        maxCount = max(maxCount, histogram.max())
+    }
+
+    for (channel in channels) {
+        val histogram = channelHistograms[channel]!!
+
+        for (x in 0 until histogramWidth) {
+            val histY = (histogramHeight.toDouble() * histogram[x] / maxCount).toInt()
+            for (y in (histogramHeight-histY) until histogramHeight) {
+                result[channel][y, x] = 1.0
+            }
+        }
+    }
+    
+    return result
+}
 
 operator fun Image.plus(other: Image): Image {
     return MatrixImage(
