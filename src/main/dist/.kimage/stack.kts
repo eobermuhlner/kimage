@@ -136,11 +136,7 @@ kimage(0.1) {
 
         if (sigmaClipHistogram.n > 0) {
             println("Sigma-Clip Histogram")
-            for (i in sigmaClipHistogram.indices) {
-                val length = (60.0 * sigmaClipHistogram[i] / sigmaClipHistogram.n).toInt()
-                val line = String.format("%3d : %10d %s", i, sigmaClipHistogram[i], "#".repeat(length))
-                println("  $line")
-            }
+            sigmaClipHistogram.print()
             println()
         }
 
