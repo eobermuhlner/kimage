@@ -32,6 +32,7 @@ fun deltaChannel(image1: Image, image2: Image, factor: Double = 5.0, channel: Ch
         Channel.Blue to blue)
 }
 
+// exaggerates low values but never reaches 1.0
 private fun exaggerate(x: Double): Double = -1/(x+0.5)+2
 
 operator fun Image.plus(other: Image): Image {
