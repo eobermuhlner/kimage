@@ -80,4 +80,13 @@ class Histogram(private val binCount: Int = 256) {
         }
         return 0.0
     }
+
+    fun print(chartWidth: Int = 60) {
+        val max = max()
+        for (i in indices) {
+            val length = (chartWidth.toDouble() * this[i] / max).toInt()
+            val line = String.format("%3d : %10d %s", i, this[i], "#".repeat(length))
+            println("$line")
+        }
+    }
 }
