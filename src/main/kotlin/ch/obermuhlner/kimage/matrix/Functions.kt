@@ -62,7 +62,7 @@ fun max(m1: Matrix, m2: Matrix): Matrix {
 
 fun Matrix.stretchClassic(min: Double, max: Double, func: (Double) -> Double = { it }): Matrix {
     val denom = func(max - min)
-    return this.onEach { value ->
+    return this.copy().onEach { value ->
         when {
             value < min -> 0.0
             value > max -> 1.0

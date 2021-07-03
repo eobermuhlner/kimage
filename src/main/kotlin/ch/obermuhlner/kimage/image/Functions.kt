@@ -21,9 +21,9 @@ fun deltaChannel(image1: Image, image2: Image, factor: Double = 5.0, channel: Ch
     val f = 0.2
     var delta = (image1[channel] - image2[channel]) * factor
     delta = delta.onEach { v -> exaggerate(v) }
-    val red = delta.onEach   { v -> if (v < 0.0) -v     else v * f }
-    val green = delta.onEach { v -> if (v < 0.0) -v * f else v * f }
-    val blue = delta.onEach  { v -> if (v < 0.0) -v * f else v     }
+    val red = delta.copy().onEach   { v -> if (v < 0.0) -v     else v * f }
+    val green = delta.copy().onEach { v -> if (v < 0.0) -v * f else v * f }
+    val blue = delta.copy().onEach  { v -> if (v < 0.0) -v * f else v     }
     return MatrixImage(
         image1.width,
         image1.height,

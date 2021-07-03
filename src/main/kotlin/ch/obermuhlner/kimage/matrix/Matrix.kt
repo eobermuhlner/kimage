@@ -166,11 +166,10 @@ interface Matrix : Iterable<Double> {
     }
 
     fun onEach(func: (Double) -> Double): Matrix {
-        val m = copy()
         for (index in 0 until size) {
-            m[index] = func.invoke(this[index])
+            this[index] = func.invoke(this[index])
         }
-        return m
+        return this
     }
 
     fun accumulate(func: (Double, Double) -> Double): Double {
