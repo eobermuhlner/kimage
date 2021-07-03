@@ -39,7 +39,8 @@ fun Image.histogramImage(
     histogramWidth: Int,
     histogramHeight: Int,
     histogramFunction: (Channel) -> Histogram = { Histogram(histogramWidth) },
-    channels: List<Channel> = this.channels
+    channels: List<Channel> = this.channels,
+    ignoreMinMaxBins: Boolean = true
 ): Image {
     val result = MatrixImage(histogramWidth, histogramHeight)
 
@@ -50,14 +51,14 @@ fun Image.histogramImage(
         channelHistograms[channel] = histogram
 
         this[channel].forEach { histogram.add(it) }
-        maxCount = max(maxCount, histogram.max())
+        maxCount = max(maxCount, histogram.max(ignoreMinMaxBins))
     }
 
     for (channel in channels) {
         val histogram = channelHistograms[channel]!!
 
         for (x in 0 until histogramWidth) {
-            val histY = (histogramHeight.toDouble() * histogram[x] / maxCount).toInt()
+            val histY = min(histogramHeight, (histogramHeight.toDouble() * histogram[x] / maxCount).toInt())
             for (y in (histogramHeight-histY) until histogramHeight) {
                 result[channel][y, x] = 1.0
             }

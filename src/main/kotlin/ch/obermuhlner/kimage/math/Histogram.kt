@@ -1,6 +1,7 @@
 package ch.obermuhlner.kimage.math
 
 import ch.obermuhlner.kimage.matrix.Matrix
+import kotlin.math.min
 
 class Histogram(private val binCount: Int = 256) {
     private val bins = IntArray(binCount)
@@ -55,8 +56,13 @@ class Histogram(private val binCount: Int = 256) {
         entryCount--
     }
 
-    fun max(): Int {
-        return indices.map { this[it] }.maxOrNull()!!
+    fun max(ignoreMinMaxBins: Boolean = false): Int {
+        val range = if (ignoreMinMaxBins) {
+            1 until bins.size-1
+        } else {
+            indices
+        }
+        return range.maxOf { this[it] }
     }
 
     fun estimateMean(): Double {
@@ -81,10 +87,10 @@ class Histogram(private val binCount: Int = 256) {
         return 0.0
     }
 
-    fun print(chartWidth: Int = 60) {
-        val max = max()
+    fun print(chartWidth: Int = 60, ignoreMinMaxBins: Boolean = false) {
+        val max = max(ignoreMinMaxBins)
         for (i in indices) {
-            val length = (chartWidth.toDouble() * this[i] / max).toInt()
+            val length = min(chartWidth, (chartWidth.toDouble() * this[i] / max).toInt())
             val line = String.format("%3d : %10d %s", i, this[i], "#".repeat(length))
             println("$line")
         }
