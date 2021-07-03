@@ -28,7 +28,7 @@ kimage(0.1) {
             description = """
                         The curve shape used to modify the contrast.
                         """
-            allowed = listOf("linear", "s-curve", "s-curve-bright", "s-curve-dark", "s-curve-strong", "bright+", "dark+", "bright-", "dark-", "custom1", "custom2")
+            allowed = listOf("linear", "s-curve", "s-curve-bright", "s-curve-dark", "s-curve-strong", "s-curve-super-strong", "bright+", "dark+", "bright-", "dark-", "custom1", "custom2")
             default = "s-curve"
         }
         double("custom1X") {
@@ -142,6 +142,12 @@ kimage(0.1) {
                 Pair(
                     listOf(0.0, 0.2, 0.8, 1.0),
                     listOf(0.0, 0.1, 0.9, 1.0)
+                )
+            }
+            "s-curve-super-strong" -> {
+                Pair(
+                    listOf(0.0, 0.2, 0.8, 1.0),
+                    listOf(0.0, 0.05, 0.95, 1.0)
                 )
             }
             "bright+" -> {
