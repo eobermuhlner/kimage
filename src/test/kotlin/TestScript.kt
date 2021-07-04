@@ -738,10 +738,11 @@ object TestScript {
                     }
                     if (flat.isPresent) {
                         flat = Optional.of(flat.get() - bias.get())
-                        if (darkflat.isPresent) {
-                            flat = Optional.of(flat.get() - darkflat.get())
-                        }
                     }
+                }
+
+                if (darkflat.isPresent) {
+                    flat = Optional.of(flat.get() - darkflat.get())
                 }
 
                 for (inputFile in inputFiles) {
@@ -754,7 +755,6 @@ object TestScript {
                     if (dark.isPresent) {
                         light = light - dark.get()
                     }
-
                     if (flat.isPresent) {
                         light = light / flat.get()
                     }
