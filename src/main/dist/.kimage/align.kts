@@ -105,6 +105,7 @@ kimage(0.1) {
         println("  searchRadius = $searchRadius")
         println("  centerX = $centerX")
         println("  centerY = $centerY")
+        println("  errorThreshold = $errorThreshold")
         println("  prefix = $prefix")
         println("  saveBad = $saveBad")
         println("  prefixBad = $prefixBad")
