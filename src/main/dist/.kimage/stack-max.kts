@@ -22,7 +22,7 @@ kimage(0.1) {
         var stacked: Image? = null
         for (inputFile in inputFiles) {
             println("Loading image: $inputFile")
-            val image = ImageReader.readMatrixImage(inputFile)
+            val image = ImageReader.read(inputFile)
             stacked = if (stacked == null) {
                 image
             } else {

@@ -79,7 +79,7 @@ kimage(0.1) {
 
         val baseInputFile = inputFiles[0]
         println("Loading base image: $baseInputFile")
-        val baseImage = ImageReader.readMatrixImage(baseInputFile)
+        val baseImage = ImageReader.read(baseInputFile)
         println("Base image: $baseImage")
         println()
 
@@ -122,7 +122,7 @@ kimage(0.1) {
         for (inputFile in inputFiles) {
             println("Loading image: $inputFile")
 
-            val image = ImageReader.readMatrixImage(inputFile)
+            val image = ImageReader.read(inputFile)
             if (verboseMode) println("Aligning image: $image")
 
             val alignment = imageAligner.align(baseImage, image, centerX = centerX, centerY = centerY, maxOffset = searchRadius)

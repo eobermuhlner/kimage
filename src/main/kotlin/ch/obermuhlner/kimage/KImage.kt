@@ -2,7 +2,7 @@ package ch.obermuhlner.kimage
 
 import ch.obermuhlner.kimage.image.*
 import ch.obermuhlner.kimage.image.Channel.*
-import ch.obermuhlner.kimage.io.ImageReader
+import ch.obermuhlner.kimage.io.ImageReader.read
 import ch.obermuhlner.kimage.io.ImageWriter
 import ch.obermuhlner.kimage.javafx.KImageApplication
 import ch.obermuhlner.kimage.javafx.KImageApplication.Companion.interactive
@@ -268,11 +268,15 @@ class KImageExecution(
                             println("Processing single file: $inputFile")
                         }
 
-                        val inputImage = ImageReader.readMatrixImage(inputFile)
+                        val inputImage = read(inputFile)
                         initCommonParameters(engine, true, inputFiles, parametersMap)
                         initSingleFileParameters(engine, inputFile, inputImage)
 
-                        val scriptInfo = executeScriptLowLevel(engine, script, ScriptExecutor.outputFile(inputFile, outputPrefix, outputDirectory))
+                        val scriptInfo = executeScriptLowLevel(
+                            engine,
+                            script,
+                            ScriptExecutor.outputFile(inputFile, outputPrefix, outputDirectory)
+                        )
                         if (scriptInfo != null) {
                             return scriptInfo
                         }
@@ -390,9 +394,9 @@ class KImageExecution(
     }
 
     private fun example() {
-        //val originalImage = ImageReader.readMatrixImage(File("images/animal.png"))
-        //val originalImage = ImageReader.readMatrixImage(File("images/orion_small_compress0.png"))
-        val originalImage = ImageReader.readMatrixImage(File("images/orion_32bit.tif"))
+        //val originalImage = ImageReader.read(File("images/animal.png"))
+        //val originalImage = ImageReader.read(File("images/orion_small_compress0.png"))
+        val originalImage = read(File("images/orion_32bit.tif"))
 
 //        val originalImage = interactive {
 //            openImageFile(initialDirectory = File("images"))
@@ -411,7 +415,7 @@ class KImageExecution(
                 }
             }
 
-            filter ("Median") {
+            filter("Median") {
                 medianPixelFilter(radiusProperty.get())
             }
         }
@@ -444,7 +448,8 @@ class KImageExecution(
                     this.height,
                     Red to croppedOriginalImage[Red] - this[Red] * removalFactorProperty.get(),
                     Green to croppedOriginalImage[Green] - this[Green] * removalFactorProperty.get(),
-                    Blue to croppedOriginalImage[Blue] - this[Blue] * removalFactorProperty.get())
+                    Blue to croppedOriginalImage[Blue] - this[Blue] * removalFactorProperty.get()
+                )
             }
         }
 

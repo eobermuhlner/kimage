@@ -92,7 +92,7 @@ kimage(0.1) {
         }
 
         println("Loading image: ${inputFiles[0]}")
-        var baseImage: Image = ImageReader.readMatrixImage(inputFiles[0])
+        var baseImage: Image = ImageReader.read(inputFiles[0])
         val channels = baseImage.channels
         val huge = HugeFloatArray(inputFiles.size, channels.size, baseImage.width, baseImage.height)
 
@@ -103,7 +103,7 @@ kimage(0.1) {
                 baseImage
             } else {
                 println("Loading image: $inputFile")
-                ImageReader.readMatrixImage(inputFile).crop(0, 0, baseImage.width, baseImage.height)
+                ImageReader.read(inputFile).crop(0, 0, baseImage.width, baseImage.height)
             }
 
             for (channelIndex in channels.indices) {

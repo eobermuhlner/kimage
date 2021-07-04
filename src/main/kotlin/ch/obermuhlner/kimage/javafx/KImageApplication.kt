@@ -1,7 +1,7 @@
 package ch.obermuhlner.kimage.javafx
 
 import ch.obermuhlner.kimage.image.Image
-import ch.obermuhlner.kimage.io.ImageReader
+import ch.obermuhlner.kimage.io.ImageReader.read
 import ch.obermuhlner.kimage.math.clamp
 import ch.obermuhlner.kotlin.javafx.*
 import javafx.application.Application
@@ -64,7 +64,7 @@ class KImageApplication : Application() {
         val chosenFile = fileChooser.showOpenDialog(primaryStage)
         if (chosenFile != null) {
             try {
-                setCurrentImage(ImageReader.readMatrixImage(chosenFile), chosenFile.name)
+                setCurrentImage(read(chosenFile), chosenFile.name)
                 currentDirectory = chosenFile.parentFile
             } catch (e: IOException) {
                 e.printStackTrace()

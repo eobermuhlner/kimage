@@ -2,7 +2,7 @@ package ch.obermuhlner.kimage
 
 import ch.obermuhlner.kimage.image.Image
 import ch.obermuhlner.kimage.image.MatrixImage
-import ch.obermuhlner.kimage.io.ImageReader
+import ch.obermuhlner.kimage.io.ImageReader.read
 import ch.obermuhlner.kimage.io.ImageWriter
 import java.io.File
 
@@ -173,8 +173,16 @@ class ScriptV0_1 : Script(0.1) {
     fun executeSingle(inputFiles: List<File>, arguments: Map<String, String>, verboseMode: Boolean, debugMode: Boolean, outputHandler: (File, Any?) -> Unit) {
         scriptSingle?.let {
             for (inputFile in inputFiles) {
-                val inputImage = ImageReader.readMatrixImage(inputFile)
-                it.executeSingleScript(inputFile, inputImage, scriptArguments, arguments, verboseMode, debugMode, outputHandler)
+                val inputImage = read(inputFile)
+                it.executeSingleScript(
+                    inputFile,
+                    inputImage,
+                    scriptArguments,
+                    arguments,
+                    verboseMode,
+                    debugMode,
+                    outputHandler
+                )
             }
         }
     }

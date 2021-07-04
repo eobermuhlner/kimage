@@ -4,6 +4,7 @@ import ch.obermuhlner.kimage.align.*
 import ch.obermuhlner.kimage.filter.*
 import ch.obermuhlner.kimage.image.*
 import ch.obermuhlner.kimage.io.*
+import ch.obermuhlner.kimage.io.ImageReader.read
 import ch.obermuhlner.kimage.math.*
 import java.io.File
 import kotlin.random.Random
@@ -33,7 +34,7 @@ object TestMain {
     }
 
     private fun exampleInterpolate(imageName: String) {
-        val image = ImageReader.readMatrixImage(File("images/$imageName"))
+        val image = read(File("images/$imageName"))
 
         val inset = 50
         // estimated nice power values for n points
@@ -46,25 +47,29 @@ object TestMain {
 
         val points2 = listOf(
             inset to inset,
-            image.width-inset to image.height-inset)
+            image.width - inset to image.height - inset
+        )
 
         val points3 = listOf(
-            image.width/2 to inset,
+            image.width / 2 to inset,
             inset to image.height - inset,
-            image.width-inset to image.height-inset)
+            image.width - inset to image.height - inset
+        )
 
         val points4 = listOf(
             inset to inset,
-            image.width-inset to inset,
-            inset to image.height-inset,
-            image.width-inset to image.height-inset)
+            image.width - inset to inset,
+            inset to image.height - inset,
+            image.width - inset to image.height - inset
+        )
 
         val points5 = listOf(
-            image.width/2 to image.height/2,
+            image.width / 2 to image.height / 2,
             inset to inset,
-            image.width-inset to inset,
-            inset to image.height-inset,
-            image.width-inset to image.height-inset)
+            image.width - inset to inset,
+            inset to image.height - inset,
+            image.width - inset to image.height - inset
+        )
 
         val grid3x3 = pointGrid(image, 3, 3)
         val grid5x5 = pointGrid(image, 5, 5)
@@ -159,7 +164,7 @@ object TestMain {
     }
 
     private fun exampleScale(imageName: String) {
-        val image = ImageReader.readMatrixImage(File("images/$imageName"))
+        val image = read(File("images/$imageName"))
 
         for (scaling in Scaling.values()) {
             example("scaled_50%_$scaling", imageName) {
@@ -169,17 +174,17 @@ object TestMain {
                 image.scaleBy(2.0, 2.0, scaling)
             }
             example("scaled_1000%_$scaling", imageName) {
-                image.cropCenter(image.width / 10, image.width/2, image.height/2).scaleBy(10.0, 10.0, scaling)
+                image.cropCenter(image.width / 10, image.width / 2, image.height / 2).scaleBy(10.0, 10.0, scaling)
             }
             example("scaled_12345%_$scaling", imageName) {
-                image.cropCenter(image.width / 100, image.width/2, image.height/2).scaleBy(123.45, 123.45, scaling)
+                image.cropCenter(image.width / 100, image.width / 2, image.height / 2).scaleBy(123.45, 123.45, scaling)
             }
         }
     }
 
     private fun exampleError() {
         var image1 = measureElapsed("Read image1") {
-            ImageReader.readMatrixImage(File("images/align/orion1.png"))
+            read(File("images/align/orion1.png"))
         }
         
         val radius = 50
@@ -198,7 +203,7 @@ object TestMain {
 
         for (inputFile in inputFiles) {
             val image2 = measureElapsed("Read image2 $inputFile") {
-                ImageReader.readMatrixImage(inputFile)
+                read(inputFile)
             }
 
             val (alignX, alignY) = measureElapsed("alignImages") {
@@ -322,7 +327,7 @@ object TestMain {
         val imageAligner = ImageAligner(radius)
 
         println("Base image: ${inputFiles[0]}")
-        val baseImage = ImageReader.readMatrixImage(inputFiles[0]).scaleBy(scaleFactor, scaleFactor)
+        val baseImage = read(inputFiles[0]).scaleBy(scaleFactor, scaleFactor)
 
         val (centerX, centerY) = imageAligner.findInterestingCropCenter(baseImage)
 
@@ -330,7 +335,7 @@ object TestMain {
             val inputFile = inputFiles[index]
 
             println("Align image: ${inputFile}")
-            val stackImage = ImageReader.readMatrixImage(inputFile).scaleBy(scaleFactor, scaleFactor)
+            val stackImage = read(inputFile).scaleBy(scaleFactor, scaleFactor)
 
             val alignment = measureElapsed("align $inputFile") {
                 imageAligner.align(baseImage, stackImage, centerX, centerY, maxOffset = 30)
@@ -349,8 +354,8 @@ object TestMain {
     }
 
     private fun exampleMedianExperiments() {
-        val image = ImageReader.readMatrixImage(File("images/lena512color.tiff"))
-        val gimp_median = ImageReader.readMatrixImage(File("images/lena512color_gimp_median3.tiff"))
+        val image = read(File("images/lena512color.tiff"))
+        val gimp_median = read(File("images/lena512color_gimp_median3.tiff"))
 
         example("noise") {
             randomNoise(image, 0.1)
@@ -429,7 +434,7 @@ object TestMain {
                 ImageReader.read(File("images/$imageName"))
             }
             example("read_write_matrix_$imageName", imageName) {
-                ImageReader.readMatrixImage(File("images/$imageName"))
+                read(File("images/$imageName"))
             }
             example("read_write_${imageName}.png", imageName) {
                 ImageReader.read(File("images/$imageName"))
@@ -523,7 +528,7 @@ object TestMain {
     fun exampleFilters(imageName: String) {
         println("### Example Filter: $imageName")
 
-        val image = ImageReader.readMatrixImage(File("images/$imageName"))
+        val image = read(File("images/$imageName"))
         println("Image: $imageName ${image.width} x ${image.height}")
 
         example("noop", imageName) {

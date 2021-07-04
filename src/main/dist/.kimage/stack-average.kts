@@ -21,7 +21,7 @@ kimage(0.1) {
 
         val sumImage = inputFiles.map {
             println("Loading image: $it")
-            ImageReader.readMatrixImage(it) as Image
+            ImageReader.read(it) as Image
         } .reduce { sum, img ->
             sum + img.crop(0, 0, sum.width, sum.height)
         }

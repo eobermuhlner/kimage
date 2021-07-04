@@ -9,7 +9,7 @@ import javax.imageio.ImageIO
 
 object ImageReader {
 
-    fun read(file: File): Image {
+    fun read(file: File): MatrixImage {
         val image = ImageIO.read(file) ?: throw RuntimeException("Failed to read image: $file")
 
         val color = DoubleArray(3)
@@ -54,10 +54,4 @@ object ImageReader {
         return matrixImage
     }
 
-    fun readMatrixImage(file: File): MatrixImage {
-        val image = read(file)
-        val matrixImage = MatrixImage(image.width, image.height)
-        matrixImage.setPixels(image)
-        return matrixImage
-    }
 }

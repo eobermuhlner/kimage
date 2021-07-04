@@ -3,6 +3,7 @@ import ch.obermuhlner.kimage.align.*
 import ch.obermuhlner.kimage.huge.HugeFloatArray
 import ch.obermuhlner.kimage.image.*
 import ch.obermuhlner.kimage.io.*
+import ch.obermuhlner.kimage.io.ImageReader.read
 import ch.obermuhlner.kimage.math.*
 
 import java.io.*
@@ -195,7 +196,7 @@ object TestScript {
 
                 val baseInputFile = inputFiles[0]
                 println("Loading base image: $baseInputFile")
-                val baseImage = ImageReader.readMatrixImage(baseInputFile)
+                val baseImage = read(baseInputFile)
                 println("Base image: $baseImage")
                 println()
 
@@ -237,10 +238,16 @@ object TestScript {
                 for (inputFile in inputFiles) {
                     println("Loading image: $inputFile")
 
-                    val image = ImageReader.readMatrixImage(inputFile)
+                    val image = read(inputFile)
                     if (verboseMode) println("Aligning image: $image")
 
-                    val alignment = imageAligner.align(baseImage, image, centerX = centerX, centerY = centerY, maxOffset = searchRadius)
+                    val alignment = imageAligner.align(
+                        baseImage,
+                        image,
+                        centerX = centerX,
+                        centerY = centerY,
+                        maxOffset = searchRadius
+                    )
                     println("Alignment: $alignment")
 
                     val alignedImage = image.crop(alignment.x, alignment.y, baseImage.width, baseImage.height)
@@ -289,7 +296,7 @@ object TestScript {
                 var stacked: Image? = null
                 for (inputFile in inputFiles) {
                     println("Loading image: $inputFile")
-                    val image = ImageReader.readMatrixImage(inputFile)
+                    val image = read(inputFile)
                     stacked = if (stacked == null) {
                         image
                     } else {
@@ -355,17 +362,19 @@ object TestScript {
 
                 val sigmaClipHistogram = Histogram(inputFiles.size + 1)
 
-                val stackingMethod: (FloatArray) -> Float = when(method) {
+                val stackingMethod: (FloatArray) -> Float = when (method) {
                     "median" -> { array -> array.median() }
                     "average" -> { array -> array.average() }
                     "max" -> { array -> array.maxOrNull()!! }
                     "min" -> { array -> array.minOrNull()!! }
                     "sigma-clip-median" -> { array ->
-                        val clippedLength = array.sigmaClipInplace(kappa.toFloat(), iterations, histogram = sigmaClipHistogram)
+                        val clippedLength =
+                            array.sigmaClipInplace(kappa.toFloat(), iterations, histogram = sigmaClipHistogram)
                         array.medianInplace(0, clippedLength)
                     }
                     "sigma-clip-average" -> { array ->
-                        val clippedLength = array.sigmaClipInplace(kappa.toFloat(), iterations, histogram = sigmaClipHistogram
+                        val clippedLength = array.sigmaClipInplace(
+                            kappa.toFloat(), iterations, histogram = sigmaClipHistogram
                         )
                         array.average(0, clippedLength)
                     }
@@ -378,18 +387,26 @@ object TestScript {
                         array.average()
                     }
                     "winsorized-sigma-clip-median" -> { array ->
-                        val clippedLength = array.huberWinsorizedSigmaClipInplace(kappa = kappa.toFloat(), iterations, histogram = sigmaClipHistogram)
+                        val clippedLength = array.huberWinsorizedSigmaClipInplace(
+                            kappa = kappa.toFloat(),
+                            iterations,
+                            histogram = sigmaClipHistogram
+                        )
                         array.medianInplace(0, clippedLength)
                     }
                     "winsorized-sigma-clip-average" -> { array ->
-                        val clippedLength = array.huberWinsorizedSigmaClipInplace(kappa = kappa.toFloat(), iterations, histogram = sigmaClipHistogram)
+                        val clippedLength = array.huberWinsorizedSigmaClipInplace(
+                            kappa = kappa.toFloat(),
+                            iterations,
+                            histogram = sigmaClipHistogram
+                        )
                         array.average(0, clippedLength)
                     }
                     else -> throw IllegalArgumentException("Unknown method: " + method)
                 }
 
                 println("Loading image: ${inputFiles[0]}")
-                var baseImage: Image = ImageReader.readMatrixImage(inputFiles[0])
+                var baseImage: Image = read(inputFiles[0])
                 val channels = baseImage.channels
                 val huge = HugeFloatArray(inputFiles.size, channels.size, baseImage.width, baseImage.height)
 
@@ -400,7 +417,7 @@ object TestScript {
                         baseImage
                     } else {
                         println("Loading image: $inputFile")
-                        ImageReader.readMatrixImage(inputFile).crop(0, 0, baseImage.width, baseImage.height)
+                        read(inputFile).crop(0, 0, baseImage.width, baseImage.height)
                     }
 
                     for (channelIndex in channels.indices) {
