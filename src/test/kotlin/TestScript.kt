@@ -20,8 +20,9 @@ object TestScript {
         //runScript(scriptStack(), mapOf("kappa" to "2.0"), *orionImages)
         //runScript(scriptStack(), mapOf("kappa" to "2.0"), *alignedOrionImages)
         //runScript(scriptRemoveBackgroundMedian(), "images/align/orion1.png")
-        runScript(scriptHistogram(), "images/align/output_orion1.png")
-        runScript(scriptColorStretch(), "images/align/output_orion1.png")
+        //runScript(scriptHistogram(), "images/align/output_orion1.png")
+        //runScript(scriptColorStretch(), "images/align/output_orion1.png")
+        runScript(scriptCalibrate())
 
     }
 
@@ -285,12 +286,18 @@ object TestScript {
             multi {
                 println("Stack multiple images using max")
 
-                inputFiles.map {
-                    println("Loading image: $it")
-                    ImageReader.readMatrixImage(it) as Image
-                } .reduce { stacked, img ->
-                    max(stacked, img.crop(0, 0, stacked.width, stacked.height))
+                var stacked: Image? = null
+                for (inputFile in inputFiles) {
+                    println("Loading image: $inputFile")
+                    val image = ImageReader.readMatrixImage(inputFile)
+                    stacked = if (stacked == null) {
+                        image
+                    } else {
+                        max(stacked, image)
+                    }
                 }
+
+                stacked
             }
         }
 
@@ -668,6 +675,48 @@ object TestScript {
                 }
 
                 image
+            }
+        }
+
+    fun scriptCalibrate(): Script =
+        kimage(0.1) {
+            name = "calibrate"
+            description = """
+                Calibrates bias/dark/flat/darkflat/light images.
+                """
+            arguments {
+            }
+
+            multi {
+                println("Calibrate")
+                println()
+
+                println("Loading bias")
+                val bias = ImageReader.read(File("images/calibrate/bias.TIF"))
+                println("Loading dark")
+                var dark = ImageReader.read(File("images/calibrate/dark.TIF"))
+                println("Loading darkflat")
+                var darkflat = ImageReader.read(File("images/calibrate/darkflat.TIF"))
+                println("Loading flat")
+                var flat = ImageReader.read(File("images/calibrate/flat.TIF"))
+
+                dark = dark - bias
+                darkflat = darkflat - bias
+                flat = flat - bias - darkflat
+
+                for (inputFile in inputFiles) {
+                    println("Loading $inputFile")
+                    var light = ImageReader.read(inputFile)
+
+                    val light2 = light - bias - dark
+                    ImageWriter.write(deltaChannel(light2, light, factor = 20.0), File("delta_light2_${inputFile.name}"))
+
+                    val light3 = light2.pixelWiseDiv(flat)
+                    ImageWriter.write(light3, File("calibrated_${inputFile.name}"))
+                    ImageWriter.write(deltaChannel(light3, light2), File("delta_light3_${inputFile.name}"))
+                }
+
+                null
             }
         }
 
