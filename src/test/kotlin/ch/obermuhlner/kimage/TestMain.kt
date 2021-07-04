@@ -211,7 +211,7 @@ object TestMain {
             }
 
             val alignedImage2 = image2.crop(alignX, alignY, image2.width, image2.height)
-            ImageWriter.write(alignedImage2, inputFile.prefixName("aligned_")
+            ImageWriter.write(alignedImage2, inputFile.prefixName("aligned_"))
 
             sumImage += alignedImage2
             sumImageCount++
