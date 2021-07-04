@@ -335,19 +335,19 @@ fun Iterable<Double>.fastMedian(min: Double, max: Double, binCount: Int = 100): 
     return histogram.estimateMedian() * (max - min) + min
 }
 
-fun FloatArray.sigmaClip(kappa: Float = 2f, iterations: Int = 1, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population, center: (FloatArray, Int, Int) -> Float = FloatArray::median, keepLast: Boolean = true, histogram: Histogram? = null): FloatArray {
+fun FloatArray.sigmaClip(kappa: Float = 2f, iterations: Int = 1, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population, center: (array: FloatArray, offset: Int, length: Int) -> Float = FloatArray::median, keepLast: Boolean = true, histogram: Histogram? = null): FloatArray {
     val array = copyOfRange(offset, offset+length)
     val clippedLength = array.sigmaClipInplace(kappa, iterations, 0, length, standardDeviationType, center, keepLast, histogram)
     return array.copyOfRange(0, clippedLength)
 }
 
-fun DoubleArray.sigmaClip(kappa: Double = 2.0, iterations: Int = 1, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population, center: (DoubleArray, Int, Int) -> Double = DoubleArray::median, keepLast: Boolean = true, histogram: Histogram? = null): DoubleArray {
+fun DoubleArray.sigmaClip(kappa: Double = 2.0, iterations: Int = 1, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population, center: (array: DoubleArray, offset: Int, length: Int) -> Double = DoubleArray::median, keepLast: Boolean = true, histogram: Histogram? = null): DoubleArray {
     val array = copyOfRange(offset, offset+length)
     val clippedLength = array.sigmaClipInplace(kappa, iterations, 0, length, standardDeviationType, center, keepLast, histogram)
     return array.copyOfRange(0, clippedLength)
 }
 
-fun FloatArray.sigmaClipInplace(kappa: Float = 2f, iterations: Int = 1, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population, center: (FloatArray, Int, Int) -> Float = FloatArray::median, keepLast: Boolean = true, histogram: Histogram? = null): Int {
+fun FloatArray.sigmaClipInplace(kappa: Float = 2f, iterations: Int = 1, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population, center: (array: FloatArray, offset: Int, length: Int) -> Float = FloatArray::median, keepLast: Boolean = true, histogram: Histogram? = null): Int {
     var currentLength = length
 
     for (i in 0 until iterations) {
@@ -364,7 +364,7 @@ fun FloatArray.sigmaClipInplace(kappa: Float = 2f, iterations: Int = 1, offset: 
     return currentLength
 }
 
-fun DoubleArray.sigmaClipInplace(kappa: Double = 2.0, iterations: Int = 1, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population, center: (DoubleArray, Int, Int) -> Double = DoubleArray::median, keepLast: Boolean = true, histogram: Histogram? = null): Int {
+fun DoubleArray.sigmaClipInplace(kappa: Double = 2.0, iterations: Int = 1, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population, center: (array: DoubleArray, offset: Int, length: Int) -> Double = DoubleArray::median, keepLast: Boolean = true, histogram: Histogram? = null): Int {
     var currentLength = length
 
     for (i in 0 until iterations) {

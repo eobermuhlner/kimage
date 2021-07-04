@@ -33,7 +33,7 @@ class MatrixImage(
             width: Int,
             height: Int,
             channels: List<Channel>,
-            matrixFunc: (Channel, Int, Int) -> Matrix = { _, _, _ -> FloatMatrix(height, width) })
+            matrixFunc: (channel: Channel, width: Int, height: Int) -> Matrix = { _, _, _ -> FloatMatrix(height, width) })
             : this(width, height, channels, channels.map { matrixFunc.invoke(it, width, height) })
 
     constructor(image: Image) : this(image.width, image.height) {

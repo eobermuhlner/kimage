@@ -124,7 +124,7 @@ fun max(image1: Image, image2: Image): Image {
     }
 }
 
-fun Image.onEach(func: (Double) -> Double): Image {
+fun Image.onEach(func: (value: Double) -> Double): Image {
     return MatrixImage(
         this.width,
         this.height,
@@ -133,7 +133,7 @@ fun Image.onEach(func: (Double) -> Double): Image {
     }
 }
 
-fun Image.stretchClassic(min: Double, max: Double, func: (Double) -> Double = { it }): Image {
+fun Image.stretchClassic(min: Double, max: Double, func: (value: Double) -> Double = { it }): Image {
     return MatrixImage(
         this.width,
         this.height,
