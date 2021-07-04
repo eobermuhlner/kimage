@@ -28,7 +28,7 @@ kimage(0.1) {
             description = """
                         The curve shape used to modify the contrast.
                         """
-            allowed = listOf("linear", "s-curve", "s-curve-bright", "s-curve-dark", "s-curve-strong", "s-curve-super-strong", "bright+", "dark+", "bright-", "dark-", "custom1", "custom2")
+            allowed = listOf("linear", "s-curve", "s-curve-bright", "s-curve-dark", "s-curve-strong", "s-curve-super-strong", "bright+", "dark+", "bright-", "dark-", "custom1", "custom2", "all")
             default = "s-curve"
         }
         double("custom1X") {
@@ -85,9 +85,9 @@ kimage(0.1) {
         var image = inputImage
 
         if (debugMode) {
-            println("Image average: ${image.values().average()}")
-            println("Image median: ${image.values().fastMedian()}")
-            println("Image stddev: ${image.values().stddev()}")
+            println("Input image - average: ${image.values().average()}")
+            println("Input image - median: ${image.values().fastMedian()}")
+            println("Input image - stddev: ${image.values().stddev()}")
 
             val histogramInputFile = File("hist_input_" + inputFile.name)
             println("Saving $histogramInputFile for manual analysis")
@@ -103,9 +103,9 @@ kimage(0.1) {
         }
 
         if (debugMode) {
-            println("Image average: ${image.values().average()}")
-            println("Image median: ${image.values().fastMedian()}")
-            println("Image stddev: ${image.values().stddev()}")
+            println("After brightness correction - average: ${image.values().average()}")
+            println("After brightness correction - median: ${image.values().fastMedian()}")
+            println("After brightness correction - stddev: ${image.values().stddev()}")
 
             val histogramBrightnessFile = File("hist_brightness_" + inputFile.name)
             println("Saving $histogramBrightnessFile (after brightness correction) for manual analysis")
@@ -113,102 +113,115 @@ kimage(0.1) {
             println()
         }
 
-        val (curvePointsX, curvePointsY) = when(curve) {
-            "linear" -> {
-                Pair(
-                    listOf(0.0, 1.0),
-                    listOf(0.0, 1.0)
-                )
-            }
-            "s-curve" -> {
-                Pair(
-                    listOf(0.0, 0.3, 0.7, 1.0),
-                    listOf(0.0, 0.2, 0.8, 1.0)
-                )
-            }
-            "s-curve-bright" -> {
-                Pair(
-                    listOf(0.0, 0.2,  0.7, 1.0),
-                    listOf(0.0, 0.18, 0.8, 1.0)
-                )
-            }
-            "s-curve-dark" -> {
-                Pair(
-                    listOf(0.0, 0.3, 0.7, 1.0),
-                    listOf(0.0, 0.2, 0.72, 1.0)
-                )
-            }
-            "s-curve-strong" -> {
-                Pair(
-                    listOf(0.0, 0.2, 0.8, 1.0),
-                    listOf(0.0, 0.1, 0.9, 1.0)
-                )
-            }
-            "s-curve-super-strong" -> {
-                Pair(
-                    listOf(0.0, 0.2, 0.8, 1.0),
-                    listOf(0.0, 0.05, 0.95, 1.0)
-                )
-            }
-            "bright+" -> {
-                Pair(
-                    listOf(0.0, 0.6, 1.0),
-                    listOf(0.0, 0.7, 1.0)
-                )
-            }
-            "dark+" -> {
-                Pair(
-                    listOf(0.0, 0.4, 1.0),
-                    listOf(0.0, 0.5, 1.0)
-                )
-            }
-            "bright-" -> {
-                Pair(
-                    listOf(0.0, 0.6, 1.0),
-                    listOf(0.0, 0.5, 1.0)
-                )
-            }
-            "dark-" -> {
-                Pair(
-                    listOf(0.0, 0.4, 1.0),
-                    listOf(0.0, 0.3, 1.0)
-                )
-            }
-            "custom1" -> {
-                Pair(
-                    listOf(0.0, custom1X, 1.0),
-                    listOf(0.0, custom1Y, 1.0)
-                )
-            }
-            "custom2" -> {
-                Pair(
-                    listOf(0.0, custom1X, custom2X, 1.0),
-                    listOf(0.0, custom1X, custom2Y, 1.0)
-                )
-            }
-            else -> throw IllegalArgumentException("Unknown curve: $curve")
+
+        val curves = if (curve == "all") {
+            listOf("linear", "s-curve", "s-curve-bright", "s-curve-dark", "s-curve-strong", "s-curve-super-strong", "bright+", "dark+", "bright-", "dark-", "custom1", "custom2")
+        } else {
+            listOf(curve)
         }
 
-        println("Curve Points:")
-        println("  X: $curvePointsX")
-        println("  Y: $curvePointsY")
-        println()
+        for (curve in curves) {
+            val (curvePointsX, curvePointsY) = when(curve) {
+                "linear" -> {
+                    Pair(
+                        listOf(0.0, 1.0),
+                        listOf(0.0, 1.0)
+                    )
+                }
+                "s-curve" -> {
+                    Pair(
+                        listOf(0.0, 0.3, 0.7, 1.0),
+                        listOf(0.0, 0.2, 0.8, 1.0)
+                    )
+                }
+                "s-curve-bright" -> {
+                    Pair(
+                        listOf(0.0, 0.2,  0.7, 1.0),
+                        listOf(0.0, 0.18, 0.8, 1.0)
+                    )
+                }
+                "s-curve-dark" -> {
+                    Pair(
+                        listOf(0.0, 0.3, 0.7, 1.0),
+                        listOf(0.0, 0.2, 0.72, 1.0)
+                    )
+                }
+                "s-curve-strong" -> {
+                    Pair(
+                        listOf(0.0, 0.2, 0.8, 1.0),
+                        listOf(0.0, 0.1, 0.9, 1.0)
+                    )
+                }
+                "s-curve-super-strong" -> {
+                    Pair(
+                        listOf(0.0, 0.2, 0.8, 1.0),
+                        listOf(0.0, 0.05, 0.95, 1.0)
+                    )
+                }
+                "bright+" -> {
+                    Pair(
+                        listOf(0.0, 0.6, 1.0),
+                        listOf(0.0, 0.7, 1.0)
+                    )
+                }
+                "dark+" -> {
+                    Pair(
+                        listOf(0.0, 0.4, 1.0),
+                        listOf(0.0, 0.5, 1.0)
+                    )
+                }
+                "bright-" -> {
+                    Pair(
+                        listOf(0.0, 0.6, 1.0),
+                        listOf(0.0, 0.5, 1.0)
+                    )
+                }
+                "dark-" -> {
+                    Pair(
+                        listOf(0.0, 0.4, 1.0),
+                        listOf(0.0, 0.3, 1.0)
+                    )
+                }
+                "custom1" -> {
+                    Pair(
+                        listOf(0.0, custom1X, 1.0),
+                        listOf(0.0, custom1Y, 1.0)
+                    )
+                }
+                "custom2" -> {
+                    Pair(
+                        listOf(0.0, custom1X, custom2X, 1.0),
+                        listOf(0.0, custom1X, custom2Y, 1.0)
+                    )
+                }
+                else -> throw IllegalArgumentException("Unknown curve: $curve")
+            }
 
-        val spline: SplineInterpolator = SplineInterpolator.createMonotoneCubicSpline(curvePointsX, curvePointsY)
-
-        image = image.onEach { v -> spline.interpolate(v) }
-
-        if (debugMode) {
-            println("Image average: ${image.values().average()}")
-            println("Image median: ${image.values().fastMedian()}")
-            println("Image stddev: ${image.values().stddev()}")
-
-            val histogramOutputFile = File("hist_output_" + inputFile.name)
-            println("Saving $histogramOutputFile (after brightness correction) for manual analysis")
-            ImageWriter.write(image.histogramImage(histogramWidth, histogramHeight), histogramOutputFile)
+            println("Curve Points:")
+            println("  X: $curvePointsX")
+            println("  Y: $curvePointsY")
             println()
+
+            val spline: SplineInterpolator = SplineInterpolator.createMonotoneCubicSpline(curvePointsX, curvePointsY)
+
+            image = image.onEach { v -> spline.interpolate(v) }
+
+            if (debugMode) {
+                println("After curve correction - average: ${image.values().average()}")
+                println("After curve correction - median: ${image.values().fastMedian()}")
+                println("After curve correction - stddev: ${image.values().stddev()}")
+
+                val histogramOutputFile = File("hist_output_" + inputFile.name)
+                println("Saving $histogramOutputFile (after curve correction) for manual analysis")
+                ImageWriter.write(image.histogramImage(histogramWidth, histogramHeight), histogramOutputFile)
+                println()
+            }
+
+            val outputFile = File("color-stretch(${curve},${brightness})_" + inputFile.name)
+            println("Saving $outputFile")
+            ImageWriter.write(image, outputFile)
         }
 
-        image
+        null
     }
 }
