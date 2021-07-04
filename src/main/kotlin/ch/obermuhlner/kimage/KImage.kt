@@ -347,7 +347,7 @@ class KImageExecution(
     private fun initSingleFileParameters(
         engine: ScriptEngine,
         inputFile: File,
-        inputImage: MatrixImage
+        inputImage: Image
     ) {
         setVariable(engine, "inputFile", inputFile)
         setVariable(engine, "inputImage", inputImage)
