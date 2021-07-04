@@ -2,9 +2,11 @@ package ch.obermuhlner.kimage
 
 import ch.obermuhlner.kimage.image.Image
 import ch.obermuhlner.kimage.image.MatrixImage
+import ch.obermuhlner.kimage.io.ImageReader
 import ch.obermuhlner.kimage.io.ImageReader.read
 import ch.obermuhlner.kimage.io.ImageWriter
 import java.io.File
+import java.util.*
 
 @DslMarker
 annotation class KotlinDSL
@@ -212,11 +214,23 @@ class ScriptArguments {
     fun int(name: String, initializer: ScriptIntArg.() -> Unit) =
         arguments.add(ScriptIntArg().apply { this.name = name }.apply(initializer))
 
+    fun optionalInt(initializer: ScriptOptionalIntArg.() -> Unit) =
+        arguments.add(ScriptOptionalIntArg().apply(initializer))
+
+    fun optionalInt(name: String, initializer: ScriptOptionalIntArg.() -> Unit) =
+        arguments.add(ScriptOptionalIntArg().apply { this.name = name }.apply(initializer))
+
     fun double(initializer: ScriptDoubleArg.() -> Unit) =
         arguments.add(ScriptDoubleArg().apply(initializer))
 
     fun double(name: String, initializer: ScriptDoubleArg.() -> Unit) =
         arguments.add(ScriptDoubleArg().apply { this.name = name }.apply(initializer))
+
+    fun optionalDouble(initializer: ScriptOptionalDoubleArg.() -> Unit) =
+        arguments.add(ScriptOptionalDoubleArg().apply(initializer))
+
+    fun optionalDouble(name: String, initializer: ScriptOptionalDoubleArg.() -> Unit) =
+        arguments.add(ScriptOptionalDoubleArg().apply { this.name = name }.apply(initializer))
 
     fun boolean(initializer: ScriptBooleanArg.() -> Unit) =
         arguments.add(ScriptBooleanArg().apply(initializer))
@@ -229,68 +243,46 @@ class ScriptArguments {
 
     fun string(name: String, initializer: ScriptStringArg.() -> Unit) =
         arguments.add(ScriptStringArg().apply { this.name = name }.apply(initializer))
-}
 
-class ExecutionArguments(
-    scriptArguments: ScriptArguments,
-    argumentValues: Map<String, String>,
-    ) {
-    val int = mutableMapOf<String, Int>()
-    val double = mutableMapOf<String, Double>()
-    val boolean = mutableMapOf<String, Boolean>()
-    val string = mutableMapOf<String, String>()
+    fun file(initializer: ScriptFileArg.() -> Unit) =
+        arguments.add(ScriptFileArg().apply(initializer))
 
-    init {
-        for (argument in scriptArguments.arguments) {
-            when (argument) {
-                is ScriptIntArg -> {
-                    val value = argument.toValue(argumentValues[argument.name])
-                    if (value != null) {
-                        int[argument.name] = value
-                    }
-                }
-                is ScriptDoubleArg -> {
-                    val value = argument.toValue(argumentValues[argument.name])
-                    if (value != null) {
-                        double[argument.name] = value
-                    }
-                }
-                is ScriptBooleanArg -> {
-                    val value = argument.toValue(argumentValues[argument.name])
-                    if (value != null) {
-                        boolean[argument.name] = value
-                    }
-                }
-                is ScriptStringArg -> {
-                    val value = argument.toValue(argumentValues[argument.name])
-                    if (value != null) {
-                        string[argument.name] = value
-                    }
-                }
-            }
-        }
-    }
+    fun file(name: String, initializer: ScriptFileArg.() -> Unit) =
+        arguments.add(ScriptFileArg().apply { this.name = name }.apply(initializer))
+
+    fun image(initializer: ScriptImageArg.() -> Unit) =
+        arguments.add(ScriptImageArg().apply(initializer))
+
+    fun image(name: String, initializer: ScriptImageArg.() -> Unit) =
+        arguments.add(ScriptImageArg().apply { this.name = name }.apply(initializer))
+
+    fun optionalImage(initializer: ScriptImageArg.() -> Unit) =
+        arguments.add(ScriptImageArg().apply(initializer))
+
+    fun optionalImage(name: String, initializer: ScriptOptionalImageArg.() -> Unit) =
+        arguments.add(ScriptOptionalImageArg().apply { this.name = name }.apply(initializer))
 }
 
 @KotlinDSL
-sealed class ScriptArg(val type: String) {
+sealed class ScriptArg(val type: String, val mandatory: Boolean) {
     var name: String = ""
     var description = ""
-    var mandatory: Boolean = false
 }
 
 @KotlinDSL
-class ScriptIntArg : ScriptArg("int") {
+open class ScriptIntArg(type: String, mandatory: Boolean) : ScriptArg(type, mandatory) {
     var min: Int? = null
     var max: Int? = null
     var default: Int? = null
 
-    fun toValue(stringValue: String?): Int? {
+    constructor() : this("int", true)
+
+    fun toIntValue(stringValue: String?): Int {
         if (stringValue == null) {
-            if (default == null && mandatory) {
-                throw ScriptArgumentException("Argument $name is mandatory")
+            default?.let {
+                return it;
             }
-            return default
+            throw ScriptArgumentException("Argument $name is mandatory")
         }
         val value = stringValue.toInt()
         min?.let {
@@ -308,17 +300,34 @@ class ScriptIntArg : ScriptArg("int") {
 }
 
 @KotlinDSL
-class ScriptDoubleArg : ScriptArg("double") {
+class ScriptOptionalIntArg : ScriptIntArg("optionalInt", false) {
+    fun toOptionalIntValue(stringValue: String?): Optional<Int> {
+        if (stringValue == null) {
+            if (default == null) {
+                return Optional.empty()
+            }
+            default?.let {
+                return Optional.of(it)
+            }
+        }
+        return Optional.of(toIntValue(stringValue))
+    }
+}
+
+@KotlinDSL
+open class ScriptDoubleArg(type: String, mandatory: Boolean) : ScriptArg(type, mandatory) {
     var min: Double? = null
     var max: Double? = null
     var default: Double? = null
 
-    fun toValue(stringValue: String?): Double? {
+    constructor() : this("double", true)
+
+    fun toDoubleValue(stringValue: String?): Double {
         if (stringValue == null) {
-            if (default == null && mandatory) {
-                throw ScriptArgumentException("Argument $name is mandatory")
+            default?.let {
+                return it;
             }
-            return default
+            throw ScriptArgumentException("Argument $name is mandatory")
         }
         val value = stringValue.toDouble()
         min?.let {
@@ -336,32 +345,66 @@ class ScriptDoubleArg : ScriptArg("double") {
 }
 
 @KotlinDSL
-class ScriptBooleanArg : ScriptArg("boolean") {
+class ScriptOptionalDoubleArg : ScriptDoubleArg("optionalDouble", false) {
+    fun toOptionalDoubleValue(stringValue: String?): Optional<Double> {
+        if (stringValue == null) {
+            if (default == null) {
+                return Optional.empty()
+            }
+            default?.let {
+                return Optional.of(it)
+            }
+        }
+        return Optional.of(toDoubleValue(stringValue))
+    }
+}
+
+@KotlinDSL
+open class ScriptBooleanArg(type: String, mandatory: Boolean) : ScriptArg(type, mandatory) {
     var default: Boolean? = null
 
-    fun toValue(stringValue: String?): Boolean? {
+    constructor() : this("boolean", true)
+
+    fun toBooleanValue(stringValue: String?): Boolean {
         if (stringValue == null) {
-            if (default == null && mandatory) {
-                throw ScriptArgumentException("Argument $name is mandatory")
+            default?.let {
+                return it;
             }
-            return default
+            throw ScriptArgumentException("Argument $name is mandatory")
         }
         return stringValue.toBoolean()
     }
 }
 
 @KotlinDSL
-class ScriptStringArg : ScriptArg("string") {
+class ScriptOptionalBooleanArg : ScriptBooleanArg("optionalBoolean", false) {
+    fun toOptionalBooleanValue(stringValue: String?): Optional<Boolean> {
+        if (stringValue == null) {
+            if (default == null) {
+                return Optional.empty()
+            }
+            default?.let {
+                return Optional.of(it)
+            }
+        }
+        return Optional.of(toBooleanValue(stringValue))
+    }
+}
+
+@KotlinDSL
+open class ScriptStringArg(type: String, mandatory: Boolean) : ScriptArg(type, mandatory) {
     var allowed: List<String> = mutableListOf()
     var regex: String? = null
     var default: String? = null
 
-    fun toValue(stringValue: String?): String? {
+    constructor() : this("string", true)
+
+    fun toStringValue(stringValue: String?): String {
         if (stringValue == null) {
-            if (default == null && mandatory) {
-                throw ScriptArgumentException("Argument $name is mandatory")
+            default?.let {
+                return it;
             }
-            return default
+            throw ScriptArgumentException("Argument $name is mandatory")
         }
         if (allowed.isNotEmpty()) {
             if (!allowed.contains(stringValue)) {
@@ -374,6 +417,124 @@ class ScriptStringArg : ScriptArg("string") {
             }
         }
         return stringValue
+    }
+}
+
+@KotlinDSL
+class ScriptOptionalStringArg : ScriptStringArg("optionalString", false) {
+    fun toOptionalStringValue(stringValue: String?): Optional<String> {
+        if (stringValue == null) {
+            if (default == null) {
+                return Optional.empty()
+            }
+            default?.let {
+                return Optional.of(it)
+            }
+        }
+        return Optional.of(toStringValue(stringValue))
+    }
+}
+
+@KotlinDSL
+open class ScriptFileArg(type: String, mandatory: Boolean) : ScriptArg(type, mandatory) {
+    var default: File? = null
+    var allowedExtensions: List<String>? = null
+    var exists: Boolean? = null
+    var isFile: Boolean? = null
+    var isDirectory: Boolean? = null
+    var canRead: Boolean? = null
+    var canWrite: Boolean? = null
+
+    constructor() : this("file", true)
+
+    fun toFileValue(stringValue: String?): File {
+        if (stringValue == null) {
+            default?.let {
+                return it;
+            }
+            throw ScriptArgumentException("Argument $name is mandatory")
+        }
+        val file = File(stringValue)
+        allowedExtensions?.let {
+            if (file.extension in it) {
+                throw ScriptArgumentException("Argument $name must have one of the extensions $allowedExtensions but has ${file.extension}: $file")
+            }
+        }
+        exists?.let {
+            if (!file.exists()) {
+                throw ScriptArgumentException("Argument $name must exist: $file")
+            }
+        }
+        isFile?.let {
+            if (!file.isFile) {
+                throw ScriptArgumentException("Argument $name must be a file: $file")
+            }
+        }
+        isDirectory?.let {
+            if (!file.isDirectory) {
+                throw ScriptArgumentException("Argument $name must be a directory: $file")
+            }
+        }
+        canRead?.let {
+            if (!file.canRead()) {
+                throw ScriptArgumentException("Argument $name must be readable: $file")
+            }
+        }
+        canWrite?.let {
+            if (!file.canWrite()) {
+                throw ScriptArgumentException("Argument $name must be writeable: $file")
+            }
+        }
+        return file
+    }
+}
+
+@KotlinDSL
+class ScriptOptionalFileArg : ScriptFileArg("optionalFile", false) {
+    fun toOptionalFileValue(stringValue: String?): Optional<File> {
+        if (stringValue == null) {
+            if (default == null) {
+                return Optional.empty()
+            }
+            default?.let {
+                return Optional.of(it)
+            }
+        }
+        return Optional.of(toFileValue(stringValue))
+    }
+}
+
+@KotlinDSL
+open class ScriptImageArg(type: String, mandatory: Boolean) : ScriptArg(type, mandatory) {
+    var default: File? = null
+
+    constructor() : this("image", true)
+
+    fun toImageValue(stringValue: String?): Image {
+        if (stringValue == null) {
+            default?.let {
+                return ImageReader.read(it)
+            }
+            throw ScriptArgumentException("Argument $name is mandatory")
+        }
+        return ImageReader.read(File(stringValue))
+    }
+}
+
+@KotlinDSL
+class ScriptOptionalImageArg() : ScriptArg("optionalImage", false) {
+    var default: File? = null
+
+    fun toOptionalImageValue(stringValue: String?): Optional<Image> {
+        if (stringValue == null) {
+            if (default == null) {
+                return Optional.empty()
+            }
+            default?.let {
+                return Optional.of(ImageReader.read(it))
+            }
+        }
+        return Optional.of(ImageReader.read(File(stringValue)))
     }
 }
 
@@ -431,29 +592,41 @@ private fun processArguments(scriptArguments: ScriptArguments, rawArguments: Map
 
     for (argument in scriptArguments.arguments) {
         when (argument) {
+            is ScriptOptionalIntArg -> {
+                processed[argument.name] = argument.toOptionalIntValue(rawArguments[argument.name])
+            }
             is ScriptIntArg -> {
-                val value = argument.toValue(rawArguments[argument.name])
-                if (value != null) {
-                    processed[argument.name] = value
-                }
+                processed[argument.name] = argument.toIntValue(rawArguments[argument.name])
+            }
+            is ScriptOptionalDoubleArg -> {
+                processed[argument.name] = argument.toOptionalDoubleValue(rawArguments[argument.name])
             }
             is ScriptDoubleArg -> {
-                val value = argument.toValue(rawArguments[argument.name])
-                if (value != null) {
-                    processed[argument.name] = value
-                }
+                processed[argument.name] = argument.toDoubleValue(rawArguments[argument.name])
+            }
+            is ScriptOptionalBooleanArg -> {
+                processed[argument.name] = argument.toOptionalBooleanValue(rawArguments[argument.name])
             }
             is ScriptBooleanArg -> {
-                val value = argument.toValue(rawArguments[argument.name])
-                if (value != null) {
-                    processed[argument.name] = value
-                }
+                processed[argument.name] = argument.toBooleanValue(rawArguments[argument.name])
+            }
+            is ScriptOptionalStringArg -> {
+                processed[argument.name] = argument.toOptionalStringValue(rawArguments[argument.name])
             }
             is ScriptStringArg -> {
-                val value = argument.toValue(rawArguments[argument.name])
-                if (value != null) {
-                    processed[argument.name] = value
-                }
+                processed[argument.name] = argument.toStringValue(rawArguments[argument.name])
+            }
+            is ScriptOptionalFileArg -> {
+                processed[argument.name] = argument.toOptionalFileValue(rawArguments[argument.name])
+            }
+            is ScriptFileArg -> {
+                processed[argument.name] = argument.toFileValue(rawArguments[argument.name])
+            }
+            is ScriptOptionalImageArg -> {
+                processed[argument.name] = argument.toOptionalImageValue(rawArguments[argument.name])
+            }
+            is ScriptImageArg -> {
+                processed[argument.name] = argument.toImageValue(rawArguments[argument.name])
             }
         }
     }

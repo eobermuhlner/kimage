@@ -4,6 +4,7 @@ import ch.obermuhlner.kimage.filter.*
 import ch.obermuhlner.kimage.image.*
 import ch.obermuhlner.kimage.io.*
 import java.io.*
+import java.util.Optional
 import kotlin.math.*
 
 kimage(0.1) {
@@ -17,6 +18,11 @@ kimage(0.1) {
             min = 0
             max = 100
             default = 0
+        }
+        optionalInt("optionalIntArg") {
+            description = "Example argument for an optional int value."
+            min = 0
+            max = 100
         }
         double("doubleArg") {
             description = "Example argument for a double value."
@@ -46,6 +52,7 @@ kimage(0.1) {
 
     multi {
         val intArg: Int by arguments
+        val optionalIntArg: Optional<Int> by arguments
         val doubleArg: Double by arguments
         val booleanArg: Boolean by arguments
         val stringArg: String by arguments
@@ -65,6 +72,7 @@ kimage(0.1) {
 
         println("Arguments:")
         println("  intArg = $intArg")
+        println("  optionalIntArg = $optionalIntArg")
         println("  doubleArg = $doubleArg")
         println("  booleanArg = $booleanArg")
         println("  stringArg = $stringArg")
