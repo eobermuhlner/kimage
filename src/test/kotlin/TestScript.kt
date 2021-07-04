@@ -3,7 +3,6 @@ import ch.obermuhlner.kimage.align.*
 import ch.obermuhlner.kimage.huge.HugeFloatArray
 import ch.obermuhlner.kimage.image.*
 import ch.obermuhlner.kimage.io.*
-import ch.obermuhlner.kimage.io.ImageReader.read
 import ch.obermuhlner.kimage.math.*
 
 import java.io.*
@@ -140,28 +139,28 @@ object TestScript {
                 Use the --debug option to save intermediate images for manual analysis.
                 """
             arguments {
-                int("checkRadius") {
+                optionalInt("checkRadius") {
                     description = """
                         The radius to check for similarity.
                         The default value is calculated from the base image.
                         """
                     min = 0
                 }
-                int("searchRadius") {
+                optionalInt("searchRadius") {
                     description = """
                         The search radius defining the maximum offset to align.
                         The default value is calculated from the base image.
                         """
                     min = 0
                 }
-                int("centerX") {
+                optionalInt("centerX") {
                     description = """
                         The X coordinate of the center to check for alignment.
                         The default value is calculated from the base image.
                         """
                     min = 0
                 }
-                int("centerY") {
+                optionalInt("centerY") {
                     description = """
                         The Y coordinate of the center to check for alignment.
                         The default value is calculated from the base image.
@@ -176,7 +175,7 @@ object TestScript {
                         See `saveBad`, `prefixBad`.
                         """
                     min = 0.0
-                    default = 1E-3
+                    default = 0.001
                 }
                 string("prefix") {
                     description = "The prefix of the aligned output files."
@@ -197,7 +196,7 @@ object TestScript {
 
                 val baseInputFile = inputFiles[0]
                 println("Loading base image: $baseInputFile")
-                val baseImage = read(baseInputFile)
+                val baseImage = ImageReader.read(baseInputFile)
                 println("Base image: $baseImage")
                 println()
 
@@ -205,14 +204,27 @@ object TestScript {
                 val defaultCheckRadius = sqrt(baseImageMinSize.toDouble()).toInt()
                 val defaultSearchRadius = min(baseImageMinSize, defaultCheckRadius * 4)
 
-                val checkRadius: Int by arguments.withDefault { defaultCheckRadius }
-                val searchRadius: Int by arguments.withDefault { defaultSearchRadius }
+                var checkRadius: Optional<Int> by arguments
+                var searchRadius: Optional<Int> by arguments
+                if (checkRadius.isEmpty) {
+                    checkRadius = Optional.of(defaultCheckRadius)
+                }
+                if (searchRadius.isEmpty) {
+                    searchRadius = Optional.of(defaultSearchRadius)
+                }
 
-                val imageAligner = ImageAligner(checkRadius)
+                val imageAligner = ImageAligner(checkRadius.get())
                 val (autoCenterX, autoCenterY) = imageAligner.findInterestingCropCenter(baseImage)
 
-                val centerX: Int by arguments.withDefault { autoCenterX }
-                val centerY: Int by arguments.withDefault { autoCenterY }
+                var centerX: Optional<Int> by arguments
+                var centerY: Optional<Int> by arguments
+                if (centerX.isEmpty) {
+                    centerX = Optional.of(autoCenterX)
+                }
+                if (centerY.isEmpty) {
+                    centerY = Optional.of(autoCenterY)
+                }
+
                 val errorThreshold: Double by arguments
                 val prefix: String by arguments
                 val saveBad: Boolean by arguments
@@ -229,7 +241,7 @@ object TestScript {
                 println()
 
                 if (debugMode) {
-                    val checkImage = baseImage.cropCenter(checkRadius, centerX, centerY)
+                    val checkImage = baseImage.cropCenter(checkRadius.get(), centerX.get(), centerY.get())
                     val checkFile = baseInputFile.prefixName("check_")
                     println("Saving $checkFile for manual analysis")
                     ImageWriter.write(checkImage, checkFile)
@@ -239,15 +251,15 @@ object TestScript {
                 for (inputFile in inputFiles) {
                     println("Loading image: $inputFile")
 
-                    val image = read(inputFile)
+                    val image = ImageReader.read(inputFile)
                     if (verboseMode) println("Aligning image: $image")
 
                     val alignment = imageAligner.align(
                         baseImage,
                         image,
-                        centerX = centerX,
-                        centerY = centerY,
-                        maxOffset = searchRadius
+                        centerX = centerX.get(),
+                        centerY = centerY.get(),
+                        maxOffset = searchRadius.get()
                     )
                     println("Alignment: $alignment")
 
@@ -297,7 +309,7 @@ object TestScript {
                 var stacked: Image? = null
                 for (inputFile in inputFiles) {
                     println("Loading image: $inputFile")
-                    val image = read(inputFile)
+                    val image = ImageReader.read(inputFile)
                     stacked = if (stacked == null) {
                         image
                     } else {
@@ -689,9 +701,13 @@ object TestScript {
                     println("Saving $histogramOutputFile (after brightness correction) for manual analysis")
                     ImageWriter.write(image.histogramImage(histogramWidth, histogramHeight), histogramOutputFile)
                     println()
+
+                    val outputFile = inputFile.prefixName("color-stretch(${brightness},${curve})_")
+                    println("Saving $outputFile")
+                    ImageWriter.write(image, outputFile)
                 }
 
-                image
+                null
             }
         }
 
