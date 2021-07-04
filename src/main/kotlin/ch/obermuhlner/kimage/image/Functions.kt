@@ -86,6 +86,17 @@ operator fun Image.minus(other: Image): Image {
     }
 }
 
+fun Image.pixelWiseDiv(other: Image): Image {
+    return MatrixImage(
+        this.width,
+        this.height,
+        this.channels) { channel, _, _ ->
+        this[channel].copy().onEach { row, column, value ->
+            value / other[channel][row, column]
+        }
+    }
+}
+
 operator fun Image.times(value: Double): Image {
     return MatrixImage(
         this.width,
