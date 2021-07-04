@@ -211,13 +211,13 @@ object TestMain {
             }
 
             val alignedImage2 = image2.crop(alignX, alignY, image2.width, image2.height)
-            ImageWriter.write(alignedImage2, File("aligned_" + inputFile.name))
+            ImageWriter.write(alignedImage2, inputFile.prefixName("aligned_")
 
             sumImage += alignedImage2
             sumImageCount++
 
             val stackedImage = sumImage / sumImageCount.toDouble()
-            ImageWriter.write(stackedImage, File("stacked_" + inputFile.name))
+            ImageWriter.write(stackedImage, inputFile.prefixName("stacked_"))
         }
     }
 

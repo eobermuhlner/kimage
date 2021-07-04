@@ -113,7 +113,7 @@ kimage(0.1) {
 
         if (debugMode) {
             val checkImage = baseImage.cropCenter(checkRadius, centerX, centerY)
-            val checkFile = File("check_" + baseInputFile.name)
+            val checkFile = baseInputFile.prefixName("check_")
             println("Saving $checkFile for manual analysis")
             ImageWriter.write(checkImage, checkFile)
             println()
@@ -132,12 +132,12 @@ kimage(0.1) {
 
             val error = baseImage.averageError(alignedImage)
             if (error <= errorThreshold) {
-                val alignedFile = File("${prefix}_" + inputFile.name)
+                val alignedFile = inputFile.prefixName("${prefix}_")
                 println("Error $error <= $errorThreshold : saving $alignedFile")
                 ImageWriter.write(alignedImage, alignedFile)
             } else {
                 if (saveBad) {
-                    val badalignedFile = File("${prefixBad}_" + inputFile.name)
+                    val badalignedFile = inputFile.prefixName("${prefixBad}_")
                     println("Error $error > $errorThreshold : saving $badalignedFile")
                     ImageWriter.write(alignedImage, badalignedFile)
                 } else {
@@ -146,7 +146,7 @@ kimage(0.1) {
             }
 
             if (debugMode) {
-                val deltaFile = File("delta_${prefix}_" + inputFile.name)
+                val deltaFile = inputFile.prefixName("delta_${prefix}_")
                 println("Saving $deltaFile for manual analysis")
                 val deltaImage = deltaChannel(baseImage, alignedImage)
                 ImageWriter.write(deltaImage, deltaFile)

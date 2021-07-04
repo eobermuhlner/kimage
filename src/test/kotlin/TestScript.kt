@@ -107,7 +107,7 @@ object TestScript {
                 if (verboseMode) println("Running median filter ...")
                 val medianImage = inputImage.medianFilter(medianFilterSize)
                 if (debugMode) {
-                    val medianFile = File("median_" + inputFile.name)
+                    val medianFile = inputFile.prefixName("median_")
                     println("Writing $medianFile")
                     ImageWriter.write(medianImage, medianFile)
                 }
@@ -115,7 +115,7 @@ object TestScript {
                 if (verboseMode) println("Running gaussian blur filter ...")
                 val backgroundImage = medianImage.gaussianBlurFilter(blurFilterSize)
                 if (debugMode) {
-                    val backgroundFile = File("background_" + inputFile.name)
+                    val backgroundFile = inputFile.prefixName("background_")
                     println("Writing $backgroundFile")
                     ImageWriter.write(backgroundImage, backgroundFile)
                 }
@@ -229,7 +229,7 @@ object TestScript {
 
                 if (debugMode) {
                     val checkImage = baseImage.cropCenter(checkRadius, centerX, centerY)
-                    val checkFile = File("check_" + baseInputFile.name)
+                    val checkFile = baseInputFile.prefixName("check_")
                     println("Saving $checkFile for manual analysis")
                     ImageWriter.write(checkImage, checkFile)
                     println()
@@ -254,12 +254,12 @@ object TestScript {
 
                     val error = baseImage.averageError(alignedImage)
                     if (error <= errorThreshold) {
-                        val alignedFile = File("${prefix}_" + inputFile.name)
+                        val alignedFile = inputFile.prefixName("${prefix}_")
                         println("Error $error <= $errorThreshold : saving $alignedFile")
                         ImageWriter.write(alignedImage, alignedFile)
                     } else {
                         if (saveBad) {
-                            val badalignedFile = File("${prefixBad}_" + inputFile.name)
+                            val badalignedFile = inputFile.prefixName("${prefixBad}_")
                             println("Error $error > $errorThreshold : saving $badalignedFile")
                             ImageWriter.write(alignedImage, badalignedFile)
                         } else {
@@ -268,7 +268,7 @@ object TestScript {
                     }
 
                     if (debugMode) {
-                        val deltaFile = File("delta_${prefix}_" + inputFile.name)
+                        val deltaFile = inputFile.prefixName("delta_${prefix}_")
                         println("Saving $deltaFile for manual analysis")
                         val deltaImage = deltaChannel(baseImage, alignedImage)
                         ImageWriter.write(deltaImage, deltaFile)
@@ -450,7 +450,7 @@ object TestScript {
                         println()
                     }
 
-                    val outputFile = File("stack(${method})_" + inputFiles[0].name)
+                    val outputFile = inputFiles[0].prefixName("stack(${method})_")
                     println("Saving $outputFile")
                     ImageWriter.write(resultImage, outputFile)
 
@@ -582,7 +582,7 @@ object TestScript {
                     println("Image median: ${image.values().fastMedian()}")
                     println("Image stddev: ${image.values().stddev()}")
 
-                    val histogramInputFile = File("hist_input_" + inputFile.name)
+                    val histogramInputFile = inputFile.prefixName("hist_input_")
                     println("Saving $histogramInputFile for manual analysis")
                     ImageWriter.write(image.histogramImage(histogramWidth, histogramHeight), histogramInputFile)
                     println()
@@ -600,7 +600,7 @@ object TestScript {
                     println("Image median: ${image.values().fastMedian()}")
                     println("Image stddev: ${image.values().stddev()}")
 
-                    val histogramBrightnessFile = File("hist_brightness_" + inputFile.name)
+                    val histogramBrightnessFile = inputFile.prefixName("hist_brightness_")
                     println("Saving $histogramBrightnessFile (after brightness correction) for manual analysis")
                     ImageWriter.write(image.histogramImage(histogramWidth, histogramHeight), histogramBrightnessFile)
                     println()
@@ -684,7 +684,7 @@ object TestScript {
                     println("Image median: ${image.values().fastMedian()}")
                     println("Image stddev: ${image.values().stddev()}")
 
-                    val histogramOutputFile = File("hist_output_" + inputFile.name)
+                    val histogramOutputFile = inputFile.prefixName("hist_output_")
                     println("Saving $histogramOutputFile (after brightness correction) for manual analysis")
                     ImageWriter.write(image.histogramImage(histogramWidth, histogramHeight), histogramOutputFile)
                     println()
@@ -725,11 +725,11 @@ object TestScript {
                     var light = ImageReader.read(inputFile)
 
                     val light2 = light - bias - dark
-                    ImageWriter.write(deltaChannel(light2, light, factor = 20.0), File("delta_light2_${inputFile.name}"))
+                    ImageWriter.write(deltaChannel(light2, light, factor = 20.0), inputFile.prefixName("delta_light2_"))
 
                     val light3 = light2.pixelWiseDiv(flat)
-                    ImageWriter.write(light3, File("calibrated_${inputFile.name}"))
-                    ImageWriter.write(deltaChannel(light3, light2), File("delta_light3_${inputFile.name}"))
+                    ImageWriter.write(light3, inputFile.prefixName("calibrated_"))
+                    ImageWriter.write(deltaChannel(light3, light2), inputFile.prefixName("delta_light3_"))
                 }
 
                 null

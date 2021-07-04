@@ -37,13 +37,13 @@ kimage(0.1) {
             var light = ImageReader.read(inputFile)
 
             val light2 = light - bias - dark
-            //ImageWriter.write(deltaChannel(light2, light, factor = 20.0), File("delta_light2_${inputFile.name}"))
+            //ImageWriter.write(deltaChannel(light2, light, factor = 20.0), inputFile.prefixName("delta_light2_"))
 
-            val outputFile = File("calibrated_${inputFile.name}")
+            val outputFile = inputFile.prefixName("calibrated_")
             println("Writing $outputFile")
             val light3 = light2.pixelWiseDiv(flat)
             ImageWriter.write(light3, outputFile)
-            //ImageWriter.write(deltaChannel(light3, light2), File("delta_light3_${inputFile.name}"))
+            //ImageWriter.write(deltaChannel(light3, light2), inputFile.prefixName("delta_light3_"))
         }
 
         null

@@ -151,7 +151,7 @@ kimage(0.1) {
                 println()
             }
 
-            val outputFile = File("stack(${method})_" + inputFiles[0].name)
+            val outputFile = inputFiles[0].prefixName("stack(${method})_")
             println("Saving $outputFile")
             ImageWriter.write(resultImage, outputFile)
 

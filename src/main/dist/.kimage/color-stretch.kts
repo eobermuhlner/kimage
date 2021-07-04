@@ -89,7 +89,7 @@ kimage(0.1) {
             println("Input image - median: ${image.values().fastMedian()}")
             println("Input image - stddev: ${image.values().stddev()}")
 
-            val histogramInputFile = File("hist_input_" + inputFile.name)
+            val histogramInputFile = inputFile.prefixName("hist_input_")
             println("Saving $histogramInputFile for manual analysis")
             ImageWriter.write(image.histogramImage(histogramWidth, histogramHeight), histogramInputFile)
             println()
@@ -107,7 +107,7 @@ kimage(0.1) {
             println("After brightness correction - median: ${image.values().fastMedian()}")
             println("After brightness correction - stddev: ${image.values().stddev()}")
 
-            val histogramBrightnessFile = File("hist_brightness_" + inputFile.name)
+            val histogramBrightnessFile = inputFile.prefixName("hist_brightness_")
             println("Saving $histogramBrightnessFile (after brightness correction) for manual analysis")
             ImageWriter.write(image.histogramImage(histogramWidth, histogramHeight), histogramBrightnessFile)
             println()
@@ -211,13 +211,13 @@ kimage(0.1) {
                 println("After curve correction - median: ${image.values().fastMedian()}")
                 println("After curve correction - stddev: ${image.values().stddev()}")
 
-                val histogramOutputFile = File("hist_output_" + inputFile.name)
+                val histogramOutputFile = inputFile.prefixName("hist_output_")
                 println("Saving $histogramOutputFile (after curve correction) for manual analysis")
                 ImageWriter.write(image.histogramImage(histogramWidth, histogramHeight), histogramOutputFile)
                 println()
             }
 
-            val outputFile = File("color-stretch(${curve},${brightness})_" + inputFile.name)
+            val outputFile = inputFile.prefixName("color-stretch(${curve},${brightness})_")
             println("Saving $outputFile")
             ImageWriter.write(image, outputFile)
         }

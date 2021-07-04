@@ -85,7 +85,7 @@ kimage(0.1) {
         if (verboseMode) println("Running median filter ...")
         val medianImage = inputImage.medianFilter(medianFilterSize)
         if (debugMode) {
-            val medianFile = File("median_" + inputFile.name)
+            val medianFile = inputFile.prefixName("median_")
             println("Writing $medianFile")
             ImageWriter.write(medianImage, medianFile)
         }
@@ -93,7 +93,7 @@ kimage(0.1) {
         if (verboseMode) println("Running gaussian blur filter ...")
         val backgroundImage = medianImage.gaussianBlurFilter(blurFilterSize)
         if (debugMode) {
-            val backgroundFile = File("background_" + inputFile.name)
+            val backgroundFile = inputFile.prefixName("background_")
             println("Writing $backgroundFile")
             ImageWriter.write(backgroundImage, backgroundFile)
         }
