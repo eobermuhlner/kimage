@@ -7,6 +7,7 @@ import ch.obermuhlner.kimage.io.ImageReader.read
 import ch.obermuhlner.kimage.math.*
 
 import java.io.*
+import java.util.*
 import kotlin.math.*
 
 object TestScript {
@@ -701,35 +702,64 @@ object TestScript {
                 Calibrates bias/dark/flat/darkflat/light images.
                 """
             arguments {
+                optionalImage("bias") {
+                }
+                optionalImage("dark") {
+                }
+                optionalImage("flat") {
+                }
+                optionalImage("darkflat") {
+                }
             }
 
             multi {
                 println("Calibrate")
                 println()
 
-                println("Loading bias")
-                val bias = ImageReader.read(File("images/calibrate/bias.TIF"))
-                println("Loading dark")
-                var dark = ImageReader.read(File("images/calibrate/dark.TIF"))
-                println("Loading darkflat")
-                var darkflat = ImageReader.read(File("images/calibrate/darkflat.TIF"))
-                println("Loading flat")
-                var flat = ImageReader.read(File("images/calibrate/flat.TIF"))
+                var bias: Optional<Image> by arguments
+                var dark: Optional<Image> by arguments
+                var flat: Optional<Image> by arguments
+                var darkflat: Optional<Image> by arguments
+                val applyBiasOnCalibration = false
 
-                dark = dark - bias
-                darkflat = darkflat - bias
-                flat = flat - bias - darkflat
+                println("Arguments:")
+                println("  bias = $bias")
+                println("  dark = $dark")
+                println("  flat = $flat")
+                println("  darkflat = $darkflat")
+                println()
+
+                if (applyBiasOnCalibration && bias.isPresent) {
+                    if (dark.isPresent) {
+                        dark = Optional.of(dark.get() - bias.get())
+                    }
+                    if (darkflat.isPresent) {
+                        darkflat = Optional.of(darkflat.get() - bias.get())
+                    }
+                    if (flat.isPresent) {
+                        flat = Optional.of(flat.get() - bias.get())
+                        if (darkflat.isPresent) {
+                            flat = Optional.of(flat.get() - darkflat.get())
+                        }
+                    }
+                }
 
                 for (inputFile in inputFiles) {
                     println("Loading $inputFile")
                     var light = ImageReader.read(inputFile)
 
-                    val light2 = light - bias - dark
-                    ImageWriter.write(deltaChannel(light2, light, factor = 20.0), inputFile.prefixName("delta_light2_"))
+                    if (bias.isPresent) {
+                        light = light - bias.get()
+                    }
+                    if (dark.isPresent) {
+                        light = light - dark.get()
+                    }
 
-                    val light3 = light2.pixelWiseDiv(flat)
-                    ImageWriter.write(light3, inputFile.prefixName("calibrated_"))
-                    ImageWriter.write(deltaChannel(light3, light2), inputFile.prefixName("delta_light3_"))
+                    if (flat.isPresent) {
+                        light = light / flat.get()
+                    }
+
+                    ImageWriter.write(light, inputFile.prefixName("calibrated_"))
                 }
 
                 null
