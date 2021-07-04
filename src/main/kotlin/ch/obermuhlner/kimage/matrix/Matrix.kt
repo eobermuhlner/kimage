@@ -172,6 +172,15 @@ interface Matrix : Iterable<Double> {
         return this
     }
 
+    fun onEach(func: (Int, Int, Double) -> Double): Matrix {
+        for (row in 0 until rows) {
+            for (column in 0 until columns) {
+                this[row, column] = func.invoke(row, column, this[row, column])
+            }
+        }
+        return this
+    }
+
     fun accumulate(func: (Double, Double) -> Double): Double {
         var result = this[0]
 
