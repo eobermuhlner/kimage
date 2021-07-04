@@ -15,10 +15,25 @@ kimage(0.1) {
                 Creates delta images between the first image and all other images.
                 """
     arguments {
+        double("factor") {
+            default = 5.0
+        }
+        string("channel") {
+            allowed = listOf("Red", "Green", "Blue", "Luminance", "Gray")
+            default = "Luminance"
+        }
     }
 
     multi {
         println("Delta image analysis")
+        println()
+
+        val factor: Double by arguments
+        val channel: String by arguments
+
+        println("Arguments:")
+        println("  factor = $factor")
+        println("  channel = $channel")
         println()
 
         println("Loading base image ${inputFiles[0]}")
@@ -32,7 +47,7 @@ kimage(0.1) {
 
             val deltaFile = File("delta_" + inputFile.name)
             println("Saving $deltaFile")
-            val deltaImage = deltaChannel(baseImage, image)
+            val deltaImage = deltaChannel(baseImage, image, factor = factor, channel = Channel.valueOf(channel))
             ImageWriter.write(deltaImage, deltaFile)
             println()
         }
