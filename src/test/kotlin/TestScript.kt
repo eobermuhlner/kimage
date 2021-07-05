@@ -14,8 +14,8 @@ object TestScript {
 
     @JvmStatic
     fun main(args: Array<String>) {
-        val orionImages = arrayOf("images/align/orion1.png", "images/align/orion2.png", "images/align/orion3.png", "images/align/orion4.png", "images/align/orion5.png", "images/align/orion6.png", "images/align/orion7.png")
-        val alignedOrionImages = arrayOf("images/align/aligned_orion1.png", "images/align/aligned_orion2.png", "images/align/aligned_orion3.png", "images/align/aligned_orion4.png", "images/align/aligned_orion5.png", "images/align/aligned_orion6.png", "images/align/aligned_orion7.png")
+        val orionImages = arrayOf("images/align/orion1.png", "images/align/orion2.png", "images/align/orion3.png", "images/align/orion4.png", "images/align/orion5.png", "images/align/orion6.png")
+        val alignedOrionImages = arrayOf("images/align/aligned_orion1.png", "images/align/aligned_orion2.png", "images/align/aligned_orion3.png", "images/align/aligned_orion4.png", "images/align/aligned_orion5.png", "images/align/aligned_orion6.png")
         //val hdrImages = arrayOf("images/hdr/hdr1.jpg", "images/hdr/hdr2.jpg", "images/hdr/hdr3.jpg", "images/hdr/hdr4.jpg")
         val hdrImages = arrayOf("images/hdr/HDRI_Sample_Scene_Window_-_01.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_02.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_03.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_04.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_05.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_06.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_07.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_08.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_09.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_10.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_11.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_12.jpg")
 
@@ -48,7 +48,7 @@ object TestScript {
                     description = """
                         The percentage of the calculated background that will be removed.
                         """
-                    default = 99.0
+                    default = 100.0
                 }
                 double("medianFilterPercent") {
                     description = """

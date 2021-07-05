@@ -49,7 +49,7 @@ kimage(0.1) {
             description = """
                         The percentage of the calculated background that will be removed.
                         """
-            default = 99.0
+            default = 100.0
         }
         int("gridSize") {
             description = """
