@@ -23,54 +23,46 @@ The following scripts are distributed together with the `kimage` application.
         [FILES]
 
 Align multiple images.
+
 The base image is the first image argument.
 The remaining image arguments are aligned to the base image by searching for a matching feature.
 
-The feature to match is defined by the centerX/centerY coordinates in the base image and the check radius.
-The searchRadius defines how far the matching feature is searched.
+The feature to match is defined by the `centerX`/`centerY` coordinates in the base image and the `checkRadius`.
+The `searchRadius` defines how far the matching feature is searched.
 
 Use the --debug option to save intermediate images for manual analysis.
-
 
 ### Argument: checkRadius
 
 - Type: int
 - Minimum value: 0
 
-
 The radius to check for similarity.
 The default value is calculated from the base image.
-
 
 ### Argument: searchRadius
 
 - Type: int
 - Minimum value: 0
 
-
 The search radius defining the maximum offset to align.
 The default value is calculated from the base image.
-
 
 ### Argument: centerX
 
 - Type: int
 - Minimum value: 0
 
-
 The X coordinate of the center to check for alignment.
 The default value is calculated from the base image.
-
 
 ### Argument: centerY
 
 - Type: int
 - Minimum value: 0
 
-
 The Y coordinate of the center to check for alignment.
 The default value is calculated from the base image.
-
 
 ### Argument: errorThreshold
 
@@ -78,12 +70,10 @@ The default value is calculated from the base image.
 - Minimum value: 0.0
 - Default value: 0.001
 
-
 The maximum error threshold for storing an aligned image.
 Images with an error above the error threshold will be either ignored
 or saved with a different prefix.
 See `saveBad`, `prefixBad`.
-
 
 ### Argument: prefix
 
@@ -117,24 +107,90 @@ The prefix of the badly aligned output files.
         [--arg darkflat=IMAGE]
         [FILES]
 
-Calibrates bias/dark/flat/darkflat/light images.
+Calibrates images using bias/dark/flat/darkflat images.
 
+The different calibration files are optional, specify only the calibration image you have.
+
+### Creating Calibration Images
+
+Create about 20-50 images of each calibration image type.
+
+- `bias` images
+  - camera with lens cap on
+  - same ISO as for real pictures
+  - fastest exposure time
+- `flat` images
+  - camera against homogeneous light source (e.g. t-shirt over lens against sky)
+  - same objective + focus as for real pictures
+  - same aperture as for real pictures
+  - set exposure time so that histogram shows most pixels at ~50%
+- `darkflat` images
+  - camera with lens cap on
+  - same objective + focus as for real pictures
+  - same aperture as for real pictures
+  - same exposure time as for `flat` images
+- `dark` images
+  - camera with lens cap on
+  - same objective + focus as for real pictures
+  - same aperture as for real pictures
+  - same exposure time as for real pictures
+  - same temperature as for real pictures
+  - (usually take the dark pictures immediately after taking the real pictures)
+
+Stack the `bias` images with:
+
+    kimage stack --arg method=median bias*.TIF
+The output will be your master `bias` image - rename it accordingly.
+
+Calibrate all other images with the `bias` images and stack them.
+
+For example the `flat` images:
+
+    kimage calibrate --arg bias=master_bias.TIF flat*.TIF
+    kimage stack --arg method=median calibrate_flat*.TIF
+
+Do this for the `flat`, `darkflat` and `dark` images.
+The outputs will be your master `flat`, `darkflat` and `dark` images - rename them accordingly.
+
+Calibrate the real images:
+
+    kimage calibrate --arg bias=master_bias.TIF --arg flat=master_flat.TIF --arg darkflat=master_darkflat.TIF --arg dark=master_dark.TIF light*.TIF
 
 ### Argument: bias
 
 - Type: image
 
+The `bias` master calibration image.
+
+This argument is optional.
+If no `bias` image is specified it will not be used in the calibration process.
+
 ### Argument: dark
 
 - Type: image
+
+The `dark` master calibration image.
+
+This argument is optional.
+If no `dark` image is specified it will not be used in the calibration process.
 
 ### Argument: flat
 
 - Type: image
 
+The `flat` master calibration image.
+
+This argument is optional.
+If no `flat` image is specified it will not be used in the calibration process.
+
 ### Argument: darkflat
 
 - Type: image
+
+The `darkflat` master calibration image.
+
+This argument is optional.
+If no `flat` image is specified it will not be used in the calibration process.
 
 
 ---
@@ -152,20 +208,17 @@ Calibrates bias/dark/flat/darkflat/light images.
 
 Stretches the colors of an image to fill the entire value range.
 
-
 ### Argument: brightness
 
 - Type: double
 - Minimum value: 0.0
 - Default value: 2.0
 
-
 The power value of the brightness increase.
 
 - A power value > 1 increases the brightness.
 - A power value = 0 does not change the brightness.
 - A power value < 1 increases the brightness.
-
 
 ### Argument: curve
 
@@ -186,9 +239,7 @@ The power value of the brightness increase.
   - `all`
 - Default value: `s-curve`
 
-
 The curve shape used to modify the contrast.
-
 
 ### Argument: custom1X
 
@@ -221,7 +272,6 @@ The curve shape used to modify the contrast.
 Converts the image into another format.
 
 
-
 ---
 
 ## Script: delta
@@ -233,7 +283,8 @@ Converts the image into another format.
 
 Creates delta images between the first image and all other images.
 
-The output images show the pixel-wise difference between two images on a specific channel (default is Luminance).
+The output images show the pixel-wise difference between two images on a specific channel (default is `Luminance`).
+
 The difference is color coded:
 - black = no difference
 - blue  = pixel in the first image is brighter
@@ -243,15 +294,12 @@ The `factor` argument controls how much the differences are exaggerated.
 
 This script is a useful to compare images, especially outputs of other scripts with different arguments.
 
-
 ### Argument: factor
 
 - Type: double
 - Default value: 5.0
 
-
 Controls how much the differences are exaggerated.
-
 
 ### Argument: channel
 
@@ -264,9 +312,7 @@ Controls how much the differences are exaggerated.
   - `Gray`
 - Default value: `Luminance`
 
-
 The channel used to calculate the difference between two images.
-
 
 
 ---
@@ -281,7 +327,6 @@ The channel used to calculate the difference between two images.
         [FILES]
 
 Stacks multiple images with different exposures into a single HDR image.
-
 
 ### Argument: saturationBlurRadius
 
@@ -315,24 +360,19 @@ Stacks multiple images with different exposures into a single HDR image.
 
 Creates a histogram image.
 
-
 ### Argument: width
 
 - Type: int
 - Default value: 512
 
-
 The width of the histogram.
-
 
 ### Argument: height
 
 - Type: int
 - Default value: 300
 
-
 The height of the histogram.
-
 
 
 ---
@@ -343,7 +383,6 @@ The height of the histogram.
         [FILES]
 
 Print info about images.
-
 
 
 ---
@@ -362,34 +401,27 @@ This script is useful for astrophotography if the fix points are chosen to repre
 
 Use the --debug option to save intermediate images for manual analysis.
 
-
 ### Argument: removePercent
 
 - Type: double
 - Default value: 99.0
 
-
 The percentage of the calculated background that will be removed.
-
 
 ### Argument: gridSize
 
 - Type: int
 - Default value: 5
 
-
 The size of the grid in the x and y axis.
 The number of grid points is the square of the `gridSize`.
-
 
 ### Argument: kappa
 
 - Type: double
 - Default value: 0.5
 
-
 The kappa factor is used in sigma-clipping of the grid to ignore grid points that do not contain enough background.
-
 
 
 ---
@@ -407,59 +439,49 @@ The kappa factor is used in sigma-clipping of the grid to ignore grid points tha
 Removes the background from the input image by subtracting a blurred median of the input.
 
 This script is useful for astrophotography if the image contains mainly stars and not too much nebulas.
+
 The size of the median filter can be increased to remove stars and nebulas completely.
 
 Use the --debug option to save intermediate images for manual analysis.
-
 
 ### Argument: removePercent
 
 - Type: double
 - Default value: 99.0
 
-
 The percentage of the calculated background that will be removed.
-
 
 ### Argument: medianFilterPercent
 
 - Type: double
 - Default value: 0.0
 
-
 The size of the median filter in percent of the image size.
-
 
 ### Argument: blurFilterPercent
 
 - Type: double
 - Default value: 0.0
 
-
 The size of the blur filter in percent of the image size.
-
 
 ### Argument: medianFilterSize
 
 - Type: int
 - Default value: 0
 
-
 The size of the median filter in pixels.
 If this value is 0 then the `medianFilterPercent` is used to calculate it.
 If the `medianFilterPercent` is 0.0 then the median filter size is calculated automatically from the image size.
-
 
 ### Argument: blurFilterSize
 
 - Type: int
 - Default value: 0
 
-
 The size of the blur filter in pixels.
 If this value is 0 then the `blurFilterPercent` is used to calculate it.
 If the `blurFilterPercent` is 0.0 then the blur filter size is calculated automatically from the image size.
-
 
 
 ---
@@ -473,7 +495,6 @@ If the `blurFilterPercent` is 0.0 then the blur filter size is calculated automa
         [FILES]
 
 Stacks multiple image using one of several algorithms.
-
 
 ### Argument: method
 
@@ -492,18 +513,16 @@ Stacks multiple image using one of several algorithms.
   - `all`
 - Default value: `sigma-clip-median`
 
-
 Method used to calculate the stacked image.
 
-The method `sigma-clip-median` removes outliers before using `median` on the remaining values.
-The method `sigma-clip-average` removes outliers before using `average` on the remaining values.
-The method `sigma-winsorize-median` replaces outliers with the nearest value in sigma range before using `median`.
-The method `sigma-winsorize-average` replaces outliers with the nearest value in sigma range before using `average`.
-The method `winsorized-sigma-clip-median` replaces outliers with the nearest value in sigma range before sigma-clipping and then using `median`.
-The method `winsorized-sigma-clip-average` replaces outliers with the nearest value in sigma range before sigma-clipping and then using `average`.
+- `sigma-clip-median` removes outliers before using `median` on the remaining values.
+- `sigma-clip-average` removes outliers before using `average` on the remaining values.
+- `sigma-winsorize-median` replaces outliers with the nearest value in sigma range before using `median`.
+- `sigma-winsorize-average` replaces outliers with the nearest value in sigma range before using `average`.
+- `winsorized-sigma-clip-median` replaces outliers with the nearest value in sigma range before sigma-clipping and then using `median`.
+- `winsorized-sigma-clip-average` replaces outliers with the nearest value in sigma range before sigma-clipping and then using `average`.
 
 All methods that use sigma-clipping print a histogram with the information how many input values where actually used to stack each output value.
-
 
 ### Argument: kappa
 
@@ -511,9 +530,7 @@ All methods that use sigma-clipping print a histogram with the information how m
 - Minimum value: 0.0
 - Default value: 2.0
 
-
 The kappa factor is used in sigma-clipping to define how far from the center the outliers are allowed to be.
-
 
 ### Argument: iterations
 
@@ -521,9 +538,7 @@ The kappa factor is used in sigma-clipping to define how far from the center the
 - Minimum value: 0
 - Default value: 10
 
-
 The number of iterations used in sigma-clipping to remove outliers.
-
 
 
 ---
@@ -535,8 +550,7 @@ The number of iterations used in sigma-clipping to remove outliers.
 
 Stacks multiple images by calculating a pixel-wise average.
 
-This stacking script is useful if there are no outliers.
-
+This stacking script is useful if there are no outliers and if the more powerful `stack` script fails for technical reasons.
 
 
 ---
@@ -549,7 +563,6 @@ This stacking script is useful if there are no outliers.
 Stacks multiple images by calculating a pixel-wise maximum.
 
 This stacking script is useful to find outliers and badly aligned images.
-
 
 
 ---
@@ -567,7 +580,6 @@ This stacking script is useful to find outliers and badly aligned images.
         [FILES]
 
 Test script to show how to handle multiple images in a kimage script.
-
 
 ### Argument: intArg
 
@@ -643,7 +655,6 @@ Example argument for a string value with regular expression.
         [FILES]
 
 Test script to show how to handle single images in a kimage script.
-
 
 ### Argument: intArg
 
