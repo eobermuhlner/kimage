@@ -1,5 +1,6 @@
 import ch.obermuhlner.kimage.*
 import ch.obermuhlner.kimage.align.*
+import ch.obermuhlner.kimage.filter.KernelFilter
 import ch.obermuhlner.kimage.huge.HugeFloatArray
 import ch.obermuhlner.kimage.image.*
 import ch.obermuhlner.kimage.io.*
@@ -15,15 +16,19 @@ object TestScript {
     fun main(args: Array<String>) {
         val orionImages = arrayOf("images/align/orion1.png", "images/align/orion2.png", "images/align/orion3.png", "images/align/orion4.png", "images/align/orion5.png", "images/align/orion6.png", "images/align/orion7.png")
         val alignedOrionImages = arrayOf("images/align/aligned_orion1.png", "images/align/aligned_orion2.png", "images/align/aligned_orion3.png", "images/align/aligned_orion4.png", "images/align/aligned_orion5.png", "images/align/aligned_orion6.png", "images/align/aligned_orion7.png")
+        //val hdrImages = arrayOf("images/hdr/hdr1.jpg", "images/hdr/hdr2.jpg", "images/hdr/hdr3.jpg", "images/hdr/hdr4.jpg")
+        val hdrImages = arrayOf("images/hdr/HDRI_Sample_Scene_Window_-_01.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_02.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_03.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_04.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_05.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_06.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_07.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_08.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_09.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_10.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_11.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_12.jpg")
 
         //runScript(scriptAlign(), *orionImages)
         //runScript(scriptStackMax(), mapOf(), *orionImages)
-        //runScript(scriptStack(), mapOf("kappa" to "2.0"), *orionImages)
         //runScript(scriptStack(), mapOf("kappa" to "2.0"), *alignedOrionImages)
+        //runScript(scriptStack(), mapOf("kappa" to "2.0"), *orionImages)
         //runScript(scriptRemoveBackgroundMedian(), "images/align/orion1.png")
         //runScript(scriptHistogram(), "images/align/output_orion1.png")
         //runScript(scriptColorStretch(), "images/align/output_orion1.png")
-        runScript(scriptCalibrate())
+        //runScript(scriptCalibrate())
+        //runScript(scriptHDR(), mapOf(), *alignedOrionImages)
+        runScript(scriptHDR(), mapOf(), *hdrImages)
 
     }
 
@@ -341,7 +346,7 @@ object TestScript {
                         
                         All methods that use sigma-clipping print a histogram with the information how many input values where actually used to stack each output value. 
                         """
-                    allowed = listOf("median", "average", "max", "min", "sigma-clip-median", "sigma-clip-average", "sigma-winsorize-median", "sigma-winsorize-average", "winsorized-sigma-clip-median", "winsorized-sigma-clip-average", "all")
+                    allowed = listOf("median", "average", "max", "min", "sigma-clip-median", "sigma-clip-average", "sigma-winsorize-median", "sigma-winsorize-average", "winsorized-sigma-clip-median", "winsorized-sigma-clip-average", "weighted-average", "all")
                     default = "sigma-clip-median"
                 }
                 double("kappa") {
@@ -436,6 +441,12 @@ object TestScript {
                             val clippedLength = array.huberWinsorizedSigmaClipInplace(kappa = kappa.toFloat(), iterations, histogram = sigmaClipHistogram)
                             array.average(0, clippedLength)
                         }
+                        "weighted-average" -> { array ->
+                            array.weightedAverage({ i, value ->
+                                val wellExposed = exp(-(value - 0.5f).pow(2)/0.08f)
+                                wellExposed.pow(1)
+                            })
+                        }
                         else -> throw IllegalArgumentException("Unknown method: " + method)
                     }
 
@@ -469,6 +480,115 @@ object TestScript {
 
                     println()
                 }
+
+                null
+            }
+        }
+
+    fun scriptHDR() =
+        kimage(0.1) {
+            name = "hdr"
+            description = """
+                Stacks multiple images with different exposures into a single HDR image.
+                """
+            arguments {
+                int("saturationBlurRadius") {
+                    default = 3
+                }
+                double("contrastWeight") {
+                    default = 0.2
+                }
+                double("saturationWeight") {
+                    default = 0.1
+                }
+                double("exposureWeight") {
+                    default = 1.0
+                }
+            }
+
+            multi {
+                // based on: https://mericam.github.io/papers/exposure_fusion_reduced.pdf
+                println("HDR stack multiple images")
+                println()
+
+                val saturationBlurRadius: Int by arguments
+                val contrastWeight: Double by arguments
+                val saturationWeight: Double by arguments
+                val exposureWeight: Double by arguments
+
+                println("Loading image: ${inputFiles[0]}")
+                var baseImage: Image = ImageReader.read(inputFiles[0])
+                val channels = baseImage.channels
+
+                val weightChannelIndex = channels.size
+                val hugeMatrixChannelCount = weightChannelIndex + 1
+
+                val huge = HugeFloatArray(inputFiles.size, hugeMatrixChannelCount, baseImage.width, baseImage.height)
+
+                for (fileIndex in inputFiles.indices) {
+                    val inputFile = inputFiles[fileIndex]
+
+                    val image = if (fileIndex == 0) {
+                        baseImage
+                    } else {
+                        println("Loading image: $inputFile")
+                        ImageReader.read(inputFile).crop(0, 0, baseImage.width, baseImage.height)
+                    }
+
+                    for (channelIndex in channels.indices) {
+                        val matrix = image[channels[channelIndex]]
+                        for (matrixIndex in 0 until matrix.size) {
+                            huge[fileIndex, channelIndex, matrixIndex] = matrix[matrixIndex].toFloat()
+                        }
+                    }
+
+                    val luminanceMatrix = image[Channel.Luminance]
+                    val saturationMatrix = image[Channel.Saturation].gaussianBlurFilter(saturationBlurRadius)
+                    val contrastMatrix = luminanceMatrix.convolute(KernelFilter.EdgeDetectionStrong)
+
+                    for (matrixIndex in 0 until luminanceMatrix.size) {
+                        val wellExposed = exp(-(luminanceMatrix[matrixIndex] - 0.5).pow(2)/0.08)
+                        val contrast = contrastMatrix[matrixIndex]
+                        val saturation = saturationMatrix[matrixIndex]
+                        val weight = contrast.pow(1.0) * contrastWeight +
+                                saturation.pow(1.0) * saturationWeight +
+                                wellExposed.pow(0.2) * exposureWeight
+                        huge[fileIndex, weightChannelIndex, matrixIndex] = weight.toFloat()
+                    }
+                }
+                println()
+
+                val stackingMethod: (FloatArray, FloatArray) -> Float = { weightValues, values ->
+                    values.weightedAverage({ i, _ ->
+                        weightValues[i]
+                    })
+                }
+
+                println("Stacking ${inputFiles.size} images")
+                val resultImage = MatrixImage(baseImage.width, baseImage.height, channels)
+                val values = FloatArray(inputFiles.size)
+                val weightValues = FloatArray(inputFiles.size)
+                for (channelIndex in channels.indices) {
+                    val channel = channels[channelIndex]
+                    println("Stacking channel: $channel")
+                    val matrix = baseImage[channel]
+                    val resultMatrix = resultImage[channel]
+                    for (matrixIndex in 0 until matrix.size) {
+                        for (fileIndex in inputFiles.indices) {
+                            values[fileIndex] = huge[fileIndex, channelIndex, matrixIndex]
+                            weightValues[fileIndex] = huge[fileIndex, weightChannelIndex, matrixIndex]
+                        }
+
+                        val stackedValue = stackingMethod(weightValues, values)
+                        resultMatrix[matrixIndex] = stackedValue.toDouble()
+                    }
+                }
+
+                val outputFile = inputFiles[0].prefixName("hdr_")
+                println("Saving $outputFile")
+                ImageWriter.write(resultImage, outputFile)
+
+                println()
 
                 null
             }
