@@ -16,7 +16,11 @@ Image processing using Kotlin scripts.
 
 Six images of M42 (Orion nebula) where taken using a 400mm tele lens in an area with Bortle 4 light pollution.
 
-Here a cropped example of an unprocessed image:
+The images where cropped to show only the interesting part:
+
+<img src="images/align/orion1.png" width="100"/><img src="images/align/orion2.png" width="100"/><img src="images/align/orion3.png" width="100"/><img src="images/align/orion4.png" width="100"/><img src="images/align/orion5.png" width="100"/><img src="images/align/orion6.png" width="100"/>
+
+Here one of the unprocessed images:
 ![](images/align/orion1.png)
 
 Let's start by running a straightforward `stack-max` script that will show how badly aligned the images are.
@@ -24,6 +28,8 @@ Let's start by running a straightforward `stack-max` script that will show how b
     kimage stack-max orion*.png
 
 ![](images/align/stack-max_orion1.png)
+
+---
 
 To align the images against the base image (the first one in the list) we use the `align` script:
 
@@ -40,6 +46,8 @@ Error 4.567307562910387E-4 <= 0.001 : saving aligned_orion2.png
 
 ![](images/align/aligned_orion2.png)
 
+---
+
 Let's run `stack-max` on the aligned images:
 
     kimage stack-max orion*.png
@@ -49,6 +57,8 @@ Let's run `stack-max` on the aligned images:
 The images are fairly well aligned, but we can see to the right of the center some stuck pixels.
 
 The script `stack-max` should only be used to verify the quality of the aligned images.
+
+---
 
 For real stacking the script `stack` is slower but produces much better quality.
 
@@ -94,6 +104,8 @@ whereas for 11946 values only 2 samples where used (and 4 where rejected).
 
 The output image is much smoother and does not show the stuck pixels anymore.
 
+---
+
 To remove the light pollution background we use `remove-background-gradient`.
 
     kimage remove-background-gradient 'stack(sigma-clip-median)_aligned_orion1.png'
@@ -101,6 +113,8 @@ To remove the light pollution background we use `remove-background-gradient`.
 ![](images/align/remove-background-gradient_stack(sigma-clip-median)_aligned_orion1.png)
 
 This script has calculated an interpolated background image and subtracted it from the original image.
+
+---
 
 But now the image is too dark. The `color-stretch` script can fix this.
 
@@ -115,6 +129,7 @@ After playing with the two arguments for a bit we find a pleasing combination:
 
 ![](images/align/color-stretch(3.0,s-curve-super-strong)_remove-background-gradient_stack(sigma-clip-median)_aligned_orion1.png)
 
+---
 
 # Scripts
 
