@@ -23,6 +23,8 @@ The images where cropped to show only the interesting part:
 Here one of the unprocessed images:
 ![](images/align/orion1.png)
 
+---
+
 Let's start by running a straightforward `stack-max` script that will show how badly aligned the images are.
 
     kimage stack-max orion*.png
