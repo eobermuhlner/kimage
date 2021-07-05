@@ -1,23 +1,31 @@
 # kimage
-Image processing using kotlin scripts.
+Image processing using Kotlin scripts.
+
+`kimage` is several things at once:
+
+- `kimage` is an image processing library written in Kotlin
+  
+- `kimage` is a script execution engine for image processing scripts
+  
+- `kimage` is a collection of image processing scripts (mostly for astrophotography purposes)
 
 
 # Example Usage
 
 ## Aligning and Stacking multiple images
 
-Six images of M42 (Orion nebula) where taken using a 400mm tele lens with a Bortle 4 light pollution.
+Six images of M42 (Orion nebula) where taken using a 400mm tele lens in an area with Bortle 4 light pollution.
 
 Here a cropped example of an unprocessed image:
 ![](images/align/orion1.png)
 
-Let's start by doing a straightforward `stack-max` stacking that will show how badly aligned the images are.
+Let's start by running a straightforward `stack-max` script that will show how badly aligned the images are.
 
     kimage stack-max orion*.png
 
 ![](images/align/stack-max_orion1.png)
 
-To align the images agains the base image (the first one in the list) we use the `align` script:
+To align the images against the base image (the first one in the list) we use the `align` script:
 
     kimage align orion*.png
 
@@ -77,6 +85,11 @@ Sigma-Clip Histogram
 Saving stack(sigma-clip-median)_aligned_orion1.png
 ```
 
+The sigma-clip histogram shows how many pixel values (red, green, blue) where outliers and had to be rejected.
+
+In this example for 1079254 pixel values all 6 samples from the aligned images where used,
+whereas for 11946 values only 2 samples where used (and 4 where rejected).
+
 ![](images/align/stack(sigma-clip-median)_aligned_orion1.png)
 
 The output image is much smoother and does not show the stuck pixels anymore.
@@ -98,7 +111,7 @@ But now the image is too dark. The `color-stretch` script can fix this.
 The color stretching algorithm has 2 arguments: `brightness` and `curve`.
 After playing with the two arguments for a bit we find a pleasing combination:
 
-  kimage color-stretch --arg brightness=3 --arg curve=s-curve-strong 'remove-background-gradient_stack(sigma-clip-median)_aligned_orion1.png'
+    kimage color-stretch --arg brightness=3 --arg curve=s-curve-strong 'remove-background-gradient_stack(sigma-clip-median)_aligned_orion1.png'
 
 ![](images/align/color-stretch(3.0,s-curve-super-strong)_remove-background-gradient_stack(sigma-clip-median)_aligned_orion1.png)
 
