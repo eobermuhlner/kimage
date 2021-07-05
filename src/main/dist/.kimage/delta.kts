@@ -13,12 +13,28 @@ kimage(0.1) {
     name = "delta"
     description = """
                 Creates delta images between the first image and all other images.
+                
+                The output images show the pixel-wise difference between two images on a specific channel (default is Luminance).
+                The difference is color coded:
+                  - black = no difference
+                  - blue  = pixel in the first image is brighter
+                  - red   = pixel in the first image is darker
+                  
+                The `factor` argument controls how much the differences are exaggerated.
+                 
+                This script is a useful to compare images, especially outputs of other scripts with different arguments.
                 """
     arguments {
         double("factor") {
+            description = """
+                Controls how much the differences are exaggerated.
+            """
             default = 5.0
         }
         string("channel") {
+            descriptions = """
+                The channel used to calculate the difference between two images.                
+            """
             allowed = listOf("Red", "Green", "Blue", "Luminance", "Gray")
             default = "Luminance"
         }
