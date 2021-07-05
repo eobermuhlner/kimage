@@ -12,6 +12,65 @@ Image processing using Kotlin scripts.
 
 # Example Usage
 
+## List available scripts
+
+Running `kimage` without any arguments will list the available scripts
+(you might see more scripts if you have some local scripts installed):
+
+    kimage
+
+```
+Scripts:
+  align
+  calibrate
+  color-stretch
+  convert
+  delta
+  hdr
+  histogram
+  info
+  remove-background-gradient
+  remove-background-median
+  stack
+  stack-average
+  stack-max
+  test-multi
+  test-single
+```
+
+Use the `--docu` option to get help on a single command:
+
+    kimage stack-max --docu
+
+```markdown
+## Script: stack-max
+
+    kimage [OPTIONS] stack-max
+        [FILES]
+
+Stacks multiple images by calculating a pixel-wise maximum.
+
+This stacking script is useful to find outliers and badly aligned images.
+
+---
+```
+
+Use the `--docu` option without a specific command and you get the documentation of all commands:
+
+    kimage --docu
+
+The script documentation further below was generated this way. 
+
+
+## Execute command line scripts
+
+You can execute simple `kimage` scripts directly from the command line:
+
+    kimage 'inputImage.gaussianBlurFilter(5)' lena512.png
+
+![](images/output_lena512.png)
+
+
 ## Aligning and Stacking multiple images
 
 Six images of M42 (Orion nebula) where taken using a 400mm tele lens in an area with Bortle 4 light pollution.
@@ -100,7 +159,7 @@ Saving stack(sigma-clip-median)_aligned_orion1.png
 The sigma-clip histogram shows how many pixel values (red, green, blue) where outliers and had to be rejected.
 
 In this example for 1079254 pixel values all 6 samples from the aligned images where used,
-whereas for 11946 values only 2 samples where used (and 4 where rejected).
+whereas in 11946 cases only 2 samples where used (and 4 where rejected).
 
 ![](images/align/stack(sigma-clip-median)_aligned_orion1.png)
 
@@ -132,6 +191,62 @@ After playing with the two arguments for a bit we find a pleasing combination:
 ![](images/align/color-stretch(3.0,s-curve-super-strong)_remove-background-gradient_stack(sigma-clip-median)_aligned_orion1.png)
 
 ---
+
+
+## Writing Scripts
+
+It is possible to write your own `kimage` scripts.
+
+Create a `.kimage` directory in your home directory and copy the following script info a file `spooky.kts`:
+
+```kotlin
+import ch.obermuhlner.kimage.*
+import ch.obermuhlner.kimage.align.*
+import ch.obermuhlner.kimage.filter.*
+import ch.obermuhlner.kimage.image.*
+import ch.obermuhlner.kimage.io.*
+import java.io.*
+import kotlin.math.*
+
+kimage(0.1) {
+  name = "spooky"
+  description = """
+                Spooky cool effect.
+                """
+
+  single {
+    println("Spooky cool effect")
+
+    val background = inputImage.medianFilter(10).gaussianBlurFilter(10)
+    inputImage - background
+  }
+}
+```
+
+`kimage` will now list the `spooky` script and even provide documentation for it:
+
+    kimage spooky --docu
+
+```markdown
+## Script: spooky
+
+    kimage [OPTIONS] spooky
+        [FILES]
+
+Spooky cool effect.
+
+---
+```
+
+    kimage spooky lena512.png
+
+```
+Spooky cool effect
+Output file: .\spooky_lena512.png
+```
+
+![](images/spooky_lena512.png)
+
 
 # Scripts
 
