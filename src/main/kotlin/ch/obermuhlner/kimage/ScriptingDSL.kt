@@ -117,11 +117,11 @@ class ScriptV0_1 : Script(0.1) {
             }
             println()
         }
-        print("        [FILES]")
+        println("        [FILES]")
         println()
 
         if (description.isNotBlank()) {
-            println(description.trimLeadingIndent())
+            println(description.trimIndent())
             println()
         }
 
@@ -199,7 +199,7 @@ class ScriptV0_1 : Script(0.1) {
             println()
 
             if (arg.description.isNotBlank()) {
-                println(arg.description.trimLeadingIndent())
+                println(arg.description.trimIndent())
                 println()
             }
         }
@@ -239,14 +239,6 @@ class ScriptV0_1 : Script(0.1) {
         }
     }
 }
-
-private fun String.trimLeadingIndent(): String =
-    lines()
-        //.filter(String::isNotBlank)
-        .map { it.trim() }
-        .joinTo(StringBuilder(), "\n")
-        .toString()
-
 
 @KotlinDSL
 class ScriptArguments {
