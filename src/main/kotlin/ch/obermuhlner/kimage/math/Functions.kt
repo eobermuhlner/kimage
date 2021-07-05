@@ -506,6 +506,38 @@ fun DoubleArray.winsorizeInplace(lowThreshold: Double, highThreshold: Double, of
     return this
 }
 
+fun FloatArray.weightedAverage(weightFunction: (i: Int, value: Float) -> Float, offset: Int = 0, length: Int = size-offset): Float {
+    val weights = FloatArray(length)
+    var totalWeight = 0.0f
+    for (i in 0 until length) {
+        val weight = weightFunction.invoke(i, this[i+offset])
+        weights[i] = weight
+        totalWeight += weight
+    }
+
+    var result = 0.0f
+    for (i in 0 until length) {
+        result += this[i+offset] * weights[i] / totalWeight
+    }
+    return result
+}
+
+fun DoubleArray.weightedAverage(weightFunction: (i: Int, value: Double) -> Double, offset: Int = 0, length: Int = size-offset): Double {
+    val weights = DoubleArray(length)
+    var totalWeight = 0.0
+    for (i in 0 until length) {
+        val weight = weightFunction.invoke(i, this[i+offset])
+        weights[i] = weight
+        totalWeight += weight
+    }
+
+    var result = 0.0
+    for (i in 0 until length) {
+        result += this[i+offset] * weights[i] / totalWeight
+    }
+    return result
+}
+
 private class ArrayFloatIterator(private val array: FloatArray, private val offset: Int, private val length: Int) : FloatIterator() {
     private var index = offset
     override fun hasNext() = index < offset + length
