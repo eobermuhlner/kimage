@@ -36,8 +36,37 @@ interface Image {
             Channel.Luminance -> 0.2126 * getPixel(x, y, Channel.Red) + 0.7152 * getPixel(x, y, Channel.Green) +  0.0722 * getPixel(x, y, Channel.Blue)
             Channel.Gray -> (getPixel(x, y, Channel.Red) + getPixel(x, y, Channel.Green) + getPixel(x, y, Channel.Blue)) / 3.0
             Channel.Alpha -> 1.0
+            Channel.Hue -> RGBtoHSB(getPixel(x, y, Channel.Red), getPixel(x, y, Channel.Green), getPixel(x, y, Channel.Blue))[0]
+            Channel.Saturation -> RGBtoHSB(getPixel(x, y, Channel.Red), getPixel(x, y, Channel.Green), getPixel(x, y, Channel.Blue))[1]
+            Channel.Value -> RGBtoHSB(getPixel(x, y, Channel.Red), getPixel(x, y, Channel.Green), getPixel(x, y, Channel.Blue))[2]
             else -> 0.0
         }
+    }
+
+    fun RGBtoHSB(r: Double, g: Double, b: Double, hsbvals: DoubleArray = DoubleArray(3)): DoubleArray {
+        var hue: Double
+        val saturation: Double
+        val brightness: Double
+        var cmax = if (r > g) r else g
+        if (b > cmax) cmax = b
+        var cmin = if (r < g) r else g
+        if (b < cmin) cmin = b
+        brightness = cmax
+        saturation = if (cmax != 0.0) (cmax - cmin) / cmax else 0.0
+        if (saturation == 0.0) {
+            hue = 0.0
+        } else {
+            val redc = (cmax - r) / (cmax - cmin)
+            val greenc = (cmax - g) / (cmax - cmin)
+            val bluec = (cmax - b) / (cmax - cmin)
+            hue = if (r == cmax) bluec - greenc else if (g == cmax) 2.0 + redc - bluec else 4.0 + greenc - redc
+            hue = hue / 6.0
+            if (hue < 0) hue = hue + 1.0
+        }
+        hsbvals[0] = hue // * 360
+        hsbvals[1] = saturation
+        hsbvals[2] = brightness
+        return hsbvals
     }
 
     fun getPixel(x: Int, y: Int, targetChannels: List<Channel>, color: DoubleArray = DoubleArray(targetChannels.size)) {
