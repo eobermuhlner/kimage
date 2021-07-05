@@ -12,25 +12,24 @@ import kotlin.random.Random
 object TestMain {
     @JvmStatic
     fun main(args: Array<String>) {
-        exampleFilters("lena512color.tiff")
+//        exampleFilters("lena512.tiff")
 
         exampleChannelManipulation("animal.png")
-        exampleFilters("animal.png")
-
-        exampleChannelManipulation("orion.png")
-        exampleFilters("orion.png")
-
-        exampleImages()
-        exampleMedianExperiments()
-
-        exampleScale("lena512color.tiff")
-
-        exampleInterpolate("colors.png")
-        exampleInterpolate("orion.png")
-        exampleInterpolate("lena512color.tiff")
-
-        exampleError()
-        exampleAlign()
+//        exampleFilters("animal.png")
+//
+//        exampleChannelManipulation("lena512.png")
+//        exampleFilters("lena512.png")
+//
+//        exampleImages()
+//        exampleMedianExperiments()
+//
+//        exampleScale("lena512.tiff")
+//
+//        exampleInterpolate("colors.png")
+//        exampleInterpolate("lena512.tiff")
+//
+//        exampleError()
+//        exampleAlign()
     }
 
     private fun exampleInterpolate(imageName: String) {
@@ -354,7 +353,7 @@ object TestMain {
     }
 
     private fun exampleMedianExperiments() {
-        val image = read(File("images/lena512color.tiff"))
+        val image = read(File("images/lena512.tiff"))
         val gimp_median = read(File("images/lena512color_gimp_median3.tiff"))
 
         example("noise") {
@@ -426,7 +425,7 @@ object TestMain {
 
     fun exampleImages() {
         for (imageName in listOf(
-            "lena512color.tiff",
+            "lena512.tiff",
             "animal.png",
 //            "orion1.png",
         )) {
@@ -467,6 +466,36 @@ object TestMain {
                     image.width,
                     image.height,
                     Channel.Blue to image[Channel.Blue])
+        }
+
+        example("channel_hue", imageName) {
+            val hue = image[Channel.Hue]
+            MatrixImage(
+                image.width,
+                image.height,
+                Channel.Red to hue,
+                Channel.Green to hue,
+                Channel.Blue to hue)
+        }
+
+        example("channel_saturation", imageName) {
+            val saturation = image[Channel.Saturation]
+            MatrixImage(
+                image.width,
+                image.height,
+                Channel.Red to saturation,
+                Channel.Green to saturation,
+                Channel.Blue to saturation)
+        }
+
+        example("channel_value", imageName) {
+            val value = image[Channel.Value]
+            MatrixImage(
+                image.width,
+                image.height,
+                Channel.Red to value,
+                Channel.Green to value,
+                Channel.Blue to value)
         }
 
         example("channel_swap_red_blue", imageName) {
