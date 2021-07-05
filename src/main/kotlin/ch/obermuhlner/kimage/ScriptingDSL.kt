@@ -99,64 +99,108 @@ class ScriptV0_1 : Script(0.1) {
     }
 
     fun help() {
-        println("NAME: $name")
+        println("---")
+        println()
 
-        print("USAGE: kimage [OPTIONS] $name")
+        println("## Script: $name")
+        println()
+
+        println("    kimage [OPTIONS] $name")
         for (arg in scriptArguments.arguments) {
-            print(" ")
-            if (!arg.mandatory) {
+            print("        ")
+            if (!arg.mandatory || arg.hasDefault) {
                 print("[")
             }
-            print("--param ${arg.name}=${arg.type.toUpperCase()}")
-            if (!arg.mandatory) {
+            print("--arg ${arg.name}=${arg.type.toUpperCase()}")
+            if (!arg.mandatory || arg.hasDefault) {
                 print("]")
             }
+            println()
         }
+        print("        [FILES]")
         println()
 
         if (description.isNotBlank()) {
-            println("DESCR:")
-            println(description.trimLeadingIndent().prependIndent("  "))
+            println(description.trimLeadingIndent())
+            println()
         }
-        println()
+
         for (arg in scriptArguments.arguments) {
-            println("ARG: ${arg.name}")
-            if (arg.description.isNotBlank()) {
-                println("  DESCRIPTION:")
-                println(arg.description.trimLeadingIndent().prependIndent("    "))
+            println("### Argument: ${arg.name}")
+            println()
+            println("- Type: ${arg.type}")
+            if (arg.mandatory && !arg.hasDefault) {
+                println("- Mandatory: yes")
             }
-            println("  TYPE: ${arg.type}")
+
             when (arg) {
                 is ScriptIntArg -> {
                     if (arg.min != null) {
-                        println("  MIN: ${arg.min}")
+                        println("- Minimum value: ${arg.min}")
                     }
                     if (arg.max != null) {
-                        println("  MAX: ${arg.max}")
+                        println("- Maximum value: ${arg.max}")
                     }
                     if (arg.default != null) {
-                        println("  DEFAULT: ${arg.default}")
+                        println("- Default value: ${arg.default}")
                     }
                 }
                 is ScriptDoubleArg -> {
                     if (arg.min != null) {
-                        println("  MIN: ${arg.min}")
+                        println("- Minimum value: ${arg.min}")
                     }
                     if (arg.max != null) {
-                        println("  MAX: ${arg.max}")
+                        println("- Maximum value: ${arg.max}")
                     }
                     if (arg.default != null) {
-                        println("  DEFAULT: ${arg.default}")
+                        println("- Default value: ${arg.default}")
                     }
                 }
                 is ScriptStringArg -> {
                     if (arg.allowed.isNotEmpty()) {
-                        println("  ALLOWED: ${arg.allowed}")
+                        println("- Allowed values:")
+                        for (allowed in arg.allowed) {
+                            println("  - `${allowed}`")
+                        }
+                    }
+                    if (arg.regex != null) {
+                        println("- Must match regular expression: `${arg.regex}`")
                     }
                     if (arg.default != null) {
-                        println("  DEFAULT: ${arg.default}")
+                        println("- Default value: `${arg.default}`")
                     }
                 }
+                is ScriptFileArg -> {
+                    if (arg.isDirectory != null) {
+                        println("- Must be directory: ${arg.isDirectory}")
+                    }
+                    if (arg.isFile != null) {
+                        println("- Must be file: ${arg.isFile}")
+                    }
+                    if (arg.exists != null) {
+                        println("- Must exist: ${arg.exists}")
+                    }
+                    arg.allowedExtensions?.let {
+                        println("- Allowed extensions:")
+                        for (allowed in it) {
+                            println("  - `${allowed}`")
+                        }
+                    }
+                    if (arg.default != null) {
+                        println("- Default path: `${arg.default}`")
+                    }
+                }
+                is ScriptImageArg -> {
+                    if (arg.default != null) {
+                        println("- Default path: `${arg.default}`")
+                    }
+                }
+            }
+            println()
+
+            if (arg.description.isNotBlank()) {
+                println(arg.description.trimLeadingIndent())
+                println()
             }
         }
         println()
@@ -198,7 +242,7 @@ class ScriptV0_1 : Script(0.1) {
 
 private fun String.trimLeadingIndent(): String =
     lines()
-        .filter(String::isNotBlank)
+        //.filter(String::isNotBlank)
         .map { it.trim() }
         .joinTo(StringBuilder(), "\n")
         .toString()
@@ -267,15 +311,18 @@ class ScriptArguments {
 sealed class ScriptArg(val type: String, val mandatory: Boolean) {
     var name: String = ""
     var description = ""
+
+    abstract val hasDefault: Boolean
 }
 
 @KotlinDSL
-open class ScriptIntArg(type: String, mandatory: Boolean) : ScriptArg(type, mandatory) {
+open class ScriptIntArg(mandatory: Boolean = true) : ScriptArg("int", mandatory) {
     var min: Int? = null
     var max: Int? = null
     var default: Int? = null
 
-    constructor() : this("int", true)
+    override val hasDefault: Boolean
+        get() = default != null
 
     fun toIntValue(stringValue: String?): Int {
         if (stringValue == null) {
@@ -300,7 +347,7 @@ open class ScriptIntArg(type: String, mandatory: Boolean) : ScriptArg(type, mand
 }
 
 @KotlinDSL
-class ScriptOptionalIntArg : ScriptIntArg("optionalInt", false) {
+class ScriptOptionalIntArg : ScriptIntArg(false) {
     fun toOptionalIntValue(stringValue: String?): Optional<Int> {
         if (stringValue == null) {
             if (default == null) {
@@ -315,12 +362,13 @@ class ScriptOptionalIntArg : ScriptIntArg("optionalInt", false) {
 }
 
 @KotlinDSL
-open class ScriptDoubleArg(type: String, mandatory: Boolean) : ScriptArg(type, mandatory) {
+open class ScriptDoubleArg(mandatory: Boolean = true) : ScriptArg("double", mandatory) {
     var min: Double? = null
     var max: Double? = null
     var default: Double? = null
 
-    constructor() : this("double", true)
+    override val hasDefault: Boolean
+        get() = default != null
 
     fun toDoubleValue(stringValue: String?): Double {
         if (stringValue == null) {
@@ -345,7 +393,7 @@ open class ScriptDoubleArg(type: String, mandatory: Boolean) : ScriptArg(type, m
 }
 
 @KotlinDSL
-class ScriptOptionalDoubleArg : ScriptDoubleArg("optionalDouble", false) {
+class ScriptOptionalDoubleArg : ScriptDoubleArg(false) {
     fun toOptionalDoubleValue(stringValue: String?): Optional<Double> {
         if (stringValue == null) {
             if (default == null) {
@@ -360,10 +408,11 @@ class ScriptOptionalDoubleArg : ScriptDoubleArg("optionalDouble", false) {
 }
 
 @KotlinDSL
-open class ScriptBooleanArg(type: String, mandatory: Boolean) : ScriptArg(type, mandatory) {
+open class ScriptBooleanArg(mandatory: Boolean = true) : ScriptArg("boolean", mandatory) {
     var default: Boolean? = null
 
-    constructor() : this("boolean", true)
+    override val hasDefault: Boolean
+        get() = default != null
 
     fun toBooleanValue(stringValue: String?): Boolean {
         if (stringValue == null) {
@@ -377,7 +426,7 @@ open class ScriptBooleanArg(type: String, mandatory: Boolean) : ScriptArg(type, 
 }
 
 @KotlinDSL
-class ScriptOptionalBooleanArg : ScriptBooleanArg("optionalBoolean", false) {
+class ScriptOptionalBooleanArg : ScriptBooleanArg(false) {
     fun toOptionalBooleanValue(stringValue: String?): Optional<Boolean> {
         if (stringValue == null) {
             if (default == null) {
@@ -392,12 +441,13 @@ class ScriptOptionalBooleanArg : ScriptBooleanArg("optionalBoolean", false) {
 }
 
 @KotlinDSL
-open class ScriptStringArg(type: String, mandatory: Boolean) : ScriptArg(type, mandatory) {
+open class ScriptStringArg(mandatory: Boolean = true) : ScriptArg("string", mandatory) {
     var allowed: List<String> = mutableListOf()
     var regex: String? = null
     var default: String? = null
 
-    constructor() : this("string", true)
+    override val hasDefault: Boolean
+        get() = default != null
 
     fun toStringValue(stringValue: String?): String {
         if (stringValue == null) {
@@ -421,7 +471,7 @@ open class ScriptStringArg(type: String, mandatory: Boolean) : ScriptArg(type, m
 }
 
 @KotlinDSL
-class ScriptOptionalStringArg : ScriptStringArg("optionalString", false) {
+class ScriptOptionalStringArg : ScriptStringArg(false) {
     fun toOptionalStringValue(stringValue: String?): Optional<String> {
         if (stringValue == null) {
             if (default == null) {
@@ -436,7 +486,7 @@ class ScriptOptionalStringArg : ScriptStringArg("optionalString", false) {
 }
 
 @KotlinDSL
-open class ScriptFileArg(type: String, mandatory: Boolean) : ScriptArg(type, mandatory) {
+open class ScriptFileArg(mandatory: Boolean = true) : ScriptArg("file", mandatory) {
     var default: File? = null
     var allowedExtensions: List<String>? = null
     var exists: Boolean? = null
@@ -445,7 +495,8 @@ open class ScriptFileArg(type: String, mandatory: Boolean) : ScriptArg(type, man
     var canRead: Boolean? = null
     var canWrite: Boolean? = null
 
-    constructor() : this("file", true)
+    override val hasDefault: Boolean
+        get() = default != null
 
     fun toFileValue(stringValue: String?): File {
         if (stringValue == null) {
@@ -490,7 +541,7 @@ open class ScriptFileArg(type: String, mandatory: Boolean) : ScriptArg(type, man
 }
 
 @KotlinDSL
-class ScriptOptionalFileArg : ScriptFileArg("optionalFile", false) {
+class ScriptOptionalFileArg : ScriptFileArg(false) {
     fun toOptionalFileValue(stringValue: String?): Optional<File> {
         if (stringValue == null) {
             if (default == null) {
@@ -505,10 +556,11 @@ class ScriptOptionalFileArg : ScriptFileArg("optionalFile", false) {
 }
 
 @KotlinDSL
-open class ScriptImageArg(type: String, mandatory: Boolean) : ScriptArg(type, mandatory) {
+open class ScriptImageArg(mandatory: Boolean = true) : ScriptArg("image", mandatory) {
     var default: File? = null
 
-    constructor() : this("image", true)
+    override val hasDefault: Boolean
+        get() = default != null
 
     fun toImageValue(stringValue: String?): Image {
         if (stringValue == null) {
@@ -522,9 +574,7 @@ open class ScriptImageArg(type: String, mandatory: Boolean) : ScriptArg(type, ma
 }
 
 @KotlinDSL
-class ScriptOptionalImageArg() : ScriptArg("optionalImage", false) {
-    var default: File? = null
-
+class ScriptOptionalImageArg() : ScriptImageArg(false) {
     fun toOptionalImageValue(stringValue: String?): Optional<Image> {
         if (stringValue == null) {
             if (default == null) {
