@@ -17,7 +17,9 @@ Image processing using Kotlin scripts.
 Running `kimage` without any arguments will list the available scripts
 (you might see more scripts if you have some local scripts installed):
 
-    kimage
+```shell
+kimage
+```
 
 ```
 Scripts:
@@ -40,7 +42,9 @@ Scripts:
 
 Use the `--docu` option to get help on a single command:
 
-    kimage stack-max --docu
+```shell
+kimage stack-max --docu
+```
 
 ```markdown
 ## Script: stack-max
@@ -57,7 +61,9 @@ This stacking script is useful to find outliers and badly aligned images.
 
 Use the `--docu` option without a specific command and you get the documentation of all commands:
 
-    kimage --docu
+```shell
+kimage --docu
+```
 
 The script documentation further below was generated this way. 
 
@@ -66,7 +72,9 @@ The script documentation further below was generated this way.
 
 You can execute simple `kimage` scripts directly from the command line:
 
-    kimage 'inputImage.gaussianBlurFilter(5)' lena512.png
+```shell
+kimage 'inputImage.gaussianBlurFilter(5)' lena512.png
+```
 
 ![](images/output_lena512.png)
 
@@ -86,7 +94,9 @@ Here one of the unprocessed images:
 
 Let's start by running a straightforward `stack-max` script that will show how badly aligned the images are.
 
-    kimage stack-max orion*.png
+```shell
+  kimage stack-max orion*.png
+```
 
 ![](images/align/stack-max_orion1.png)
 
@@ -94,7 +104,9 @@ Let's start by running a straightforward `stack-max` script that will show how b
 
 To align the images against the base image (the first one in the list) we use the `align` script:
 
+```shell
     kimage align orion*.png
+```
 
 The output will tell us by how many pixels each image was aligned and what the error distance to the base image is (smaller is better).
 If an aligned image is above the error threshold it will be saved with a prefix `badaligned` instead.
@@ -111,7 +123,9 @@ Error 4.567307562910387E-4 <= 0.001 : saving aligned_orion2.png
 
 Let's run `stack-max` on the aligned images:
 
-    kimage stack-max orion*.png
+```shell
+kimage stack-max orion*.png
+```
 
 ![](images/align/stack-max_aligned_orion1.png)
 
@@ -123,7 +137,9 @@ The script `stack-max` should only be used to verify the quality of the aligned 
 
 For real stacking the script `stack` is slower but produces much better quality.
 
+```shell
     kimage stack orion*.png
+```
 
 ```
 Stack multiple images
@@ -169,7 +185,9 @@ The output image is much smoother and does not show the stuck pixels anymore.
 
 To remove the light pollution background we use `remove-background-gradient`.
 
-    kimage remove-background-gradient 'stack(sigma-clip-median)_aligned_orion1.png'
+```shell
+kimage remove-background-gradient 'stack(sigma-clip-median)_aligned_orion1.png'
+```
 
 ![](images/align/remove-background-gradient_stack(sigma-clip-median)_aligned_orion1.png)
 
@@ -179,14 +197,18 @@ This script has calculated an interpolated background image and subtracted it fr
 
 But now the image is too dark. The `color-stretch` script can fix this.
 
-    kimage color-stretch 'remove-background-gradient_stack(sigma-clip-median)_aligned_orion1.png'
+```shell
+kimage color-stretch 'remove-background-gradient_stack(sigma-clip-median)_aligned_orion1.png'
+```
 
 ![](images/align/color-stretch(2.0,s-curve)_remove-background-gradient_stack(sigma-clip-median)_aligned_orion1.png)
 
 The color stretching algorithm has 2 arguments: `brightness` and `curve`.
 After playing with the two arguments for a bit we find a pleasing combination:
 
-    kimage color-stretch --arg brightness=3 --arg curve=s-curve-strong 'remove-background-gradient_stack(sigma-clip-median)_aligned_orion1.png'
+```shell
+kimage color-stretch --arg brightness=3 --arg curve=s-curve-strong 'remove-background-gradient_stack(sigma-clip-median)_aligned_orion1.png'
+```
 
 ![](images/align/color-stretch(3.0,s-curve-super-strong)_remove-background-gradient_stack(sigma-clip-median)_aligned_orion1.png)
 
@@ -225,7 +247,9 @@ kimage(0.1) {
 
 `kimage` will now list the `spooky` script and even provide documentation for it:
 
-    kimage spooky --docu
+```shell
+kimage spooky --docu
+```
 
 ```markdown
 ## Script: spooky
@@ -238,7 +262,9 @@ Spooky cool effect.
 ---
 ```
 
-    kimage spooky lena512.png
+```shell
+kimage spooky lena512.png
+```
 
 ```
 Spooky cool effect
