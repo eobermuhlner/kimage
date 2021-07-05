@@ -110,43 +110,52 @@ class KimageCli(parser: ArgParser) {
         fillScriptFiles(scriptFileMap, System.getProperty("user.home"))
         fillScriptFiles(scriptFileMap, System.getProperty("user.dir"))
 
+        val commands = mutableListOf<String>()
         if (command == "") {
-            println("Scripts:")
-            scriptFileMap.keys.sorted().forEach {
-                println("  $it")
+            if (helpMode) {
+                commands.addAll(scriptFileMap.keys.sorted())
+            } else {
+                println("Scripts:")
+                scriptFileMap.keys.sorted().forEach {
+                    println("  $it")
+                }
+                return
             }
-            return
+        } else {
+            commands.add(command)
         }
 
-        val (commandName, script, extension) = when {
-            scriptFileMap.containsKey(command) -> Triple(
-                command,
-                scriptFileMap[command]!!.readText(),
-                scriptFileMap[command]!!.extension
-            )
-            File(command).exists() -> Triple(
-                File(command).nameWithoutExtension,
-                File(command).readText(),
-                File(command).extension
-            )
-            else -> Triple("output", command, "kts")
+        for (command in commands) {
+            val (commandName, script, extension) = when {
+                scriptFileMap.containsKey(command) -> Triple(
+                    command,
+                    scriptFileMap[command]!!.readText(),
+                    scriptFileMap[command]!!.extension
+                )
+                File(command).exists() -> Triple(
+                    File(command).nameWithoutExtension,
+                    File(command).readText(),
+                    File(command).extension
+                )
+                else -> Triple("output", command, "kts")
+            }
+
+            val parametersMap: Map<String, String> = mapOf(*parameters.toTypedArray())
+
+            KImageExecution(
+                commandName,
+                command == script,
+                script,
+                extension,
+                parametersMap,
+                fileNames,
+                if (outputPrefix == "") commandName else outputPrefix,
+                outputDirectory,
+                helpMode,
+                verboseMode,
+                debugMode
+            ).execute()
         }
-
-        val parametersMap: Map<String, String> = mapOf(*parameters.toTypedArray())
-
-        KImageExecution(
-            commandName,
-            command == script,
-            script,
-            extension,
-            parametersMap,
-            fileNames,
-            if (outputPrefix == "") commandName else outputPrefix,
-            outputDirectory,
-            helpMode,
-            verboseMode,
-            debugMode
-        ).execute()
     }
 
     private fun fillScriptFiles(scriptFilesMap: MutableMap<String, File>, path: String?) {
@@ -467,9 +476,14 @@ class KImageExecution(
             import ch.obermuhlner.kimage.io.*
             import ch.obermuhlner.kimage.math.*
             import java.io.*
+            import java.util.Optional
             import kotlin.math.*
         """.trimIndent()
 
         private val IMPORT_REGEX = Regex("^import")
     }
 }
+
+data class Point(val x: Double, val y: Double)
+
+data class Rectangle(val x: Double, val y: Double, val width: Double, val height: Double)
