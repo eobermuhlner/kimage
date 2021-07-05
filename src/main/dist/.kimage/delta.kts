@@ -32,7 +32,7 @@ kimage(0.1) {
             default = 5.0
         }
         string("channel") {
-            descriptions = """
+            description = """
                 The channel used to calculate the difference between two images.                
             """
             allowed = listOf("Red", "Green", "Blue", "Luminance", "Gray")
