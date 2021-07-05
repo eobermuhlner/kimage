@@ -17,9 +17,9 @@ kimage(0.1) {
             description = """
                         The power value of the brightness increase.
                         
-                        A power value > 1 increases the brightness.
-                        A power value = 0 does not change the brightness.
-                        A power value < 1 increases the brightness.
+                        - A power value > 1 increases the brightness.
+                        - A power value = 0 does not change the brightness.
+                        - A power value < 1 increases the brightness.
                         """
             min = 0.0
             default = 2.0
