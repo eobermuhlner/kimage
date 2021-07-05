@@ -59,6 +59,8 @@ kimage(0.1) {
                 Calibrate the real images:
                 
                     kimage calibrate --arg bias=master_bias.TIF --arg flat=master_flat.TIF --arg darkflat=master_darkflat.TIF --arg dark=master_dark.TIF light*.TIF
+                    
+                See: http://deepskystacker.free.fr/english/theory.htm
                 """
     arguments {
         optionalImage("bias") {
