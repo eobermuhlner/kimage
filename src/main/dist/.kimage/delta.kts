@@ -14,7 +14,8 @@ kimage(0.1) {
     description = """
                 Creates delta images between the first image and all other images.
                 
-                The output images show the pixel-wise difference between two images on a specific channel (default is Luminance).
+                The output images show the pixel-wise difference between two images on a specific channel (default is `Luminance`).
+                
                 The difference is color coded:
                   - black = no difference
                   - blue  = pixel in the first image is brighter

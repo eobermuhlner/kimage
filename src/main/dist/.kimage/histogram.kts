@@ -18,13 +18,13 @@ kimage(0.1) {
         int("width") {
             description = """
                         The width of the histogram.                        
-                    """
+                        """
             default = 512
         }
         int("height") {
             description = """
                         The height of the histogram.                        
-                    """
+                        """
             default = 300
         }
     }

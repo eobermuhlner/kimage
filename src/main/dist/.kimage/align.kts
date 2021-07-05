@@ -14,11 +14,12 @@ kimage(0.1) {
     name = "align"
     description = """
                 Align multiple images.
+                
                 The base image is the first image argument.
                 The remaining image arguments are aligned to the base image by searching for a matching feature.
                 
-                The feature to match is defined by the centerX/centerY coordinates in the base image and the check radius.
-                The searchRadius defines how far the matching feature is searched.
+                The feature to match is defined by the `centerX`/`centerY` coordinates in the base image and the `checkRadius`.
+                The `searchRadius` defines how far the matching feature is searched.
 
                 Use the --debug option to save intermediate images for manual analysis.
                 """

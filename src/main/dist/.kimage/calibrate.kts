@@ -11,16 +11,87 @@ import kotlin.math.*
 kimage(0.1) {
     name = "calibrate"
     description = """
-                Calibrates bias/dark/flat/darkflat/light images.
+                Calibrates images using bias/dark/flat/darkflat images.
+                
+                The different calibration files are optional, specify only the calibration image you have.
+                
+                ### Creating Calibration Images
+                
+                Create about 20-50 images of each calibration image type.
+                
+                - `bias` images 
+                  - camera with lens cap on
+                  - same ISO as for real pictures
+                  - fastest exposure time
+                - `flat` images
+                  - camera against homogeneous light source (e.g. t-shirt over lens against sky)
+                  - same objective + focus as for real pictures
+                  - same aperture as for real pictures
+                  - set exposure time so that histogram shows most pixels at ~50%
+                - `darkflat` images
+                  - camera with lens cap on
+                  - same objective + focus as for real pictures
+                  - same aperture as for real pictures
+                  - same exposure time as for `flat` images
+                - `dark` images
+                  - camera with lens cap on
+                  - same objective + focus as for real pictures
+                  - same aperture as for real pictures
+                  - same exposure time as for real pictures
+                  - same temperature as for real pictures
+                  - (usually take the dark pictures immediately after taking the real pictures)
+                
+                Stack the `bias` images with:
+                
+                    kimage stack --arg method=median bias*.TIF
+                The output will be your master `bias` image - rename it accordingly.
+                
+                Calibrate all other images with the `bias` images and stack them.
+                
+                For example the `flat` images:
+                
+                    kimage calibrate --arg bias=master_bias.TIF flat*.TIF
+                    kimage stack --arg method=median calibrate_flat*.TIF
+                
+                Do this for the `flat`, `darkflat` and `dark` images.
+                The outputs will be your master `flat`, `darkflat` and `dark` images - rename them accordingly.
+                
+                Calibrate the real images:
+                
+                    kimage calibrate --arg bias=master_bias.TIF --arg flat=master_flat.TIF --arg darkflat=master_darkflat.TIF --arg dark=master_dark.TIF light*.TIF
                 """
     arguments {
         optionalImage("bias") {
+            description = """
+                The `bias` master calibration image.
+                
+                This argument is optional.
+                If no `bias` image is specified it will not be used in the calibration process.
+                """
         }
         optionalImage("dark") {
+            description = """
+                The `dark` master calibration image.
+                
+                This argument is optional.
+                If no `dark` image is specified it will not be used in the calibration process.
+                """
         }
         optionalImage("flat") {
+            description = """
+                The `flat` master calibration image.
+                
+                This argument is optional.
+                If no `flat` image is specified it will not be used in the calibration process.
+                """
         }
         optionalImage("darkflat") {
+            description = """
+                The `darkflat` master calibration image.
+                
+                This argument is optional.
+                If no `flat` image is specified it will not be used in the calibration process.
+                """
         }
     }
 

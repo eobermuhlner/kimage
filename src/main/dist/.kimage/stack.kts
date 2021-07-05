@@ -19,12 +19,12 @@ kimage(0.1) {
             description = """
                         Method used to calculate the stacked image.
                         
-                        The method `sigma-clip-median` removes outliers before using `median` on the remaining values.
-                        The method `sigma-clip-average` removes outliers before using `average` on the remaining values.
-                        The method `sigma-winsorize-median` replaces outliers with the nearest value in sigma range before using `median`.
-                        The method `sigma-winsorize-average` replaces outliers with the nearest value in sigma range before using `average`.
-                        The method `winsorized-sigma-clip-median` replaces outliers with the nearest value in sigma range before sigma-clipping and then using `median`.
-                        The method `winsorized-sigma-clip-average` replaces outliers with the nearest value in sigma range before sigma-clipping and then using `average`.
+                        - `sigma-clip-median` removes outliers before using `median` on the remaining values.
+                        - `sigma-clip-average` removes outliers before using `average` on the remaining values.
+                        - `sigma-winsorize-median` replaces outliers with the nearest value in sigma range before using `median`.
+                        - `sigma-winsorize-average` replaces outliers with the nearest value in sigma range before using `average`.
+                        - `winsorized-sigma-clip-median` replaces outliers with the nearest value in sigma range before sigma-clipping and then using `median`.
+                        - `winsorized-sigma-clip-average` replaces outliers with the nearest value in sigma range before sigma-clipping and then using `average`.
                         
                         All methods that use sigma-clipping print a histogram with the information how many input values where actually used to stack each output value. 
                         """

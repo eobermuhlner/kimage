@@ -11,7 +11,7 @@ kimage(0.1) {
     description = """
                 Stacks multiple images by calculating a pixel-wise average.
                 
-                This stacking script is useful if there are no outliers. 
+                This stacking script is useful if there are no outliers and if the more powerful `stack` script fails for technical reasons.
                 """
     arguments {
     }

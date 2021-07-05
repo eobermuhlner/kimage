@@ -12,6 +12,7 @@ kimage(0.1) {
                 Removes the background from the input image by subtracting a blurred median of the input.
                 
                 This script is useful for astrophotography if the image contains mainly stars and not too much nebulas.
+                
                 The size of the median filter can be increased to remove stars and nebulas completely.
                 
                 Use the --debug option to save intermediate images for manual analysis.
