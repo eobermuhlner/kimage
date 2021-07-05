@@ -2,6 +2,106 @@
 Image processing using kotlin scripts.
 
 
+# Example Usage
+
+## Aligning and Stacking multiple images
+
+Six images of M42 (Orion nebula) where taken using a 400mm tele lens with a Bortle 4 light pollution.
+
+Here a cropped example of an unprocessed image:
+![](images/align/orion1.png)
+
+Let's start by doing a straightforward `stack-max` stacking that will show how badly aligned the images are.
+
+    kimage stack-max orion*.png
+
+![](images/align/stack-max_orion1.png)
+
+To align the images agains the base image (the first one in the list) we use the `align` script:
+
+    kimage align orion*.png
+
+The output will tell us by how many pixels each image was aligned and what the error distance to the base image is (smaller is better).
+If an aligned image is above the error threshold it will be saved with a prefix `badaligned` instead.
+
+```
+Loading image: orion2.png
+Alignment: Alignment(x=-8, y=-4, error=2.450572331451992E-4)
+Error 4.567307562910387E-4 <= 0.001 : saving aligned_orion2.png
+```
+
+![](images/align/aligned_orion2.png)
+
+Let's run `stack-max` on the aligned images:
+
+    kimage stack-max orion*.png
+
+![](images/align/stack-max_aligned_orion1.png)
+
+The images are fairly well aligned, but we can see to the right of the center some stuck pixels.
+
+The script `stack-max` should only be used to verify the quality of the aligned images.
+
+For real stacking the script `stack` is slower but produces much better quality.
+
+    kimage stack orion*.png
+
+```
+Stack multiple images
+
+Arguments:
+  method = sigma-clip-median
+  kappa = 2.0
+  iterations = 10
+
+Loading image: aligned_orion1.png
+Loading image: aligned_orion2.png
+Loading image: aligned_orion3.png
+Loading image: aligned_orion4.png
+Loading image: aligned_orion5.png
+Loading image: aligned_orion6.png
+
+Stacking 6 images using sigma-clip-median
+Stacking channel: Red
+Stacking channel: Green
+Stacking channel: Blue
+Sigma-Clip Histogram
+  0 :          0
+  1 :          0
+  2 :      11946
+  3 :     101072 #####
+  4 :     152128 ########
+  5 :     343100 ###################
+  6 :    1079254 ############################################################
+
+Saving stack(sigma-clip-median)_aligned_orion1.png
+```
+
+![](images/align/stack(sigma-clip-median)_aligned_orion1.png)
+
+The output image is much smoother and does not show the stuck pixels anymore.
+
+To remove the light pollution background we use `remove-background-gradient`.
+
+    kimage remove-background-gradient 'stack(sigma-clip-median)_aligned_orion1.png'
+
+![](images/align/remove-background-gradient_stack(sigma-clip-median)_aligned_orion1.png)
+
+This script has calculated an interpolated background image and subtracted it from the original image.
+
+But now the image is too dark. The `color-stretch` script can fix this.
+
+    kimage color-stretch 'remove-background-gradient_stack(sigma-clip-median)_aligned_orion1.png'
+
+![](images/align/color-stretch(2.0,s-curve)_remove-background-gradient_stack(sigma-clip-median)_aligned_orion1.png)
+
+The color stretching algorithm has 2 arguments: `brightness` and `curve`.
+After playing with the two arguments for a bit we find a pleasing combination:
+
+  kimage color-stretch --arg brightness=3 --arg curve=s-curve-strong 'remove-background-gradient_stack(sigma-clip-median)_aligned_orion1.png'
+
+![](images/align/color-stretch(3.0,s-curve-super-strong)_remove-background-gradient_stack(sigma-clip-median)_aligned_orion1.png)
+
 
 # Scripts
 
