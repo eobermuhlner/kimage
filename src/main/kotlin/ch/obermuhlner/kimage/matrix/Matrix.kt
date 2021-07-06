@@ -1,8 +1,7 @@
 package ch.obermuhlner.kimage.matrix
 
 import ch.obermuhlner.kimage.math.clamp
-import kotlin.math.max
-import kotlin.math.sqrt
+import kotlin.math.abs
 
 interface Matrix : Iterable<Double> {
     val rows: Int
@@ -25,12 +24,12 @@ interface Matrix : Iterable<Double> {
         this[index] = value
     }
 
-    fun set(other: Matrix) {
+    fun set(other: Matrix, offsetRow: Int = 0, offsetColumn: Int = 0) {
         checkSameSize(this, other)
 
         for (row in 0 until rows) {
             for (column in 0 until columns) {
-                this[row, column] = other[row, column]
+                this[row+offsetRow, column+offsetColumn] = other[row, column]
             }
         }
     }
@@ -157,6 +156,114 @@ interface Matrix : Iterable<Double> {
             }
         }
         return m
+    }
+
+    fun transpose(): Matrix {
+        val m = create(columns, rows)
+
+        for (row in 0 until rows) {
+            for (column in 0 until columns) {
+                m[row, column] = this[column, row]
+            }
+        }
+
+        return m
+    }
+
+    fun invert(): Matrix {
+        checkSquare(this)
+
+        val m = create(rows, columns*2)
+        m.set(this, 0, 0)
+        m.set(m.identity(rows), 0, columns)
+
+        m.gaussianElimination()
+
+        return m.croppedMatrix(0, columns, rows, columns)
+    }
+
+    fun gaussianElimination(reducedEchelonForm: Boolean = true) {
+        var pivotRow = 0
+        var pivotColumn = 0
+
+        while (pivotRow < rows && pivotColumn < columns) {
+            var maxRow = pivotRow
+            for (row in pivotRow + 1 until rows) {
+                if (abs(this[row, pivotColumn]) > this[maxRow, pivotColumn]) {
+                    maxRow = row
+                }
+            }
+            val pivotCell = this[maxRow, pivotColumn]
+            if (pivotCell == 0.0) {
+                pivotColumn++
+            } else {
+                swapRows(pivotRow, maxRow)
+                val divisor = this[pivotRow, pivotColumn]
+                for (row in pivotRow + 1 until rows) {
+                    val factor = this[row, pivotColumn] / divisor
+                    this[row, pivotColumn] = 0.0
+                    for (column in pivotColumn + 1 until columns) {
+                        val value = this[row, column] - this[pivotRow, column] * factor
+                        this[row, column] =  value
+                    }
+                }
+            }
+            if (reducedEchelonForm) {
+                val pivotDivisor = this[pivotRow, pivotColumn]
+                this[pivotRow, pivotColumn] = 1.0
+                for (column in pivotColumn + 1 until columns) {
+                    val value = this[pivotRow, column] / pivotDivisor
+                    set(pivotRow, column, value)
+                }
+                for (row in 0 until pivotRow) {
+                    val factor = this[row, pivotColumn]
+                    this[row, pivotColumn] = 0.0
+                    for (column in pivotColumn + 1 until columns) {
+                        val value =
+                            this[row, column] - this[pivotRow, column] * factor
+                        this[row, column] = value
+                    }
+                }
+            }
+            pivotColumn++
+            pivotRow++
+        }
+    }
+
+    fun swapRows(row1: Int, row2: Int) {
+        checkRow(this, "row1", row1)
+        checkRow(this, "row2", row2)
+
+        if (row1 == row2) {
+            return
+        }
+        for (column in 0 until columns) {
+            val tmp = this[row1, column]
+            this[row1, column] = this[row2, column]
+            this[row2, column] = tmp
+        }
+    }
+
+    fun swapColumns(column1: Int, column2: Int) {
+        checkColumn(this, "column1", column1)
+        checkColumn(this, "column2", column2)
+
+        if (column1 == column2) {
+            return
+        }
+        for (row in 0 until columns) {
+            val tmp = this[row, column1]
+            this[row, column1] = this[row, column2]
+            this[row, column2] = tmp
+        }
+    }
+
+    fun identity(size: Int): Matrix {
+        val m = create(size, size)
+        for (i in 0 until size) {
+            m[i, i] = 1.0;
+        }
+        return m;
     }
 
     fun copy(): Matrix {
