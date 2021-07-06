@@ -99,9 +99,6 @@ class ScriptV0_1 : Script(0.1) {
     }
 
     fun help() {
-        println("---")
-        println()
-
         println("## Script: $name")
         println()
 
@@ -203,6 +200,8 @@ class ScriptV0_1 : Script(0.1) {
                 println()
             }
         }
+
+        println("---")
         println()
     }
 
@@ -291,6 +290,12 @@ class ScriptArguments {
 
     fun image(name: String, initializer: ScriptImageArg.() -> Unit) =
         arguments.add(ScriptImageArg().apply { this.name = name }.apply(initializer))
+
+    fun optionalFile(initializer: ScriptFileArg.() -> Unit) =
+        arguments.add(ScriptFileArg().apply(initializer))
+
+    fun optionalFile(name: String, initializer: ScriptOptionalFileArg.() -> Unit) =
+        arguments.add(ScriptOptionalFileArg().apply { this.name = name }.apply(initializer))
 
     fun optionalImage(initializer: ScriptImageArg.() -> Unit) =
         arguments.add(ScriptImageArg().apply(initializer))
