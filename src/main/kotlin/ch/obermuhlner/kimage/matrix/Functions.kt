@@ -6,6 +6,12 @@ import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.sqrt
 
+fun Matrix.getPixel(x: Int, y: Int) = this[y, x]
+
+fun Matrix.setPixel(x: Int, y: Int, value: Double) {
+    this[y, x] = value
+}
+
 fun Matrix.contentToString(multiline: Boolean = false): String {
     val str = StringBuilder()
 
