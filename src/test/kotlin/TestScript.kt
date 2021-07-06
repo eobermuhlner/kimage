@@ -5,8 +5,13 @@ import ch.obermuhlner.kimage.huge.HugeFloatArray
 import ch.obermuhlner.kimage.image.*
 import ch.obermuhlner.kimage.io.*
 import ch.obermuhlner.kimage.math.*
+import ch.obermuhlner.kimage.matrix.FloatMatrix
+import ch.obermuhlner.kimage.matrix.Matrix
+import ch.obermuhlner.kimage.matrix.getPixel
 
 import java.io.*
+import java.nio.file.FileSystems
+import java.nio.file.Path
 import java.util.*
 import kotlin.math.*
 
@@ -28,7 +33,12 @@ object TestScript {
         //runScript(scriptColorStretch(), "images/align/output_orion1.png")
         //runScript(scriptCalibrate())
         //runScript(scriptHDR(), mapOf(), *alignedOrionImages)
-        runScript(scriptHDR(), mapOf(), *hdrImages)
+        //runScript(scriptHDR(), mapOf(), *hdrImages)
+        //runScript(scriptCalibrate(), mapOf("biasDir" to "images/align"))
+        //runScript(scriptCalibrate(), mapOf("biasDir" to "images/align"))
+
+        //runScript(scriptRemoveVignette(), mapOf(), "images/flat_large.tif")
+        runScript(scriptRemoveVignette(), mapOf(), "images/calibrate/light/IMG_6800.TIF")
 
     }
 
@@ -835,22 +845,107 @@ object TestScript {
         kimage(0.1) {
             name = "calibrate"
             description = """
-                Calibrates bias/dark/flat/darkflat/light images.
+                Calibrates images using bias/dark/flat/darkflat images.
+                
+                The different calibration files are optional, specify only the calibration image you have.
+                
+                ### Creating Calibration Images
+                
+                Create about 20-50 images of each calibration image type.
+                
+                - `bias` images 
+                  - camera with lens cap on
+                  - same ISO as for real pictures
+                  - fastest exposure time
+                - `flat` images
+                  - camera against homogeneous light source (e.g. t-shirt over lens against sky)
+                  - same objective + focus as for real pictures
+                  - same aperture as for real pictures
+                  - set exposure time so that histogram shows most pixels at ~50%
+                - `darkflat` images
+                  - camera with lens cap on
+                  - same objective + focus as for real pictures
+                  - same aperture as for real pictures
+                  - same ISO as for `flat` images
+                  - same exposure time as for `flat` images
+                - `dark` images
+                  - camera with lens cap on
+                  - same objective + focus as for real pictures
+                  - same aperture as for real pictures
+                  - same ISO as for real pictures
+                  - same exposure time as for real pictures
+                  - same temperature as for real pictures
+                  - (usually take the dark pictures immediately after taking the real pictures)
+                
+                Stack the `bias` images with:
+                
+                    kimage stack --arg method=median bias*.TIF
+                The output will be your master `bias` image - rename it accordingly.
+                
+                Calibrate all other images with the `bias` images and stack them.
+                
+                For example the `flat` images:
+                
+                    kimage calibrate --arg bias=master_bias.TIF flat*.TIF
+                    kimage stack --arg method=median calibrate_flat*.TIF
+                
+                Do this for the `flat`, `darkflat` and `dark` images.
+                The outputs will be your master `flat`, `darkflat` and `dark` images - rename them accordingly.
+                
+                Calibrate the real images:
+                
+                    kimage calibrate --arg bias=master_bias.TIF --arg flat=master_flat.TIF --arg darkflat=master_darkflat.TIF --arg dark=master_dark.TIF light*.TIF
+                    
+                See: http://deepskystacker.free.fr/english/theory.htm
                 """
             arguments {
+                optionalFile("biasDir") {
+                    description = "Directory containing bias images"
+                    isDirectory = true
+                }
+                string("biasFilePattern") {
+                    default = "*.{tif,tiff,png,jpg,jpeg}"
+                }
                 optionalImage("bias") {
+                    description = """
+                The `bias` master calibration image.
+                
+                This argument is optional.
+                If no `bias` image is specified it will not be used in the calibration process.
+                """
                 }
                 optionalImage("dark") {
+                    description = """
+                The `dark` master calibration image.
+                
+                This argument is optional.
+                If no `dark` image is specified it will not be used in the calibration process.
+                """
                 }
                 optionalImage("flat") {
+                    description = """
+                The `flat` master calibration image.
+                
+                This argument is optional.
+                If no `flat` image is specified it will not be used in the calibration process.
+                """
                 }
                 optionalImage("darkflat") {
+                    description = """
+                The `darkflat` master calibration image.
+                
+                This argument is optional.
+                If no `flat` image is specified it will not be used in the calibration process.
+                """
                 }
             }
 
             multi {
                 println("Calibrate")
                 println()
+
+                val biasDir: Optional<File> by arguments
+                val biasFilePattern: String by arguments
 
                 var bias: Optional<Image> by arguments
                 var dark: Optional<Image> by arguments
@@ -859,11 +954,25 @@ object TestScript {
                 val applyBiasOnCalibration = false
 
                 println("Arguments:")
+                println("  biasDir = $biasDir")
+                println("  biasFilePattern = $biasFilePattern")
                 println("  bias = $bias")
                 println("  dark = $dark")
                 println("  flat = $flat")
                 println("  darkflat = $darkflat")
                 println()
+
+                if (biasDir.isPresent) {
+                    val biasFilePatternMatcher = FileSystems.getDefault().getPathMatcher("glob:$biasFilePattern")
+
+                    val biasFiles = biasDir.get().listFiles { f ->
+                        biasFilePatternMatcher.matches(Path.of(f.name))
+                    }
+
+                    for (biasFile in biasFiles) {
+                        val biasImage = ImageReader.read(biasFile)
+                    }
+                }
 
                 if (applyBiasOnCalibration && bias.isPresent) {
                     if (dark.isPresent) {
@@ -897,6 +1006,91 @@ object TestScript {
 
                     ImageWriter.write(light, inputFile.prefixName("calibrated_"))
                 }
+
+                null
+            }
+        }
+
+    fun scriptRemoveVignette(): Script =
+        kimage(0.1) {
+            name = "remove-vignette"
+            description = """
+                Removes the background from the input image by subtracting a gradient calculated from the color of fix points.
+                
+                This script is useful for astrophotography if the fix points are chosen to represent the background.
+                
+                Use the --debug option to save intermediate images for manual analysis.
+                """
+            arguments {
+                double("removePercent") {
+                    description = """
+                        The percentage of the calculated background that will be removed.
+                        """
+                    default = 100.0
+                }
+                int("gridSize") {
+                    description = """
+                        The size of the grid in the x and y axis.
+                        The number of grid points is the square of the `gridSize`.
+                        """
+                    default = 5
+                }
+                double("kappa") {
+                    description = """
+                        The kappa factor is used in sigma-clipping of the grid to ignore grid points that do not contain enough background.
+                        """
+                    default = 0.5
+                }
+            }
+            single {
+                val removePercent: Double by arguments
+                val gridSize: Int by arguments
+                val kappa: Double by arguments
+
+                println("Arguments:")
+                println("  removePercent = $removePercent%")
+                println("  gridSize = $gridSize")
+                println("  kappa = $kappa")
+                println()
+
+                val centerX = inputImage.width / 2
+                val centerY = inputImage.height / 2
+
+                val calculatedMaxDistance = centerX + centerY // TODO calculate better
+                val matrix = inputImage[Channel.Luminance]
+                val distanceValues = Array<MutableList<Float>>(calculatedMaxDistance) { mutableListOf() }
+                var maxDistance = 0
+                for (y in 0 until inputImage.height) {
+                    for (x in 0 until inputImage.width) {
+                        val value = matrix.getPixel(x, y)
+                        val dx = (centerX-x).toDouble()
+                        val dy = (centerY-y).toDouble()
+                        val distance = sqrt(dx*dx + dy*dy).toInt()
+                        distanceValues[distance].add(value.toFloat())
+                        maxDistance = max(maxDistance, distance)
+                    }
+                }
+
+                for (i in 0 until maxDistance) {
+                    val value = distanceValues[i].toFloatArray().sigmaWinsorize(2f).medianInplace()
+                    println("  $i, $value")
+                }
+
+                val n = 3
+                val mx = Matrix.matrixOf(
+                    n, 2,
+                    1.0, 7.0,
+                    1.0, 5.0,
+                    1.0, 2.5
+                )
+                val my = Matrix.matrixOf(
+                    n, 1,
+                    3.5,
+                    2.0,
+                    1.5
+                )
+                val w = (mx.transpose() * mx).invert() * mx.transpose() * my
+
 
                 null
             }

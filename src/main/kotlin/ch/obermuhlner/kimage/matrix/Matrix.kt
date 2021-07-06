@@ -25,7 +25,7 @@ interface Matrix : Iterable<Double> {
     }
 
     fun set(other: Matrix, offsetRow: Int = 0, offsetColumn: Int = 0) {
-        checkSameSize(this, other)
+        //checkSameSize(this, other)
 
         for (row in 0 until rows) {
             for (column in 0 until columns) {
@@ -92,7 +92,7 @@ interface Matrix : Iterable<Double> {
     operator fun times(other: Matrix): Matrix {
         checkColumnsOtherRows(this, other)
 
-        val m = create()
+        val m = create(this.rows, other.columns)
         for (row in 0 until rows) {
             for (otherColumn in 0 until other.columns) {
                 var sum = 0.0
