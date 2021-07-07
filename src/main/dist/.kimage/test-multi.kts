@@ -58,6 +58,7 @@ kimage(0.1) {
             description = "Example argument for a list of integer values."
             min = 1
             default = listOf(1, 2, 3)
+
             int {
                 description = "A single integer value"
                 min = 0
@@ -67,6 +68,7 @@ kimage(0.1) {
         optionalList("optionalListOfIntArg") {
             description = "Example argument for an optional list of integer values."
             min = 1
+
             int {
                 description = "A single integer value"
                 min = 0
@@ -75,16 +77,25 @@ kimage(0.1) {
         }
         record("recordArg") {
             description = "Example argument for a record containing different values."
-            default = mapOf(
-                "recordInt" to 1,
-                "recordString" to "hello",
-                "recordDouble" to 3.14)
 
             int("recordInt") {
+                default = 2
             }
-            int("recordString") {
+            string("recordString") {
+                default = "hello"
             }
-            int("recordDouble") {
+            double("recordDouble") {
+                default = 3.14
+            }
+        }
+        optionalRecord("optionalRecordArg") {
+            description = "Example argument for an optional record containing different values."
+
+            int("optionalRecordInt") {
+            }
+            string("optionalRecordString") {
+            }
+            double("optionalRecordDouble") {
             }
         }
     }
@@ -97,12 +108,16 @@ kimage(0.1) {
         val stringArg: String by arguments
         val allowedStringArg: String by arguments
         val regexStringArg: String by arguments
+
         val listOfIntArg: List<Int> by arguments
         val optionalListOfIntArg: Optional<List<Int>> by arguments
+
         val recordArg: Map<String, Any> by arguments
         val recordInt: Int by recordArg
         val recordString: String by recordArg
         val recordDouble: Double by recordArg
+
+        val optionalRecordArg: Optional<Map<String, Any>> by arguments
 
         println("Raw Arguments:")
         for (rawArgument in rawArguments) {

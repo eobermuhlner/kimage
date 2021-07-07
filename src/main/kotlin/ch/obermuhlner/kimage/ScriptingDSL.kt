@@ -240,12 +240,6 @@ class ScriptV0_1 : Script(0.1) {
                 for (recordElement in arg.arguments) {
                     printArgumentType(recordElement, level+1)
                 }
-                if (arg.default != null) {
-                    println("${indent}- Default values:")
-                    for (recordArgument in arg.arguments) {
-                        println("${indent}  - `${recordArgument.name}` = ${arg.default!![recordArgument.name]}")
-                    }
-                }
             }
         }
         println()
@@ -741,17 +735,25 @@ class ScriptOptionalListArg(arguments: MutableList<ScriptArg> = mutableListOf())
 
 @KotlinDSL
 open class ScriptRecordArg(override val arguments: MutableList<ScriptArg> = mutableListOf(), mandatory: Boolean = true) : ScriptArg("record", mandatory), ScriptNamedTypes {
-    var default: Map<String, Any>? = null
-
     override val hasDefault: Boolean
-        get() = default != null
+        get() {
+            for (argument in arguments) {
+                if (!argument.hasDefault) {
+                    return false
+                }
+            }
+            return true
+        }
 
     fun toRecordValue(stringValue: String?): Map<String, Any> {
         if (stringValue == null) {
-            default?.let {
-                return it;
+            val valueMap = mutableMapOf<String, Any>()
+
+            for (argument in arguments) {
+                valueMap[argument.name] = processArgument(argument, null)
             }
-            throw ScriptArgumentException("Argument $name is mandatory")
+
+            return valueMap
         }
 
         val valueMap = mutableMapOf<String, Any>()
@@ -772,11 +774,10 @@ open class ScriptRecordArg(override val arguments: MutableList<ScriptArg> = muta
 class ScriptOptionalRecordArg(arguments: MutableList<ScriptArg> = mutableListOf()) : ScriptRecordArg(arguments, false) {
     fun toOptionalRecordValue(stringValue: String?): Optional<Map<String, Any>> {
         if (stringValue == null) {
-            if (default == null) {
-                return Optional.empty()
-            }
-            default?.let {
-                return Optional.of(it)
+            return try {
+                Optional.of(toRecordValue(null))
+            } catch (ex: ScriptArgumentException) {
+                Optional.empty()
             }
         }
         return Optional.of(toRecordValue(stringValue))
@@ -910,8 +911,6 @@ private fun processArgument(scriptArgument: ScriptArg, rawArgument: String?): An
             return scriptArgument.toRecordValue(rawArgument)
         }
     }
-
-    throw IllegalArgumentException("Unknown argument: ${scriptArgument.name}")
 }
 
 fun kimage(version: Double, initializer: ScriptV0_1.() -> Unit): Script {
