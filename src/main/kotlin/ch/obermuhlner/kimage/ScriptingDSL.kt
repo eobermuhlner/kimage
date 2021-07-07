@@ -147,6 +147,10 @@ class ScriptV0_1 : Script(0.1) {
     private fun printArgumentType(arg: ScriptArg, level: Int) {
         val indent = "  ".repeat(level)
 
+        if (level > 0 && arg.name.isNotBlank()) {
+            println("${indent}- Name: `${arg.name}`")
+        }
+
         println("${indent}- Type: ${arg.type}")
         if (level == 0) {
             if (arg.mandatory && !arg.hasDefault) {
@@ -155,21 +159,6 @@ class ScriptV0_1 : Script(0.1) {
         }
 
         when (arg) {
-            is ScriptListArg -> {
-                if (arg.min != null) {
-                    println("${indent}- Minimum length: ${arg.min}")
-                }
-                if (arg.max != null) {
-                    println("${indent}- Maximum length: ${arg.max}")
-                }
-                if (arg.default != null) {
-                    println("${indent}- Default values: ${arg.default}")
-                }
-                for (listElement in arg.arguments) {
-                    println("${indent}- List Elements:")
-                    printArgumentType(listElement, level+1)
-                }
-            }
             is ScriptIntArg -> {
                 if (arg.min != null) {
                     println("${indent}- Minimum value: ${arg.min}")
@@ -229,6 +218,33 @@ class ScriptV0_1 : Script(0.1) {
             is ScriptImageArg -> {
                 if (arg.default != null) {
                     println("${indent}- Default path: `${arg.default}`")
+                }
+            }
+            is ScriptListArg -> {
+                println("${indent}- List Elements:")
+                for (listElement in arg.arguments) {
+                    printArgumentType(listElement, level+1)
+                }
+                if (arg.min != null) {
+                    println("${indent}- Minimum length: ${arg.min}")
+                }
+                if (arg.max != null) {
+                    println("${indent}- Maximum length: ${arg.max}")
+                }
+                if (arg.default != null) {
+                    println("${indent}- Default values: ${arg.default}")
+                }
+            }
+            is ScriptRecordArg -> {
+                println("${indent}- Record Elements:")
+                for (recordElement in arg.arguments) {
+                    printArgumentType(recordElement, level+1)
+                }
+                if (arg.default != null) {
+                    println("${indent}- Default values:")
+                    for (recordArgument in arg.arguments) {
+                        println("${indent}  - `${recordArgument.name}` = ${arg.default!![recordArgument.name]}")
+                    }
                 }
             }
         }
