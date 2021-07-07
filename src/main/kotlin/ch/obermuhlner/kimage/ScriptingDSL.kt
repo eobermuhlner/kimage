@@ -129,7 +129,7 @@ class ScriptV0_1 : Script(0.1) {
         }
 
         for (arg in scriptArguments.arguments) {
-            println("### Argument: ${arg.name}")
+            println("#### Argument: ${arg.name}")
             println()
             println("- Type: ${arg.type}")
             if (arg.mandatory && !arg.hasDefault) {
