@@ -280,18 +280,6 @@ class ScriptV0_1 : Script(0.1) {
 interface ScriptTypes {
     val arguments: MutableList<ScriptArg>
 
-    fun list(initializer: ScriptListArg.() -> Unit) =
-        arguments.add(ScriptListArg().apply(initializer))
-
-    fun list(name: String, initializer: ScriptListArg.() -> Unit) =
-        arguments.add(ScriptListArg().apply { this.name = name }.apply(initializer))
-
-    fun optionalList(initializer: ScriptOptionalListArg.() -> Unit) =
-        arguments.add(ScriptOptionalListArg().apply(initializer))
-
-    fun optionalList(name: String, initializer: ScriptOptionalListArg.() -> Unit) =
-        arguments.add(ScriptOptionalListArg().apply { this.name = name }.apply(initializer))
-
     fun int(initializer: ScriptIntArg.() -> Unit) =
         arguments.add(ScriptIntArg().apply(initializer))
 
@@ -351,6 +339,30 @@ interface ScriptTypes {
 
     fun optionalImage(name: String, initializer: ScriptOptionalImageArg.() -> Unit) =
         arguments.add(ScriptOptionalImageArg().apply { this.name = name }.apply(initializer))
+
+    fun list(initializer: ScriptListArg.() -> Unit) =
+        arguments.add(ScriptListArg().apply(initializer))
+
+    fun list(name: String, initializer: ScriptListArg.() -> Unit) =
+        arguments.add(ScriptListArg().apply { this.name = name }.apply(initializer))
+
+    fun optionalList(initializer: ScriptOptionalListArg.() -> Unit) =
+        arguments.add(ScriptOptionalListArg().apply(initializer))
+
+    fun optionalList(name: String, initializer: ScriptOptionalListArg.() -> Unit) =
+        arguments.add(ScriptOptionalListArg().apply { this.name = name }.apply(initializer))
+
+    fun record(initializer: ScriptRecordArg.() -> Unit) =
+        arguments.add(ScriptRecordArg().apply(initializer))
+
+    fun record(name: String, initializer: ScriptRecordArg.() -> Unit) =
+        arguments.add(ScriptRecordArg().apply { this.name = name }.apply(initializer))
+
+    fun optionalRecord(initializer: ScriptOptionalRecordArg.() -> Unit) =
+        arguments.add(ScriptOptionalRecordArg().apply(initializer))
+
+    fun optionalRecord(name: String, initializer: ScriptOptionalRecordArg.() -> Unit) =
+        arguments.add(ScriptOptionalRecordArg().apply { this.name = name }.apply(initializer))
 }
 
 @KotlinDSL
@@ -363,53 +375,6 @@ sealed class ScriptArg(val type: String, val mandatory: Boolean) {
     var description = ""
 
     abstract val hasDefault: Boolean
-}
-
-@KotlinDSL
-open class ScriptListArg(override val arguments: MutableList<ScriptArg> = mutableListOf(), mandatory: Boolean = true) : ScriptArg("list", mandatory), ScriptTypes {
-    var min: Int? = null
-    var max: Int? = null
-    var default: List<Any>? = null
-
-    override val hasDefault: Boolean
-        get() = default != null
-
-    fun toListValue(stringValue: String?): List<Any> {
-        if (arguments.isEmpty()) {
-            throw ScriptArgumentException("Argument $name is a list, but the element type is not defined")
-        }
-        if (arguments.size > 1) {
-            throw ScriptArgumentException("Argument $name is a list, but only one element type is allowed")
-        }
-        if (stringValue == null) {
-            default?.let {
-                return it;
-            }
-            throw ScriptArgumentException("Argument $name is mandatory")
-        }
-
-        val values = mutableListOf<Any>()
-        val scriptArg = arguments[0]
-        for (stringElement in stringValue.splitToSequence(',')) {
-            values.add(processArgument(scriptArg, stringElement))
-        }
-        return values
-    }
-}
-
-@KotlinDSL
-class ScriptOptionalListArg(arguments: MutableList<ScriptArg> = mutableListOf()) : ScriptListArg(arguments, false) {
-    fun toOptionalListValue(stringValue: String?): Optional<List<Any>> {
-        if (stringValue == null) {
-            if (default == null) {
-                return Optional.empty()
-            }
-            default?.let {
-                return Optional.of(it)
-            }
-        }
-        return Optional.of(toListValue(stringValue))
-    }
 }
 
 @KotlinDSL
@@ -428,18 +393,22 @@ open class ScriptIntArg(mandatory: Boolean = true) : ScriptArg("int", mandatory)
             }
             throw ScriptArgumentException("Argument $name is mandatory")
         }
-        val value = stringValue.toInt()
-        min?.let {
-            if (value < it) {
-                throw ScriptArgumentException("Argument $name must be >= $it but is $value")
+        try {
+            val value = stringValue.toInt()
+            min?.let {
+                if (value < it) {
+                    throw ScriptArgumentException("Argument $name must be >= $it but is $value")
+                }
             }
-        }
-        max?.let {
-            if (value > it) {
-                throw ScriptArgumentException("Argument $name must be <= $it but is $value")
+            max?.let {
+                if (value > it) {
+                    throw ScriptArgumentException("Argument $name must be <= $it but is $value")
+                }
             }
+            return value
+        } catch (ex: NumberFormatException) {
+            throw ScriptArgumentException("Argument $name must be an integer value, but is '$stringValue'")
         }
-        return value
     }
 }
 
@@ -474,18 +443,22 @@ open class ScriptDoubleArg(mandatory: Boolean = true) : ScriptArg("double", mand
             }
             throw ScriptArgumentException("Argument $name is mandatory")
         }
-        val value = stringValue.toDouble()
-        min?.let {
-            if (value < it) {
-                throw ScriptArgumentException("Argument $name must be >= $it but is $value")
+        try {
+            val value = stringValue.toDouble()
+            min?.let {
+                if (value < it) {
+                    throw ScriptArgumentException("Argument $name must be >= $it but is $value")
+                }
             }
-        }
-        max?.let {
-            if (value > it) {
-                throw ScriptArgumentException("Argument $name must be <= $it but is $value")
+            max?.let {
+                if (value > it) {
+                    throw ScriptArgumentException("Argument $name must be <= $it but is $value")
+                }
             }
+            return value
+        } catch (ex: NumberFormatException) {
+            throw ScriptArgumentException("Argument $name must be an integer value, but is '$stringValue'")
         }
-        return value
     }
 }
 
@@ -685,6 +658,110 @@ class ScriptOptionalImageArg() : ScriptImageArg(false) {
     }
 }
 
+@KotlinDSL
+open class ScriptListArg(override val arguments: MutableList<ScriptArg> = mutableListOf(), mandatory: Boolean = true) : ScriptArg("list", mandatory), ScriptTypes {
+    var min: Int? = null
+    var max: Int? = null
+    var default: List<Any>? = null
+
+    override val hasDefault: Boolean
+        get() = default != null
+
+    fun toListValue(stringValue: String?): List<Any> {
+        if (arguments.isEmpty()) {
+            throw ScriptArgumentException("Argument $name is a list, but the element type is not defined")
+        }
+        if (arguments.size > 1) {
+            throw ScriptArgumentException("Argument $name is a list, but only one element type is allowed")
+        }
+        if (stringValue == null) {
+            default?.let {
+                return it;
+            }
+            throw ScriptArgumentException("Argument $name is mandatory")
+        }
+
+        val values = mutableListOf<Any>()
+        val scriptArg = arguments[0]
+        val stringElements = stringValue.split(',')
+
+        min?.let {
+            if (stringElements.size < it) {
+                throw ScriptArgumentException("Argument $name must be a list of minimum length $it: ${stringElements.size} elements found")
+            }
+        }
+        max?.let {
+            if (stringElements.size > it) {
+                throw ScriptArgumentException("Argument $name must be a list of maximum length $it: ${stringElements.size} elements found")
+            }
+        }
+
+        for (stringElement in stringElements) {
+            values.add(processArgument(scriptArg, stringElement))
+        }
+        return values
+    }
+}
+
+@KotlinDSL
+class ScriptOptionalListArg(arguments: MutableList<ScriptArg> = mutableListOf()) : ScriptListArg(arguments, false) {
+    fun toOptionalListValue(stringValue: String?): Optional<List<Any>> {
+        if (stringValue == null) {
+            if (default == null) {
+                return Optional.empty()
+            }
+            default?.let {
+                return Optional.of(it)
+            }
+        }
+        return Optional.of(toListValue(stringValue))
+    }
+}
+
+@KotlinDSL
+open class ScriptRecordArg(override val arguments: MutableList<ScriptArg> = mutableListOf(), mandatory: Boolean = true) : ScriptArg("record", mandatory), ScriptTypes {
+    var default: Map<String, Any>? = null
+
+    override val hasDefault: Boolean
+        get() = default != null
+
+    fun toRecordValue(stringValue: String?): Map<String, Any> {
+        if (stringValue == null) {
+            default?.let {
+                return it;
+            }
+            throw ScriptArgumentException("Argument $name is mandatory")
+        }
+
+        val valueMap = mutableMapOf<String, Any>()
+        val stringElements = stringValue.split(',')
+
+        if (stringElements.size != arguments.size) {
+            throw ScriptArgumentException("Argument $name is a record of ${arguments.size} elements: ${stringElements.size} elements found")
+        }
+
+        for (i in stringElements.indices) {
+            valueMap[arguments[i].name] = processArgument(arguments[i], stringElements[i])
+        }
+        return valueMap
+    }
+}
+
+@KotlinDSL
+class ScriptOptionalRecordArg(arguments: MutableList<ScriptArg> = mutableListOf()) : ScriptRecordArg(arguments, false) {
+    fun toOptionalRecordValue(stringValue: String?): Optional<Map<String, Any>> {
+        if (stringValue == null) {
+            if (default == null) {
+                return Optional.empty()
+            }
+            default?.let {
+                return Optional.of(it)
+            }
+        }
+        return Optional.of(toRecordValue(stringValue))
+    }
+}
+
 class ScriptArgumentException(message: String): RuntimeException(message)
 
 sealed class AbstractScript {
@@ -763,12 +840,6 @@ private fun processArguments(scriptArguments: List<ScriptArg>, rawArguments: Map
 
 private fun processArgument(scriptArgument: ScriptArg, rawArgument: String?): Any {
     when (scriptArgument) {
-        is ScriptOptionalListArg -> {
-            return scriptArgument.toOptionalListValue(rawArgument)
-        }
-        is ScriptListArg -> {
-            return scriptArgument.toListValue(rawArgument)
-        }
         is ScriptOptionalIntArg -> {
             return scriptArgument.toOptionalIntValue(rawArgument)
         }
@@ -804,6 +875,18 @@ private fun processArgument(scriptArgument: ScriptArg, rawArgument: String?): An
         }
         is ScriptImageArg -> {
             return scriptArgument.toImageValue(rawArgument)
+        }
+        is ScriptOptionalListArg -> {
+            return scriptArgument.toOptionalListValue(rawArgument)
+        }
+        is ScriptListArg -> {
+            return scriptArgument.toListValue(rawArgument)
+        }
+        is ScriptOptionalRecordArg -> {
+            return scriptArgument.toOptionalRecordValue(rawArgument)
+        }
+        is ScriptRecordArg -> {
+            return scriptArgument.toRecordValue(rawArgument)
         }
     }
 
