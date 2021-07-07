@@ -5,16 +5,17 @@ import ch.obermuhlner.kimage.huge.*
 import ch.obermuhlner.kimage.image.*
 import ch.obermuhlner.kimage.io.*
 import ch.obermuhlner.kimage.math.*
+import ch.obermuhlner.kimage.matrix.*
 
 import java.io.*
+import java.nio.file.*
 import java.util.*
 import kotlin.math.*
 
 kimage(0.1) {
     name = "align"
+    title = "Align multiple images"
     description = """
-                Align multiple images.
-                
                 The base image is the first image argument.
                 The remaining image arguments are aligned to the base image by searching for a matching feature.
                 
@@ -77,8 +78,6 @@ kimage(0.1) {
     }
 
     multi {
-        println("inputFiles : $inputFiles")
-
         val baseInputFile = inputFiles[0]
         println("Loading base image: $baseInputFile")
         val baseImage = ImageReader.read(baseInputFile)
@@ -91,10 +90,10 @@ kimage(0.1) {
 
         var checkRadius: Optional<Int> by arguments
         var searchRadius: Optional<Int> by arguments
-        if (checkRadius.isEmpty) {
+        if (!checkRadius.isPresent) {
             checkRadius = Optional.of(defaultCheckRadius)
         }
-        if (searchRadius.isEmpty) {
+        if (!searchRadius.isPresent) {
             searchRadius = Optional.of(defaultSearchRadius)
         }
 
@@ -103,10 +102,10 @@ kimage(0.1) {
 
         var centerX: Optional<Int> by arguments
         var centerY: Optional<Int> by arguments
-        if (centerX.isEmpty) {
+        if (!centerX.isPresent) {
             centerX = Optional.of(autoCenterX)
         }
-        if (centerY.isEmpty) {
+        if (!centerY.isPresent) {
             centerY = Optional.of(autoCenterY)
         }
 
@@ -115,14 +114,11 @@ kimage(0.1) {
         val saveBad: Boolean by arguments
         val prefixBad: String by arguments
 
-        println("Arguments:")
+        println("Arguments (calculated from input):")
         println("  checkRadius = $checkRadius")
         println("  searchRadius = $searchRadius")
         println("  centerX = $centerX")
         println("  centerY = $centerY")
-        println("  prefix = $prefix")
-        println("  saveBad = $saveBad")
-        println("  prefixBad = $prefixBad")
         println()
 
         if (debugMode) {

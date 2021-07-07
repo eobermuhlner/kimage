@@ -9,8 +9,9 @@ import kotlin.math.*
 
 kimage(0.1) {
     name = "test-single"
+    title = "Test script to show how to handle single images in a kimage script"
     description = """
-                Test script to show how to handle single images in a kimage script.
+                Example script as starting point for developers.
                 """
     arguments {
         int("intArg") {
@@ -68,16 +69,6 @@ kimage(0.1) {
             val value: String = rawArgument.value
             println("  Argument: ${key} = ${value}")
         }
-        println()
-
-        println("Arguments:")
-        println("  intArg = $intArg")
-        println("  optionalIntArg = $optionalIntArg")
-        println("  doubleArg = $doubleArg")
-        println("  booleanArg = $booleanArg")
-        println("  stringArg = $stringArg")
-        println("  allowedStringArg = $allowedStringArg")
-        println("  regexStringArg = $regexStringArg")
         println()
 
         println("inputFile  = $inputFile")

@@ -11,8 +11,9 @@ import kotlin.math.*
 
 kimage(0.1) {
     name = "histogram"
+    title = "Create a histogram image"
     description = """
-                Creates a histogram image.
+                The values of every channel (RGB) are counted and a histogram is created for each channel.
                 """
     arguments {
         int("width") {
@@ -30,16 +31,8 @@ kimage(0.1) {
     }
 
     single {
-        println("Create a histogram of an image.")
-        println()
-
         val width: Int by arguments
         val height: Int by arguments
-
-        println("Arguments:")
-        println("  width = $width")
-        println("  height = $height")
-        println()
 
         inputImage.histogramImage(width, height)
     }

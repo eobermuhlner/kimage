@@ -37,8 +37,9 @@ fun sigmaClipPointGrid(image: Image, grid: List<Pair<Int, Int>>, kappa: Double =
 
 kimage(0.1) {
     name = "remove-background-gradient"
+    title = "Remove the background by subtracting an interpolated gradient"
     description = """
-                Removes the background from the input image by subtracting a gradient calculated from the color of fix points.
+                Calculates an interpolated background image from several fix points and removes it.
                 
                 This script is useful for astrophotography if the fix points are chosen to represent the background.
                 
@@ -69,12 +70,6 @@ kimage(0.1) {
         val removePercent: Double by arguments
         val gridSize: Int by arguments
         val kappa: Double by arguments
-
-        println("Arguments:")
-        println("  removePercent = $removePercent%")
-        println("  gridSize = $gridSize")
-        println("  kappa = $kappa")
-        println()
 
         val grid = pointGrid(inputImage.width, inputImage.height, gridSize, gridSize)
         val clippedGrid = sigmaClipPointGrid(inputImage, grid, kappa)

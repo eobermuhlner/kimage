@@ -9,8 +9,9 @@ import kotlin.math.*
 
 kimage(0.1) {
     name = "color-stretch"
+    title = "Stretch the colors of an image to fill the entire value range"
     description = """
-                Stretches the colors of an image to fill the entire value range.
+                The colors are first brightened and then a curve is applied.
                 """
     arguments {
         double("brightness") {
@@ -46,9 +47,6 @@ kimage(0.1) {
     }
 
     single {
-        println("Color stretching")
-        println()
-
         val brightness: Double by arguments
         val curve: String by arguments
         val custom1X: Double by arguments
@@ -58,23 +56,6 @@ kimage(0.1) {
 
         val histogramWidth = 256
         val histogramHeight = 150
-
-        println("Arguments:")
-        println("  brightness = $brightness")
-        println("  curve = $curve")
-        when (curve) {
-            "custom1" -> {
-                println("  custom1X = $custom1X")
-                println("  custom1Y = $custom1Y")
-            }
-            "custom2" -> {
-                println("  custom1X = $custom1X")
-                println("  custom1Y = $custom1Y")
-                println("  custom2X = $custom2X")
-                println("  custom2Y = $custom2Y")
-            }
-        }
-        println()
 
         val (power1, power2) = if (brightness < 1000.0) {
             Pair(brightness, 1.0)

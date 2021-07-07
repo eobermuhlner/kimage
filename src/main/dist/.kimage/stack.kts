@@ -11,22 +11,28 @@ import kotlin.math.*
 
 kimage(0.1) {
     name = "stack"
+    title = "Stack multiple image using one of several algorithms"
     description = """
-                Stacks multiple image using one of several algorithms.
+                After loading all images one of the following stacking methods is applied on the RGB channels:
+                
+                - `median` takes the median values of every pixel of each input image.
+                - `average` takes the average values of every pixel of each input image.
+                - `max` takes the maximum value of every pixel of each input image.
+                - `min` takes the minimum value of every pixel of each input image.
+                - `sigma-clip-median` removes outliers before using `median` on the remaining values.
+                - `sigma-clip-average` removes outliers before using `average` on the remaining values.
+                - `sigma-winsorize-median` replaces outliers with the nearest value in sigma range before using `median`.
+                - `sigma-winsorize-average` replaces outliers with the nearest value in sigma range before using `average`.
+                - `winsorized-sigma-clip-median` replaces outliers with the nearest value in sigma range before sigma-clipping and then using `median`.
+                - `winsorized-sigma-clip-average` replaces outliers with the nearest value in sigma range before sigma-clipping and then using `average`.
+                - `all` runs all of the available methods and produces an output image for each method.
+                        
+                All methods that use sigma-clipping print a histogram with the information how many input values where actually used to stack each output value. 
                 """
     arguments {
         string("method") {
             description = """
-                        Method used to calculate the stacked image.
-                        
-                        - `sigma-clip-median` removes outliers before using `median` on the remaining values.
-                        - `sigma-clip-average` removes outliers before using `average` on the remaining values.
-                        - `sigma-winsorize-median` replaces outliers with the nearest value in sigma range before using `median`.
-                        - `sigma-winsorize-average` replaces outliers with the nearest value in sigma range before using `average`.
-                        - `winsorized-sigma-clip-median` replaces outliers with the nearest value in sigma range before sigma-clipping and then using `median`.
-                        - `winsorized-sigma-clip-average` replaces outliers with the nearest value in sigma range before sigma-clipping and then using `average`.
-                        
-                        All methods that use sigma-clipping print a histogram with the information how many input values where actually used to stack each output value. 
+                        Method used to calculate the stacked image.                        
                         """
             allowed = listOf("median", "average", "max", "min", "sigma-clip-median", "sigma-clip-average", "sigma-winsorize-median", "sigma-winsorize-average", "winsorized-sigma-clip-median", "winsorized-sigma-clip-average", "all")
             default = "sigma-clip-median"
@@ -48,18 +54,9 @@ kimage(0.1) {
     }
 
     multi {
-        println("Stack multiple images")
-        println()
-
         val method: String by arguments
         val kappa: Double by arguments
         val iterations: Int by arguments
-
-        println("Arguments:")
-        println("  method = $method")
-        println("  kappa = $kappa")
-        println("  iterations = $iterations")
-        println()
 
         println("Loading image: ${inputFiles[0]}")
         var baseImage: Image = ImageReader.read(inputFiles[0])

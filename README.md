@@ -1,4 +1,5 @@
 # kimage
+
 Image processing using Kotlin scripts.
 
 `kimage` is several things at once:
@@ -46,7 +47,7 @@ Use the `--docu` option to get help on a single command:
 kimage stack-max --docu
 ```
 
-```markdown
+```
 ## Script: stack-max
 
     kimage [OPTIONS] stack-max
@@ -293,7 +294,7 @@ The following scripts are distributed together with the `kimage` application.
         [--arg prefixBad=STRING]
         [FILES]
 
-Align multiple images.
+### Align multiple images
 
 The base image is the first image argument.
 The remaining image arguments are aligned to the base image by searching for a matching feature.
@@ -366,7 +367,6 @@ Controls whether badly aligned images are saved.
 
 The prefix of the badly aligned output files.
 
-
 ---
 
 ## Script: calibrate
@@ -378,7 +378,7 @@ The prefix of the badly aligned output files.
         [--arg darkflat=IMAGE]
         [FILES]
 
-Calibrates images using bias/dark/flat/darkflat images.
+### Calibrate images using bias/dark/flat/darkflat images
 
 The different calibration files are optional, specify only the calibration image you have.
 
@@ -427,6 +427,8 @@ Calibrate the real images:
 
     kimage calibrate --arg bias=master_bias.TIF --arg flat=master_flat.TIF --arg darkflat=master_darkflat.TIF --arg dark=master_dark.TIF light*.TIF
 
+See: http://deepskystacker.free.fr/english/theory.htm
+
 ### Argument: bias
 
 - Type: image
@@ -463,7 +465,6 @@ The `darkflat` master calibration image.
 This argument is optional.
 If no `flat` image is specified it will not be used in the calibration process.
 
-
 ---
 
 ## Script: color-stretch
@@ -477,7 +478,9 @@ If no `flat` image is specified it will not be used in the calibration process.
         [--arg custom2Y=DOUBLE]
         [FILES]
 
-Stretches the colors of an image to fill the entire value range.
+### Stretch the colors of an image to fill the entire value range
+
+The colors are first brightened and then a curve is applied.
 
 ### Argument: brightness
 
@@ -532,17 +535,6 @@ The curve shape used to modify the contrast.
 - Type: double
 - Default value: 0.9
 
-
----
-
-## Script: convert
-
-    kimage [OPTIONS] convert
-        [FILES]
-
-Converts the image into another format.
-
-
 ---
 
 ## Script: delta
@@ -552,14 +544,14 @@ Converts the image into another format.
         [--arg channel=STRING]
         [FILES]
 
-Creates delta images between the first image and all other images.
+### Create delta images between the first image and all other images
 
 The output images show the pixel-wise difference between two images on a specific channel (default is `Luminance`).
 
 The difference is color coded:
-- black = no difference
-- blue  = pixel in the first image is brighter
-- red   = pixel in the first image is darker
+  - black = no difference
+  - blue  = pixel in the first image is brighter
+  - red   = pixel in the first image is darker
 
 The `factor` argument controls how much the differences are exaggerated.
 
@@ -585,7 +577,6 @@ Controls how much the differences are exaggerated.
 
 The channel used to calculate the difference between two images.
 
-
 ---
 
 ## Script: hdr
@@ -597,7 +588,9 @@ The channel used to calculate the difference between two images.
         [--arg exposureWeight=DOUBLE]
         [FILES]
 
-Stacks multiple images with different exposures into a single HDR image.
+### Stack multiple images with different exposures into a single HDR image
+
+Stacking of the pixels with the best exposure.
 
 ### Argument: saturationBlurRadius
 
@@ -619,7 +612,6 @@ Stacks multiple images with different exposures into a single HDR image.
 - Type: double
 - Default value: 1.0
 
-
 ---
 
 ## Script: histogram
@@ -629,7 +621,9 @@ Stacks multiple images with different exposures into a single HDR image.
         [--arg height=INT]
         [FILES]
 
-Creates a histogram image.
+### Create a histogram image
+
+The RGB channel values are counted and a histogram is created for each channel.
 
 ### Argument: width
 
@@ -645,7 +639,6 @@ The width of the histogram.
 
 The height of the histogram.
 
-
 ---
 
 ## Script: info
@@ -653,8 +646,7 @@ The height of the histogram.
     kimage [OPTIONS] info
         [FILES]
 
-Print info about images.
-
+### Print info about images
 
 ---
 
@@ -666,7 +658,9 @@ Print info about images.
         [--arg kappa=DOUBLE]
         [FILES]
 
-Removes the background from the input image by subtracting a gradient calculated from the color of fix points.
+### Remove the background by subtracting an interpolated gradient
+
+Calculates an interpolated background image from several fix points and removes it.
 
 This script is useful for astrophotography if the fix points are chosen to represent the background.
 
@@ -675,7 +669,7 @@ Use the --debug option to save intermediate images for manual analysis.
 ### Argument: removePercent
 
 - Type: double
-- Default value: 99.0
+- Default value: 100.0
 
 The percentage of the calculated background that will be removed.
 
@@ -694,7 +688,6 @@ The number of grid points is the square of the `gridSize`.
 
 The kappa factor is used in sigma-clipping of the grid to ignore grid points that do not contain enough background.
 
-
 ---
 
 ## Script: remove-background-median
@@ -707,7 +700,7 @@ The kappa factor is used in sigma-clipping of the grid to ignore grid points tha
         [--arg blurFilterSize=INT]
         [FILES]
 
-Removes the background from the input image by subtracting a blurred median of the input.
+### Remove the background by subtracting a blurred median-filtered version of the input
 
 This script is useful for astrophotography if the image contains mainly stars and not too much nebulas.
 
@@ -754,7 +747,6 @@ The size of the blur filter in pixels.
 If this value is 0 then the `blurFilterPercent` is used to calculate it.
 If the `blurFilterPercent` is 0.0 then the blur filter size is calculated automatically from the image size.
 
-
 ---
 
 ## Script: stack
@@ -765,7 +757,23 @@ If the `blurFilterPercent` is 0.0 then the blur filter size is calculated automa
         [--arg iterations=INT]
         [FILES]
 
-Stacks multiple image using one of several algorithms.
+### Stack multiple image using one of several algorithms
+
+After loading all images one of the following stacking methods is applied on the RGB channels:
+
+- `median` takes the median values of every pixel of each input image.
+- `average` takes the average values of every pixel of each input image.
+- `max` takes the maximum value of every pixel of each input image.
+- `min` takes the minimum value of every pixel of each input image.
+- `sigma-clip-median` removes outliers before using `median` on the remaining values.
+- `sigma-clip-average` removes outliers before using `average` on the remaining values.
+- `sigma-winsorize-median` replaces outliers with the nearest value in sigma range before using `median`.
+- `sigma-winsorize-average` replaces outliers with the nearest value in sigma range before using `average`.
+- `winsorized-sigma-clip-median` replaces outliers with the nearest value in sigma range before sigma-clipping and then using `median`.
+- `winsorized-sigma-clip-average` replaces outliers with the nearest value in sigma range before sigma-clipping and then using `average`.
+- `all` runs all of the available methods and produces an output image for each method.
+
+All methods that use sigma-clipping print a histogram with the information how many input values where actually used to stack each output value.
 
 ### Argument: method
 
@@ -786,15 +794,6 @@ Stacks multiple image using one of several algorithms.
 
 Method used to calculate the stacked image.
 
-- `sigma-clip-median` removes outliers before using `median` on the remaining values.
-- `sigma-clip-average` removes outliers before using `average` on the remaining values.
-- `sigma-winsorize-median` replaces outliers with the nearest value in sigma range before using `median`.
-- `sigma-winsorize-average` replaces outliers with the nearest value in sigma range before using `average`.
-- `winsorized-sigma-clip-median` replaces outliers with the nearest value in sigma range before sigma-clipping and then using `median`.
-- `winsorized-sigma-clip-average` replaces outliers with the nearest value in sigma range before sigma-clipping and then using `average`.
-
-All methods that use sigma-clipping print a histogram with the information how many input values where actually used to stack each output value.
-
 ### Argument: kappa
 
 - Type: double
@@ -811,7 +810,6 @@ The kappa factor is used in sigma-clipping to define how far from the center the
 
 The number of iterations used in sigma-clipping to remove outliers.
 
-
 ---
 
 ## Script: stack-average
@@ -819,10 +817,9 @@ The number of iterations used in sigma-clipping to remove outliers.
     kimage [OPTIONS] stack-average
         [FILES]
 
-Stacks multiple images by calculating a pixel-wise average.
+### Stack multiple images by calculating a pixel-wise average
 
 This stacking script is useful if there are no outliers and if the more powerful `stack` script fails for technical reasons.
-
 
 ---
 
@@ -831,10 +828,9 @@ This stacking script is useful if there are no outliers and if the more powerful
     kimage [OPTIONS] stack-max
         [FILES]
 
-Stacks multiple images by calculating a pixel-wise maximum.
+### Stack multiple images by calculating a pixel-wise maximum
 
 This stacking script is useful to find outliers and badly aligned images.
-
 
 ---
 
@@ -850,7 +846,9 @@ This stacking script is useful to find outliers and badly aligned images.
         [--arg regexStringArg=STRING]
         [FILES]
 
-Test script to show how to handle multiple images in a kimage script.
+### Test script to show how to handle multiple images in a kimage script
+
+Example script as starting point for developers.
 
 ### Argument: intArg
 
@@ -909,7 +907,6 @@ Example argument for a string value with some allowed strings.
 - Default value: `aaa`
 
 Example argument for a string value with regular expression.
-
 
 ---
 
@@ -925,7 +922,9 @@ Example argument for a string value with regular expression.
         [--arg regexStringArg=STRING]
         [FILES]
 
-Test script to show how to handle single images in a kimage script.
+### Test script to show how to handle single images in a kimage script
+
+Example script as starting point for developers.
 
 ### Argument: intArg
 
@@ -985,4 +984,5 @@ Example argument for a string value with some allowed strings.
 
 Example argument for a string value with regular expression.
 
+---
 

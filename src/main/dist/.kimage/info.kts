@@ -9,9 +9,7 @@ import kotlin.math.*
 
 kimage(0.1) {
     name = "info"
-    description = """
-                Print info about images.
-                """
+    title = "Print info about images"
     arguments {
     }
 

@@ -9,8 +9,9 @@ import kotlin.math.*
 
 kimage(0.1) {
     name = "test-multi"
+    title = "Test script to show how to handle multiple images in a kimage script"
     description = """
-                Test script to show how to handle multiple images in a kimage script.
+                Example script as starting point for developers.
                 """
     arguments {
         int("intArg") {
@@ -59,25 +60,12 @@ kimage(0.1) {
         val allowedStringArg: String by arguments
         val regexStringArg: String by arguments
 
-        println("Test multi image script")
-        println()
-
         println("Raw Arguments:")
         for (rawArgument in rawArguments) {
             val key: String = rawArgument.key
             val value: String = rawArgument.value
             println("  Argument: ${key} = ${value}")
         }
-        println()
-
-        println("Arguments:")
-        println("  intArg = $intArg")
-        println("  optionalIntArg = $optionalIntArg")
-        println("  doubleArg = $doubleArg")
-        println("  booleanArg = $booleanArg")
-        println("  stringArg = $stringArg")
-        println("  allowedStringArg = $allowedStringArg")
-        println("  regexStringArg = $regexStringArg")
         println()
 
         println("Input Files:")

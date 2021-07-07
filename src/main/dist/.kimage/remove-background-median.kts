@@ -8,9 +8,8 @@ import kotlin.math.*
 
 kimage(0.1) {
     name = "remove-background-median"
+    title = "Remove the background by subtracting a blurred median-filtered version of the input"
     description = """
-                Removes the background from the input image by subtracting a blurred median of the input.
-                
                 This script is useful for astrophotography if the image contains mainly stars and not too much nebulas.
                 
                 The size of the median filter can be increased to remove stars and nebulas completely.
@@ -75,13 +74,6 @@ kimage(0.1) {
                 max(3, medianFilterSize)
             }
         }
-
-        println("Arguments:")
-        println("  removePercent = $removePercent%")
-        println("  medianFilterPercent = $medianFilterPercent%")
-        println("  blurFilterPercent = $blurFilterPercent%")
-        println("  medianFilterSize = $medianFilterSize")
-        println("  blurFilterSize = $blurFilterSize")
 
         if (verboseMode) println("Running median filter ...")
         val medianImage = inputImage.medianFilter(medianFilterSize)

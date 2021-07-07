@@ -11,9 +11,8 @@ import kotlin.math.*
 
 kimage(0.1) {
     name = "delta"
+    title = "Create delta images between the first image and all other images"
     description = """
-                Creates delta images between the first image and all other images.
-                
                 The output images show the pixel-wise difference between two images on a specific channel (default is `Luminance`).
                 
                 The difference is color coded:
@@ -42,16 +41,8 @@ kimage(0.1) {
     }
 
     multi {
-        println("Delta image analysis")
-        println()
-
         val factor: Double by arguments
         val channel: String by arguments
-
-        println("Arguments:")
-        println("  factor = $factor")
-        println("  channel = $channel")
-        println()
 
         println("Loading base image ${inputFiles[0]}")
         val baseImage = ImageReader.read(inputFiles[0])

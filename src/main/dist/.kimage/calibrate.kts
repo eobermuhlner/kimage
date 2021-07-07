@@ -10,9 +10,8 @@ import kotlin.math.*
 
 kimage(0.1) {
     name = "calibrate"
+    title = "Calibrate images using bias/dark/flat/darkflat images"
     description = """
-                Calibrates images using bias/dark/flat/darkflat images.
-                
                 The different calibration files are optional, specify only the calibration image you have.
                 
                 ### Creating Calibration Images
@@ -98,21 +97,11 @@ kimage(0.1) {
     }
 
     multi {
-        println("Calibrate")
-        println()
-
         var bias: Optional<Image> by arguments
         var dark: Optional<Image> by arguments
         var flat: Optional<Image> by arguments
         var darkflat: Optional<Image> by arguments
         val applyBiasOnCalibration = false
-
-        println("Arguments:")
-        println("  bias = $bias")
-        println("  dark = $dark")
-        println("  flat = $flat")
-        println("  darkflat = $darkflat")
-        println()
 
         if (applyBiasOnCalibration && bias.isPresent) {
             if (dark.isPresent) {

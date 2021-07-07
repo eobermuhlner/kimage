@@ -11,8 +11,9 @@ import kotlin.math.*
 
 kimage(0.1) {
     name = "hdr"
+    title = "Stack multiple images with different exposures into a single HDR image"
     description = """
-                Stacks multiple images with different exposures into a single HDR image.
+                Calculates for every pixel the values with the best exposure and merges them into a single HDR image.
                 """
     arguments {
         int("saturationBlurRadius") {

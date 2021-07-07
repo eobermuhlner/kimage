@@ -1,17 +1,14 @@
 import ch.obermuhlner.kimage.*
 import ch.obermuhlner.kimage.align.*
-import ch.obermuhlner.kimage.filter.KernelFilter
-import ch.obermuhlner.kimage.huge.HugeFloatArray
+import ch.obermuhlner.kimage.filter.*
+import ch.obermuhlner.kimage.huge.*
 import ch.obermuhlner.kimage.image.*
 import ch.obermuhlner.kimage.io.*
 import ch.obermuhlner.kimage.math.*
-import ch.obermuhlner.kimage.matrix.FloatMatrix
-import ch.obermuhlner.kimage.matrix.Matrix
-import ch.obermuhlner.kimage.matrix.getPixel
+import ch.obermuhlner.kimage.matrix.*
 
 import java.io.*
-import java.nio.file.FileSystems
-import java.nio.file.Path
+import java.nio.file.*
 import java.util.*
 import kotlin.math.*
 
@@ -24,7 +21,7 @@ object TestScript {
         //val hdrImages = arrayOf("images/hdr/hdr1.jpg", "images/hdr/hdr2.jpg", "images/hdr/hdr3.jpg", "images/hdr/hdr4.jpg")
         val hdrImages = arrayOf("images/hdr/HDRI_Sample_Scene_Window_-_01.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_02.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_03.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_04.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_05.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_06.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_07.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_08.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_09.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_10.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_11.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_12.jpg")
 
-        //runScript(scriptAlign(), *orionImages)
+        runScript(scriptAlign(), *orionImages)
         //runScript(scriptStackMax(), mapOf(), *orionImages)
         //runScript(scriptStack(), mapOf("kappa" to "2.0"), *alignedOrionImages)
         //runScript(scriptStack(), mapOf("kappa" to "2.0"), *orionImages)
@@ -38,16 +35,15 @@ object TestScript {
         //runScript(scriptCalibrate(), mapOf("biasDir" to "images/align"))
 
         //runScript(scriptRemoveVignette(), mapOf(), "images/flat_large.tif")
-        runScript(scriptRemoveVignette(), mapOf(), "images/calibrate/light/IMG_6800.TIF")
+        //runScript(scriptRemoveVignette(), mapOf(), "images/calibrate/light/IMG_6800.TIF")
 
     }
 
     private fun scriptRemoveBackgroundMedian(): Script =
         kimage(0.1) {
             name = "remove-background-median"
+            title = "Remove the background by subtracting a blurred median-filtered version of the input"
             description = """
-                Removes the background from the input image by subtracting a blurred median of the input.
-                
                 This script is useful for astrophotography if the image contains mainly stars and not too much nebulas.
                 The size of the median filter can be increased to remove stars and nebulas completely.
                 
@@ -112,13 +108,6 @@ object TestScript {
                     }
                 }
 
-                println("Arguments:")
-                println("  removePercent = $removePercent%")
-                println("  medianFilterPercent = $medianFilterPercent%")
-                println("  blurFilterPercent = $blurFilterPercent%")
-                println("  medianFilterSize = $medianFilterSize")
-                println("  blurFilterSize = $blurFilterSize")
-
                 if (verboseMode) println("Running median filter ...")
                 val medianImage = inputImage.medianFilter(medianFilterSize)
                 if (debugMode) {
@@ -143,13 +132,13 @@ object TestScript {
     private fun scriptAlign(): Script =
         kimage(0.1) {
             name = "align"
+            title = "Align multiple images"
             description = """
-                Align multiple images.
                 The base image is the first image argument.
                 The remaining image arguments are aligned to the base image by searching for a matching feature.
                 
-                The feature to match is defined by the centerX/centerY coordinates in the base image and the check radius.
-                The searchRadius defines how far the matching feature is searched.
+                The feature to match is defined by the `centerX`/`centerY` coordinates in the base image and the `checkRadius`.
+                The `searchRadius` defines how far the matching feature is searched.
 
                 Use the --debug option to save intermediate images for manual analysis.
                 """
@@ -207,8 +196,6 @@ object TestScript {
             }
 
             multi {
-                println("inputFiles : $inputFiles")
-
                 val baseInputFile = inputFiles[0]
                 println("Loading base image: $baseInputFile")
                 val baseImage = ImageReader.read(baseInputFile)
@@ -221,10 +208,10 @@ object TestScript {
 
                 var checkRadius: Optional<Int> by arguments
                 var searchRadius: Optional<Int> by arguments
-                if (checkRadius.isEmpty) {
+                if (!checkRadius.isPresent) {
                     checkRadius = Optional.of(defaultCheckRadius)
                 }
-                if (searchRadius.isEmpty) {
+                if (!searchRadius.isPresent) {
                     searchRadius = Optional.of(defaultSearchRadius)
                 }
 
@@ -233,10 +220,10 @@ object TestScript {
 
                 var centerX: Optional<Int> by arguments
                 var centerY: Optional<Int> by arguments
-                if (centerX.isEmpty) {
+                if (!centerX.isPresent) {
                     centerX = Optional.of(autoCenterX)
                 }
-                if (centerY.isEmpty) {
+                if (!centerY.isPresent) {
                     centerY = Optional.of(autoCenterY)
                 }
 
@@ -245,14 +232,11 @@ object TestScript {
                 val saveBad: Boolean by arguments
                 val prefixBad: String by arguments
 
-                println("Arguments:")
+                println("Arguments (calculated from input):")
                 println("  checkRadius = $checkRadius")
                 println("  searchRadius = $searchRadius")
                 println("  centerX = $centerX")
                 println("  centerY = $centerY")
-                println("  prefix = $prefix")
-                println("  saveBad = $saveBad")
-                println("  prefixBad = $prefixBad")
                 println()
 
                 if (debugMode) {
@@ -310,10 +294,10 @@ object TestScript {
     fun scriptStackMax(): Script =
         kimage(0.1) {
             name = "stack-max"
+            title = "Stack multiple images by calculating a pixel-wise maximum"
             description = """
-                Stacks multiple images by calculating a pixel-wise maximum.
-                
                 This stacking script is useful to find outliers and badly aligned images.
+                This implementation is faster and uses less memory than using the generic script `stack --arg method=max`.
                 """
             arguments {
             }
@@ -339,22 +323,28 @@ object TestScript {
     fun scriptStack() =
         kimage(0.1) {
             name = "stack"
+            title = "Stack multiple image using one of several algorithms"
             description = """
-                Stacks multiple image using one of several algorithms.
+                After loading all images one of the following stacking methods is applied on the RGB channels:
+                
+                - `median` takes the median values of every pixel of each input image.
+                - `average` takes the average values of every pixel of each input image.
+                - `max` takes the maximum value of every pixel of each input image.
+                - `min` takes the minimum value of every pixel of each input image.
+                - `sigma-clip-median` removes outliers before using `median` on the remaining values.
+                - `sigma-clip-average` removes outliers before using `average` on the remaining values.
+                - `sigma-winsorize-median` replaces outliers with the nearest value in sigma range before using `median`.
+                - `sigma-winsorize-average` replaces outliers with the nearest value in sigma range before using `average`.
+                - `winsorized-sigma-clip-median` replaces outliers with the nearest value in sigma range before sigma-clipping and then using `median`.
+                - `winsorized-sigma-clip-average` replaces outliers with the nearest value in sigma range before sigma-clipping and then using `average`.
+                - `all` runs all of the available methods and produces an output image for each method.
+                        
+                All methods that use sigma-clipping print a histogram with the information how many input values where actually used to stack each output value. 
                 """
             arguments {
                 string("method") {
                     description = """
                         Method used to calculate the stacked image.
-                        
-                        The method `sigma-clip-median` removes outliers before using `median` on the remaining values.
-                        The method `sigma-clip-average` removes outliers before using `average` on the remaining values.
-                        The method `sigma-winsorize-median` replaces outliers with the nearest value in sigma range before using `median`.
-                        The method `sigma-winsorize-average` replaces outliers with the nearest value in sigma range before using `average`.
-                        The method `winsorized-sigma-clip-median` replaces outliers with the nearest value in sigma range before sigma-clipping and then using `median`.
-                        The method `winsorized-sigma-clip-average` replaces outliers with the nearest value in sigma range before sigma-clipping and then using `average`.
-                        
-                        All methods that use sigma-clipping print a histogram with the information how many input values where actually used to stack each output value. 
                         """
                     allowed = listOf("median", "average", "max", "min", "sigma-clip-median", "sigma-clip-average", "sigma-winsorize-median", "sigma-winsorize-average", "winsorized-sigma-clip-median", "winsorized-sigma-clip-average", "weighted-average", "all")
                     default = "sigma-clip-median"
@@ -376,17 +366,9 @@ object TestScript {
             }
 
             multi {
-                println("Stack multiple images")
-
                 val method: String by arguments
                 val kappa: Double by arguments
                 val iterations: Int by arguments
-
-                println("Arguments:")
-                println("  method = $method")
-                println("  kappa = $kappa")
-                println("  iterations = $iterations")
-                println()
 
                 println("Loading image: ${inputFiles[0]}")
                 var baseImage: Image = ImageReader.read(inputFiles[0])
@@ -498,8 +480,9 @@ object TestScript {
     fun scriptHDR() =
         kimage(0.1) {
             name = "hdr"
+            title = "Stack multiple images with different exposures into a single HDR image"
             description = """
-                Stacks multiple images with different exposures into a single HDR image.
+                Calculates for every pixel the values with the best exposure and merges them into a single HDR image.
                 """
             arguments {
                 int("saturationBlurRadius") {
@@ -607,8 +590,9 @@ object TestScript {
     fun scriptHistogram(): Script =
         kimage(0.1) {
             name = "histogram"
+            title = "Create a histogram image"
             description = """
-                Creates a histogram image.
+                The values of every channel (RGB) are counted and a histogram is created for each channel.
                 """
             arguments {
                 int("width") {
@@ -626,16 +610,8 @@ object TestScript {
             }
 
             single {
-                println("Create a histogram of an image.")
-                println()
-
                 val width: Int by arguments
                 val height: Int by arguments
-
-                println("Arguments:")
-                println("  width = $width")
-                println("  height = $height")
-                println()
 
                 inputImage.histogramImage(width, height)
             }
@@ -645,8 +621,9 @@ object TestScript {
     fun scriptColorStretch(): Script =
         kimage(0.1) {
             name = "color-stretch"
+            title = "Stretch the colors of an image to fill the entire value range"
             description = """
-                Stretches the colors of an image to fill the entire value range.
+                The colors are first brightened and then a curve is applied.
                 """
             arguments {
                 double("brightness") {
@@ -682,9 +659,6 @@ object TestScript {
             }
 
             single {
-                println("Color stretching")
-                println()
-
                 val brightness: Double by arguments
                 val curve: String by arguments
                 val custom1X: Double by arguments
@@ -694,23 +668,6 @@ object TestScript {
 
                 val histogramWidth = 256
                 val histogramHeight = 150
-
-                println("Arguments:")
-                println("  brightness = $brightness")
-                println("  curve = $curve")
-                when (curve) {
-                    "custom1" -> {
-                        println("  custom1X = $custom1X")
-                        println("  custom1Y = $custom1Y")
-                    }
-                    "custom2" -> {
-                        println("  custom1X = $custom1X")
-                        println("  custom1Y = $custom1Y")
-                        println("  custom2X = $custom2X")
-                        println("  custom2Y = $custom2Y")
-                    }
-                }
-                println()
 
                 val (power1, power2) = if (brightness < 1000.0) {
                     Pair(brightness, 1.0)
@@ -941,9 +898,6 @@ object TestScript {
             }
 
             multi {
-                println("Calibrate")
-                println()
-
                 val biasDir: Optional<File> by arguments
                 val biasFilePattern: String by arguments
 
@@ -952,15 +906,6 @@ object TestScript {
                 var flat: Optional<Image> by arguments
                 var darkflat: Optional<Image> by arguments
                 val applyBiasOnCalibration = false
-
-                println("Arguments:")
-                println("  biasDir = $biasDir")
-                println("  biasFilePattern = $biasFilePattern")
-                println("  bias = $bias")
-                println("  dark = $dark")
-                println("  flat = $flat")
-                println("  darkflat = $darkflat")
-                println()
 
                 if (biasDir.isPresent) {
                     val biasFilePatternMatcher = FileSystems.getDefault().getPathMatcher("glob:$biasFilePattern")
@@ -1046,12 +991,6 @@ object TestScript {
                 val removePercent: Double by arguments
                 val gridSize: Int by arguments
                 val kappa: Double by arguments
-
-                println("Arguments:")
-                println("  removePercent = $removePercent%")
-                println("  gridSize = $gridSize")
-                println("  kappa = $kappa")
-                println()
 
                 val centerX = inputImage.width / 2
                 val centerY = inputImage.height / 2
