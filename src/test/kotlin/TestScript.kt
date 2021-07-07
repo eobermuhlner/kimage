@@ -21,11 +21,11 @@ object TestScript {
         //val hdrImages = arrayOf("images/hdr/hdr1.jpg", "images/hdr/hdr2.jpg", "images/hdr/hdr3.jpg", "images/hdr/hdr4.jpg")
         val hdrImages = arrayOf("images/hdr/HDRI_Sample_Scene_Window_-_01.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_02.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_03.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_04.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_05.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_06.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_07.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_08.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_09.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_10.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_11.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_12.jpg")
 
-        runScript(scriptAlign(), *orionImages)
+        //runScript(scriptAlign(), *orionImages)
         //runScript(scriptStackMax(), mapOf(), *orionImages)
         //runScript(scriptStack(), mapOf("kappa" to "2.0"), *alignedOrionImages)
         //runScript(scriptStack(), mapOf("kappa" to "2.0"), *orionImages)
-        //runScript(scriptRemoveBackgroundMedian(), "images/align/orion1.png")
+        //runScript(scriptRemoveBackgroundMedian(),"images/align/orion1.png")
         //runScript(scriptHistogram(), "images/align/output_orion1.png")
         //runScript(scriptColorStretch(), "images/align/output_orion1.png")
         //runScript(scriptCalibrate())
@@ -37,6 +37,7 @@ object TestScript {
         //runScript(scriptRemoveVignette(), mapOf(), "images/flat_large.tif")
         //runScript(scriptRemoveVignette(), mapOf(), "images/calibrate/light/IMG_6800.TIF")
 
+        runScript(scriptTestMulti(), mapOf())
     }
 
     private fun scriptRemoveBackgroundMedian(): Script =
@@ -1035,6 +1036,128 @@ object TestScript {
             }
         }
 
+    fun scriptTestMulti(): Script =
+        kimage(0.1) {
+            name = "test-multi"
+            title = "Test script to show how to handle multiple images in a kimage script"
+            description = """
+                Example script as starting point for developers.
+                """
+            arguments {
+                int("intArg") {
+                    description = "Example argument for an int value."
+                    min = 0
+                    max = 100
+                    default = 0
+                }
+                optionalInt("optionalIntArg") {
+                    description = "Example argument for an optional int value."
+                    min = 0
+                    max = 100
+                }
+                double("doubleArg") {
+                    description = "Example argument for a double value."
+                    min = 0.0
+                    max = 100.0
+                    default = 50.0
+                }
+                boolean("booleanArg") {
+                    description = "Example argument for a boolean value."
+                    default = false
+                }
+                string("stringArg") {
+                    description = "Example argument for a string value."
+                    default = "undefined"
+                }
+                string("allowedStringArg") {
+                    description = "Example argument for a string value with some allowed strings."
+                    allowed = listOf("red", "green", "blue")
+                    default = "red"
+                }
+                string("regexStringArg") {
+                    description = "Example argument for a string value with regular expression."
+                    regex = "a+"
+                    default = "aaa"
+                }
+                list("listOfIntArg") {
+                    description = "Example argument for a list of integer values."
+                    min = 1
+                    default = listOf(1, 2, 3)
+                    int {
+                        description = "A single integer value"
+                        min = 0
+                        max = 9
+                    }
+                }
+                optionalList("optionalListOfIntArg") {
+                    description = "Example argument for an optional list of integer values."
+                    min = 1
+                    int {
+                        description = "A single integer value"
+                        min = 0
+                        max = 9
+                    }
+                }
+                record("recordArg") {
+                    description = "Example argument for a record containing different values."
+                    default = mapOf(
+                        "recordInt" to 1,
+                        "recordString" to "hello",
+                        "recordDouble" to 3.14)
+
+                    int("recordInt") {
+                    }
+                    int("recordString") {
+                    }
+                    int("recordDouble") {
+                    }
+                }
+            }
+
+            multi {
+                val intArg: Int by arguments
+                val optionalIntArg: Optional<Int> by arguments
+                val doubleArg: Double by arguments
+                val booleanArg: Boolean by arguments
+                val stringArg: String by arguments
+                val allowedStringArg: String by arguments
+                val regexStringArg: String by arguments
+                val listOfIntArg: List<Int> by arguments
+                val optionalListOfIntArg: Optional<List<Int>> by arguments
+                val recordArg: Map<String, Any> by arguments
+                val recordInt: Int by recordArg
+                val recordString: String by recordArg
+                val recordDouble: Double by recordArg
+
+                println("Raw Arguments:")
+                for (rawArgument in rawArguments) {
+                    val key: String = rawArgument.key
+                    val value: String = rawArgument.value
+                    println("  Argument: ${key} = ${value}")
+                }
+                println()
+
+                println("Processed Arguments:")
+                println("  intArg = $intArg")
+                println("  optionalIntArg = $optionalIntArg")
+                println("  doubleArg = $doubleArg")
+                println("  booleanArg = $booleanArg")
+                println("  stringArg = $stringArg")
+                println("  allowedStringArg = $allowedStringArg")
+                println("  regexStringArg = $regexStringArg")
+                println("  listOfIntArg = $listOfIntArg")
+                println("  optionalListOfIntArg = $optionalListOfIntArg")
+                println("  recordArg = $recordArg")
+                println("  recordInt = $recordInt")
+                println("  recordString = $recordString")
+                println("  recordDouble = $recordDouble")
+
+                println("Input Files:")
+                for (file in inputFiles) {
+                    println("  File: $file exists=${file.exists()}")
+                }
+            }
+        }
 
     fun runScript(script: Script, vararg filepaths: String) {
         runScript(script, mapOf(), *filepaths)

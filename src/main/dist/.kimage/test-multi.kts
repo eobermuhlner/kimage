@@ -1,10 +1,15 @@
 import ch.obermuhlner.kimage.*
 import ch.obermuhlner.kimage.align.*
 import ch.obermuhlner.kimage.filter.*
+import ch.obermuhlner.kimage.huge.*
 import ch.obermuhlner.kimage.image.*
 import ch.obermuhlner.kimage.io.*
+import ch.obermuhlner.kimage.math.*
+import ch.obermuhlner.kimage.matrix.*
+
 import java.io.*
-import java.util.Optional
+import java.nio.file.*
+import java.util.*
 import kotlin.math.*
 
 kimage(0.1) {
@@ -53,7 +58,6 @@ kimage(0.1) {
             description = "Example argument for a list of integer values."
             min = 1
             default = listOf(1, 2, 3)
-
             int {
                 description = "A single integer value"
                 min = 0
@@ -63,11 +67,24 @@ kimage(0.1) {
         optionalList("optionalListOfIntArg") {
             description = "Example argument for an optional list of integer values."
             min = 1
-
             int {
                 description = "A single integer value"
                 min = 0
                 max = 9
+            }
+        }
+        record("recordArg") {
+            description = "Example argument for a record containing different values."
+            default = mapOf(
+                "recordInt" to 1,
+                "recordString" to "hello",
+                "recordDouble" to 3.14)
+
+            int("recordInt") {
+            }
+            int("recordString") {
+            }
+            int("recordDouble") {
             }
         }
     }
@@ -81,6 +98,11 @@ kimage(0.1) {
         val allowedStringArg: String by arguments
         val regexStringArg: String by arguments
         val listOfIntArg: List<Int> by arguments
+        val optionalListOfIntArg: Optional<List<Int>> by arguments
+        val recordArg: Map<String, Any> by arguments
+        val recordInt: Int by recordArg
+        val recordString: String by recordArg
+        val recordDouble: Double by recordArg
 
         println("Raw Arguments:")
         for (rawArgument in rawArguments) {
@@ -89,6 +111,21 @@ kimage(0.1) {
             println("  Argument: ${key} = ${value}")
         }
         println()
+
+        println("Processed Arguments:")
+        println("  intArg = $intArg")
+        println("  optionalIntArg = $optionalIntArg")
+        println("  doubleArg = $doubleArg")
+        println("  booleanArg = $booleanArg")
+        println("  stringArg = $stringArg")
+        println("  allowedStringArg = $allowedStringArg")
+        println("  regexStringArg = $regexStringArg")
+        println("  listOfIntArg = $listOfIntArg")
+        println("  optionalListOfIntArg = $optionalListOfIntArg")
+        println("  recordArg = $recordArg")
+        println("  recordInt = $recordInt")
+        println("  recordString = $recordString")
+        println("  recordDouble = $recordDouble")
 
         println("Input Files:")
         for (file in inputFiles) {
