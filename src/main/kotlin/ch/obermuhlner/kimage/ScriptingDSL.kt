@@ -79,6 +79,7 @@ object ScriptExecutor {
 
 @KotlinDSL
 class ScriptV0_1 : Script(0.1) {
+    var title = ""
     var description = ""
 
     private var scriptArguments: ScriptArguments = ScriptArguments()
@@ -116,6 +117,11 @@ class ScriptV0_1 : Script(0.1) {
         }
         println("        [FILES]")
         println()
+
+        if (title.isNotBlank()) {
+            println("### ${title.trimIndent()}")
+            println()
+        }
 
         if (description.isNotBlank()) {
             println(description.trimIndent())
@@ -206,6 +212,13 @@ class ScriptV0_1 : Script(0.1) {
     }
 
     fun execute(inputFiles: List<File>, arguments: Map<String, String>, verboseMode: Boolean, debugMode: Boolean, outputHandler: (File, Any?) -> Unit) {
+        if (title.isNotBlank()) {
+            print(title)
+        } else {
+            print(name)
+        }
+        println()
+
         return if (scriptMulti != null) {
             executeMulti(inputFiles, arguments, verboseMode, debugMode, outputHandler)
         } else if (scriptSingle != null) {
@@ -587,22 +600,40 @@ class ScriptOptionalImageArg() : ScriptImageArg(false) {
 
 class ScriptArgumentException(message: String): RuntimeException(message)
 
-@KotlinDSL
-class ScriptSingle(val executable: ScriptSingle.() -> Any?) {
-    var inputFile: File = File(".")
-    var inputImage: Image = MatrixImage(0, 0)
+sealed class AbstractScript {
+    var scriptArguments: ScriptArguments = ScriptArguments()
     val rawArguments: MutableMap<String, String> = mutableMapOf()
     var arguments: MutableMap<String, Any> = mutableMapOf()
     var verboseMode: Boolean = false
     var debugMode: Boolean = false
 
+    fun printExecution() {
+        println()
+        if (arguments.isNotEmpty()) {
+            println("Arguments:")
+            for ((name, value) in arguments.entries) {
+                println("  $name = $value")
+            }
+            println()
+        }
+    }
+}
+
+@KotlinDSL
+class ScriptSingle(val executable: ScriptSingle.() -> Any?) : AbstractScript() {
+    var inputFile: File = File(".")
+    var inputImage: Image = MatrixImage(0, 0)
+
     fun executeSingleScript(inputFile: File, inputImage: Image, scriptArguments: ScriptArguments, arguments: Map<String, String>, verboseMode: Boolean, debugMode: Boolean, outputHandler: (File, Any?) -> Unit) {
         this.inputFile = inputFile
         this.inputImage = inputImage
+        this.scriptArguments = scriptArguments
         this.rawArguments.putAll(arguments)
         this.arguments = processArguments(scriptArguments, arguments)
         this.verboseMode = verboseMode
         this.debugMode = debugMode
+
+        printExecution()
 
         val output = executable()
         outputHandler(inputFile, output)
@@ -610,19 +641,18 @@ class ScriptSingle(val executable: ScriptSingle.() -> Any?) {
 }
 
 @KotlinDSL
-class ScriptMulti(val executable: ScriptMulti.() -> Any?) {
+class ScriptMulti(val executable: ScriptMulti.() -> Any?) : AbstractScript() {
     var inputFiles: List<File> = listOf()
-    val rawArguments: MutableMap<String, String> = mutableMapOf()
-    var arguments: MutableMap<String, Any> = mutableMapOf()
-    var verboseMode: Boolean = false
-    var debugMode: Boolean = false
 
     fun executeMultiScript(inputFiles: List<File>, scriptArguments: ScriptArguments, arguments: Map<String, String>, verboseMode: Boolean, debugMode: Boolean, outputHandler: (File, Any?) -> Unit) {
         this.inputFiles = inputFiles
+        this.scriptArguments = scriptArguments
         this.rawArguments.putAll(arguments)
         this.arguments = processArguments(scriptArguments, arguments)
         this.verboseMode = verboseMode
         this.debugMode = debugMode
+
+        printExecution()
 
         val output = executable()
         val referenceFile = if (inputFiles.isEmpty()) {
