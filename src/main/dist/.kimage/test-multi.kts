@@ -49,6 +49,27 @@ kimage(0.1) {
             regex = "a+"
             default = "aaa"
         }
+        list("listOfIntArg") {
+            description = "Example argument for a list of integer values."
+            min = 1
+            default = listOf(1, 2, 3)
+
+            int {
+                description = "A single integer value"
+                min = 0
+                max = 9
+            }
+        }
+        optionalList("optionalListOfIntArg") {
+            description = "Example argument for an optional list of integer values."
+            min = 1
+
+            int {
+                description = "A single integer value"
+                min = 0
+                max = 9
+            }
+        }
     }
 
     multi {
@@ -59,6 +80,7 @@ kimage(0.1) {
         val stringArg: String by arguments
         val allowedStringArg: String by arguments
         val regexStringArg: String by arguments
+        val listOfIntArg: List<Int> by arguments
 
         println("Raw Arguments:")
         for (rawArgument in rawArguments) {

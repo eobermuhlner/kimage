@@ -131,75 +131,8 @@ class ScriptV0_1 : Script(0.1) {
         for (arg in scriptArguments.arguments) {
             println("#### Argument: `${arg.name}`")
             println()
-            println("- Type: ${arg.type}")
-            if (arg.mandatory && !arg.hasDefault) {
-                println("- Mandatory: yes")
-            }
 
-            when (arg) {
-                is ScriptIntArg -> {
-                    if (arg.min != null) {
-                        println("- Minimum value: ${arg.min}")
-                    }
-                    if (arg.max != null) {
-                        println("- Maximum value: ${arg.max}")
-                    }
-                    if (arg.default != null) {
-                        println("- Default value: ${arg.default}")
-                    }
-                }
-                is ScriptDoubleArg -> {
-                    if (arg.min != null) {
-                        println("- Minimum value: ${arg.min}")
-                    }
-                    if (arg.max != null) {
-                        println("- Maximum value: ${arg.max}")
-                    }
-                    if (arg.default != null) {
-                        println("- Default value: ${arg.default}")
-                    }
-                }
-                is ScriptStringArg -> {
-                    if (arg.allowed.isNotEmpty()) {
-                        println("- Allowed values:")
-                        for (allowed in arg.allowed) {
-                            println("  - `${allowed}`")
-                        }
-                    }
-                    if (arg.regex != null) {
-                        println("- Must match regular expression: `${arg.regex}`")
-                    }
-                    if (arg.default != null) {
-                        println("- Default value: `${arg.default}`")
-                    }
-                }
-                is ScriptFileArg -> {
-                    if (arg.isDirectory != null) {
-                        println("- Must be directory: ${arg.isDirectory}")
-                    }
-                    if (arg.isFile != null) {
-                        println("- Must be file: ${arg.isFile}")
-                    }
-                    if (arg.exists != null) {
-                        println("- Must exist: ${arg.exists}")
-                    }
-                    arg.allowedExtensions?.let {
-                        println("- Allowed extensions:")
-                        for (allowed in it) {
-                            println("  - `${allowed}`")
-                        }
-                    }
-                    if (arg.default != null) {
-                        println("- Default path: `${arg.default}`")
-                    }
-                }
-                is ScriptImageArg -> {
-                    if (arg.default != null) {
-                        println("- Default path: `${arg.default}`")
-                    }
-                }
-            }
-            println()
+            printArgumentType(arg, 0)
 
             if (arg.description.isNotBlank()) {
                 println(arg.description.trimIndent())
@@ -208,6 +141,97 @@ class ScriptV0_1 : Script(0.1) {
         }
 
         println("---")
+        println()
+    }
+
+    private fun printArgumentType(arg: ScriptArg, level: Int) {
+        val indent = "  ".repeat(level)
+
+        println("${indent}- Type: ${arg.type}")
+        if (level == 0) {
+            if (arg.mandatory && !arg.hasDefault) {
+                println("${indent}- Mandatory: yes")
+            }
+        }
+
+        when (arg) {
+            is ScriptListArg -> {
+                if (arg.min != null) {
+                    println("${indent}- Minimum length: ${arg.min}")
+                }
+                if (arg.max != null) {
+                    println("${indent}- Maximum length: ${arg.max}")
+                }
+                if (arg.default != null) {
+                    println("${indent}- Default values: ${arg.default}")
+                }
+                for (listElement in arg.arguments) {
+                    println("${indent}- List Elements:")
+                    printArgumentType(listElement, level+1)
+                }
+            }
+            is ScriptIntArg -> {
+                if (arg.min != null) {
+                    println("${indent}- Minimum value: ${arg.min}")
+                }
+                if (arg.max != null) {
+                    println("${indent}- Maximum value: ${arg.max}")
+                }
+                if (arg.default != null) {
+                    println("${indent}- Default value: ${arg.default}")
+                }
+            }
+            is ScriptDoubleArg -> {
+                if (arg.min != null) {
+                    println("${indent}- Minimum value: ${arg.min}")
+                }
+                if (arg.max != null) {
+                    println("${indent}- Maximum value: ${arg.max}")
+                }
+                if (arg.default != null) {
+                    println("${indent}- Default value: ${arg.default}")
+                }
+            }
+            is ScriptStringArg -> {
+                if (arg.allowed.isNotEmpty()) {
+                    println("${indent}- Allowed values:")
+                    for (allowed in arg.allowed) {
+                        println("${indent}  - `${allowed}`")
+                    }
+                }
+                if (arg.regex != null) {
+                    println("${indent}- Must match regular expression: `${arg.regex}`")
+                }
+                if (arg.default != null) {
+                    println("${indent}- Default value: `${arg.default}`")
+                }
+            }
+            is ScriptFileArg -> {
+                if (arg.isDirectory != null) {
+                    println("${indent}- Must be directory: ${arg.isDirectory}")
+                }
+                if (arg.isFile != null) {
+                    println("${indent}- Must be file: ${arg.isFile}")
+                }
+                if (arg.exists != null) {
+                    println("${indent}- Must exist: ${arg.exists}")
+                }
+                arg.allowedExtensions?.let {
+                    println("${indent}- Allowed extensions:")
+                    for (allowed in it) {
+                        println("${indent}  - `${allowed}`")
+                    }
+                }
+                if (arg.default != null) {
+                    println("${indent}- Default path: `${arg.default}`")
+                }
+            }
+            is ScriptImageArg -> {
+                if (arg.default != null) {
+                    println("${indent}- Default path: `${arg.default}`")
+                }
+            }
+        }
         println()
     }
 
@@ -253,8 +277,20 @@ class ScriptV0_1 : Script(0.1) {
 }
 
 @KotlinDSL
-class ScriptArguments {
-    val arguments: MutableList<ScriptArg> = mutableListOf()
+interface ScriptTypes {
+    val arguments: MutableList<ScriptArg>
+
+    fun list(initializer: ScriptListArg.() -> Unit) =
+        arguments.add(ScriptListArg().apply(initializer))
+
+    fun list(name: String, initializer: ScriptListArg.() -> Unit) =
+        arguments.add(ScriptListArg().apply { this.name = name }.apply(initializer))
+
+    fun optionalList(initializer: ScriptOptionalListArg.() -> Unit) =
+        arguments.add(ScriptOptionalListArg().apply(initializer))
+
+    fun optionalList(name: String, initializer: ScriptOptionalListArg.() -> Unit) =
+        arguments.add(ScriptOptionalListArg().apply { this.name = name }.apply(initializer))
 
     fun int(initializer: ScriptIntArg.() -> Unit) =
         arguments.add(ScriptIntArg().apply(initializer))
@@ -318,11 +354,62 @@ class ScriptArguments {
 }
 
 @KotlinDSL
+class ScriptArguments(override val arguments: MutableList<ScriptArg> = mutableListOf()) : ScriptTypes {
+}
+
+@KotlinDSL
 sealed class ScriptArg(val type: String, val mandatory: Boolean) {
     var name: String = ""
     var description = ""
 
     abstract val hasDefault: Boolean
+}
+
+@KotlinDSL
+open class ScriptListArg(override val arguments: MutableList<ScriptArg> = mutableListOf(), mandatory: Boolean = true) : ScriptArg("list", mandatory), ScriptTypes {
+    var min: Int? = null
+    var max: Int? = null
+    var default: List<Any>? = null
+
+    override val hasDefault: Boolean
+        get() = default != null
+
+    fun toListValue(stringValue: String?): List<Any> {
+        if (arguments.isEmpty()) {
+            throw ScriptArgumentException("Argument $name is a list, but the element type is not defined")
+        }
+        if (arguments.size > 1) {
+            throw ScriptArgumentException("Argument $name is a list, but only one element type is allowed")
+        }
+        if (stringValue == null) {
+            default?.let {
+                return it;
+            }
+            throw ScriptArgumentException("Argument $name is mandatory")
+        }
+
+        val values = mutableListOf<Any>()
+        val scriptArg = arguments[0]
+        for (stringElement in stringValue.splitToSequence(',')) {
+            values.add(processArgument(scriptArg, stringElement))
+        }
+        return values
+    }
+}
+
+@KotlinDSL
+class ScriptOptionalListArg(arguments: MutableList<ScriptArg> = mutableListOf()) : ScriptListArg(arguments, false) {
+    fun toOptionalListValue(stringValue: String?): Optional<List<Any>> {
+        if (stringValue == null) {
+            if (default == null) {
+                return Optional.empty()
+            }
+            default?.let {
+                return Optional.of(it)
+            }
+        }
+        return Optional.of(toListValue(stringValue))
+    }
 }
 
 @KotlinDSL
@@ -629,7 +716,7 @@ class ScriptSingle(val executable: ScriptSingle.() -> Any?) : AbstractScript() {
         this.inputImage = inputImage
         this.scriptArguments = scriptArguments
         this.rawArguments.putAll(arguments)
-        this.arguments = processArguments(scriptArguments, arguments)
+        this.arguments = processArguments(scriptArguments.arguments, arguments)
         this.verboseMode = verboseMode
         this.debugMode = debugMode
 
@@ -648,7 +735,7 @@ class ScriptMulti(val executable: ScriptMulti.() -> Any?) : AbstractScript() {
         this.inputFiles = inputFiles
         this.scriptArguments = scriptArguments
         this.rawArguments.putAll(arguments)
-        this.arguments = processArguments(scriptArguments, arguments)
+        this.arguments = processArguments(scriptArguments.arguments, arguments)
         this.verboseMode = verboseMode
         this.debugMode = debugMode
 
@@ -664,51 +751,63 @@ class ScriptMulti(val executable: ScriptMulti.() -> Any?) : AbstractScript() {
     }
 }
 
-private fun processArguments(scriptArguments: ScriptArguments, rawArguments: Map<String, String>): MutableMap<String, Any> {
+private fun processArguments(scriptArguments: List<ScriptArg>, rawArguments: Map<String, String>): MutableMap<String, Any> {
     val processed = mutableMapOf<String, Any>()
 
-    for (argument in scriptArguments.arguments) {
-        when (argument) {
-            is ScriptOptionalIntArg -> {
-                processed[argument.name] = argument.toOptionalIntValue(rawArguments[argument.name])
-            }
-            is ScriptIntArg -> {
-                processed[argument.name] = argument.toIntValue(rawArguments[argument.name])
-            }
-            is ScriptOptionalDoubleArg -> {
-                processed[argument.name] = argument.toOptionalDoubleValue(rawArguments[argument.name])
-            }
-            is ScriptDoubleArg -> {
-                processed[argument.name] = argument.toDoubleValue(rawArguments[argument.name])
-            }
-            is ScriptOptionalBooleanArg -> {
-                processed[argument.name] = argument.toOptionalBooleanValue(rawArguments[argument.name])
-            }
-            is ScriptBooleanArg -> {
-                processed[argument.name] = argument.toBooleanValue(rawArguments[argument.name])
-            }
-            is ScriptOptionalStringArg -> {
-                processed[argument.name] = argument.toOptionalStringValue(rawArguments[argument.name])
-            }
-            is ScriptStringArg -> {
-                processed[argument.name] = argument.toStringValue(rawArguments[argument.name])
-            }
-            is ScriptOptionalFileArg -> {
-                processed[argument.name] = argument.toOptionalFileValue(rawArguments[argument.name])
-            }
-            is ScriptFileArg -> {
-                processed[argument.name] = argument.toFileValue(rawArguments[argument.name])
-            }
-            is ScriptOptionalImageArg -> {
-                processed[argument.name] = argument.toOptionalImageValue(rawArguments[argument.name])
-            }
-            is ScriptImageArg -> {
-                processed[argument.name] = argument.toImageValue(rawArguments[argument.name])
-            }
-        }
+    for (scriptArgument in scriptArguments) {
+        processed[scriptArgument.name] = processArgument(scriptArgument, rawArguments[scriptArgument.name])
     }
 
     return processed
+}
+
+private fun processArgument(scriptArgument: ScriptArg, rawArgument: String?): Any {
+    when (scriptArgument) {
+        is ScriptOptionalListArg -> {
+            return scriptArgument.toOptionalListValue(rawArgument)
+        }
+        is ScriptListArg -> {
+            return scriptArgument.toListValue(rawArgument)
+        }
+        is ScriptOptionalIntArg -> {
+            return scriptArgument.toOptionalIntValue(rawArgument)
+        }
+        is ScriptIntArg -> {
+            return scriptArgument.toIntValue(rawArgument)
+        }
+        is ScriptOptionalDoubleArg -> {
+            return scriptArgument.toOptionalDoubleValue(rawArgument)
+        }
+        is ScriptDoubleArg -> {
+            return scriptArgument.toDoubleValue(rawArgument)
+        }
+        is ScriptOptionalBooleanArg -> {
+            return scriptArgument.toOptionalBooleanValue(rawArgument)
+        }
+        is ScriptBooleanArg -> {
+            return scriptArgument.toBooleanValue(rawArgument)
+        }
+        is ScriptOptionalStringArg -> {
+            return scriptArgument.toOptionalStringValue(rawArgument)
+        }
+        is ScriptStringArg -> {
+            return scriptArgument.toStringValue(rawArgument)
+        }
+        is ScriptOptionalFileArg -> {
+            return scriptArgument.toOptionalFileValue(rawArgument)
+        }
+        is ScriptFileArg -> {
+            return scriptArgument.toFileValue(rawArgument)
+        }
+        is ScriptOptionalImageArg -> {
+            return scriptArgument.toOptionalImageValue(rawArgument)
+        }
+        is ScriptImageArg -> {
+            return scriptArgument.toImageValue(rawArgument)
+        }
+    }
+
+    throw IllegalArgumentException("Unknown argument: ${scriptArgument.name}")
 }
 
 fun kimage(version: Double, initializer: ScriptV0_1.() -> Unit): Script {
