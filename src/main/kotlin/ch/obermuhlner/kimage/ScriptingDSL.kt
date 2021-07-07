@@ -293,96 +293,101 @@ class ScriptV0_1 : Script(0.1) {
 }
 
 @KotlinDSL
-interface ScriptTypes {
+interface ScriptNamedTypes {
     val arguments: MutableList<ScriptArg>
-
-    fun int(initializer: ScriptIntArg.() -> Unit) =
-        arguments.add(ScriptIntArg().apply(initializer))
 
     fun int(name: String, initializer: ScriptIntArg.() -> Unit) =
         arguments.add(ScriptIntArg().apply { this.name = name }.apply(initializer))
 
-    fun optionalInt(initializer: ScriptOptionalIntArg.() -> Unit) =
-        arguments.add(ScriptOptionalIntArg().apply(initializer))
-
     fun optionalInt(name: String, initializer: ScriptOptionalIntArg.() -> Unit) =
         arguments.add(ScriptOptionalIntArg().apply { this.name = name }.apply(initializer))
-
-    fun double(initializer: ScriptDoubleArg.() -> Unit) =
-        arguments.add(ScriptDoubleArg().apply(initializer))
 
     fun double(name: String, initializer: ScriptDoubleArg.() -> Unit) =
         arguments.add(ScriptDoubleArg().apply { this.name = name }.apply(initializer))
 
-    fun optionalDouble(initializer: ScriptOptionalDoubleArg.() -> Unit) =
-        arguments.add(ScriptOptionalDoubleArg().apply(initializer))
-
     fun optionalDouble(name: String, initializer: ScriptOptionalDoubleArg.() -> Unit) =
         arguments.add(ScriptOptionalDoubleArg().apply { this.name = name }.apply(initializer))
-
-    fun boolean(initializer: ScriptBooleanArg.() -> Unit) =
-        arguments.add(ScriptBooleanArg().apply(initializer))
 
     fun boolean(name:String, initializer: ScriptBooleanArg.() -> Unit) =
         arguments.add(ScriptBooleanArg().apply { this.name = name }.apply(initializer))
 
-    fun string(initializer: ScriptStringArg.() -> Unit) =
-        arguments.add(ScriptStringArg().apply(initializer))
-
     fun string(name: String, initializer: ScriptStringArg.() -> Unit) =
         arguments.add(ScriptStringArg().apply { this.name = name }.apply(initializer))
-
-    fun file(initializer: ScriptFileArg.() -> Unit) =
-        arguments.add(ScriptFileArg().apply(initializer))
 
     fun file(name: String, initializer: ScriptFileArg.() -> Unit) =
         arguments.add(ScriptFileArg().apply { this.name = name }.apply(initializer))
 
-    fun image(initializer: ScriptImageArg.() -> Unit) =
-        arguments.add(ScriptImageArg().apply(initializer))
-
     fun image(name: String, initializer: ScriptImageArg.() -> Unit) =
         arguments.add(ScriptImageArg().apply { this.name = name }.apply(initializer))
-
-    fun optionalFile(initializer: ScriptFileArg.() -> Unit) =
-        arguments.add(ScriptFileArg().apply(initializer))
 
     fun optionalFile(name: String, initializer: ScriptOptionalFileArg.() -> Unit) =
         arguments.add(ScriptOptionalFileArg().apply { this.name = name }.apply(initializer))
 
-    fun optionalImage(initializer: ScriptImageArg.() -> Unit) =
-        arguments.add(ScriptImageArg().apply(initializer))
-
     fun optionalImage(name: String, initializer: ScriptOptionalImageArg.() -> Unit) =
         arguments.add(ScriptOptionalImageArg().apply { this.name = name }.apply(initializer))
-
-    fun list(initializer: ScriptListArg.() -> Unit) =
-        arguments.add(ScriptListArg().apply(initializer))
 
     fun list(name: String, initializer: ScriptListArg.() -> Unit) =
         arguments.add(ScriptListArg().apply { this.name = name }.apply(initializer))
 
-    fun optionalList(initializer: ScriptOptionalListArg.() -> Unit) =
-        arguments.add(ScriptOptionalListArg().apply(initializer))
-
     fun optionalList(name: String, initializer: ScriptOptionalListArg.() -> Unit) =
         arguments.add(ScriptOptionalListArg().apply { this.name = name }.apply(initializer))
 
-    fun record(initializer: ScriptRecordArg.() -> Unit) =
-        arguments.add(ScriptRecordArg().apply(initializer))
-
     fun record(name: String, initializer: ScriptRecordArg.() -> Unit) =
         arguments.add(ScriptRecordArg().apply { this.name = name }.apply(initializer))
-
-    fun optionalRecord(initializer: ScriptOptionalRecordArg.() -> Unit) =
-        arguments.add(ScriptOptionalRecordArg().apply(initializer))
 
     fun optionalRecord(name: String, initializer: ScriptOptionalRecordArg.() -> Unit) =
         arguments.add(ScriptOptionalRecordArg().apply { this.name = name }.apply(initializer))
 }
 
 @KotlinDSL
-class ScriptArguments(override val arguments: MutableList<ScriptArg> = mutableListOf()) : ScriptTypes {
+interface ScriptUnnamedTypes {
+    val arguments: MutableList<ScriptArg>
+
+    fun int(initializer: ScriptIntArg.() -> Unit) =
+        arguments.add(ScriptIntArg().apply(initializer))
+
+    fun optionalInt(initializer: ScriptOptionalIntArg.() -> Unit) =
+        arguments.add(ScriptOptionalIntArg().apply(initializer))
+
+    fun double(initializer: ScriptDoubleArg.() -> Unit) =
+        arguments.add(ScriptDoubleArg().apply(initializer))
+
+    fun optionalDouble(initializer: ScriptOptionalDoubleArg.() -> Unit) =
+        arguments.add(ScriptOptionalDoubleArg().apply(initializer))
+
+    fun boolean(initializer: ScriptBooleanArg.() -> Unit) =
+        arguments.add(ScriptBooleanArg().apply(initializer))
+
+    fun string(initializer: ScriptStringArg.() -> Unit) =
+        arguments.add(ScriptStringArg().apply(initializer))
+
+    fun file(initializer: ScriptFileArg.() -> Unit) =
+        arguments.add(ScriptFileArg().apply(initializer))
+
+    fun image(initializer: ScriptImageArg.() -> Unit) =
+        arguments.add(ScriptImageArg().apply(initializer))
+
+    fun optionalFile(initializer: ScriptFileArg.() -> Unit) =
+        arguments.add(ScriptFileArg().apply(initializer))
+
+    fun optionalImage(initializer: ScriptImageArg.() -> Unit) =
+        arguments.add(ScriptImageArg().apply(initializer))
+
+    fun list(initializer: ScriptListArg.() -> Unit) =
+        arguments.add(ScriptListArg().apply(initializer))
+
+    fun optionalList(initializer: ScriptOptionalListArg.() -> Unit) =
+        arguments.add(ScriptOptionalListArg().apply(initializer))
+
+    fun record(initializer: ScriptRecordArg.() -> Unit) =
+        arguments.add(ScriptRecordArg().apply(initializer))
+
+    fun optionalRecord(initializer: ScriptOptionalRecordArg.() -> Unit) =
+        arguments.add(ScriptOptionalRecordArg().apply(initializer))
+}
+
+@KotlinDSL
+class ScriptArguments(override val arguments: MutableList<ScriptArg> = mutableListOf()) : ScriptNamedTypes {
 }
 
 @KotlinDSL
@@ -675,7 +680,7 @@ class ScriptOptionalImageArg() : ScriptImageArg(false) {
 }
 
 @KotlinDSL
-open class ScriptListArg(override val arguments: MutableList<ScriptArg> = mutableListOf(), mandatory: Boolean = true) : ScriptArg("list", mandatory), ScriptTypes {
+open class ScriptListArg(override val arguments: MutableList<ScriptArg> = mutableListOf(), mandatory: Boolean = true) : ScriptArg("list", mandatory), ScriptUnnamedTypes {
     var min: Int? = null
     var max: Int? = null
     var default: List<Any>? = null
@@ -735,7 +740,7 @@ class ScriptOptionalListArg(arguments: MutableList<ScriptArg> = mutableListOf())
 }
 
 @KotlinDSL
-open class ScriptRecordArg(override val arguments: MutableList<ScriptArg> = mutableListOf(), mandatory: Boolean = true) : ScriptArg("record", mandatory), ScriptTypes {
+open class ScriptRecordArg(override val arguments: MutableList<ScriptArg> = mutableListOf(), mandatory: Boolean = true) : ScriptArg("record", mandatory), ScriptNamedTypes {
     var default: Map<String, Any>? = null
 
     override val hasDefault: Boolean
