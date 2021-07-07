@@ -281,7 +281,7 @@ The following scripts are distributed together with the `kimage` application.
 
 ---
 
-## Script: align
+## Script: `align`
 
     kimage [OPTIONS] align
         [--arg checkRadius=INT]
@@ -304,7 +304,7 @@ The `searchRadius` defines how far the matching feature is searched.
 
 Use the --debug option to save intermediate images for manual analysis.
 
-#### Argument: checkRadius
+#### Argument: `checkRadius`
 
 - Type: int
 - Minimum value: 0
@@ -312,7 +312,7 @@ Use the --debug option to save intermediate images for manual analysis.
 The radius to check for similarity.
 The default value is calculated from the base image.
 
-#### Argument: searchRadius
+#### Argument: `searchRadius`
 
 - Type: int
 - Minimum value: 0
@@ -320,7 +320,7 @@ The default value is calculated from the base image.
 The search radius defining the maximum offset to align.
 The default value is calculated from the base image.
 
-#### Argument: centerX
+#### Argument: `centerX`
 
 - Type: int
 - Minimum value: 0
@@ -328,7 +328,7 @@ The default value is calculated from the base image.
 The X coordinate of the center to check for alignment.
 The default value is calculated from the base image.
 
-#### Argument: centerY
+#### Argument: `centerY`
 
 - Type: int
 - Minimum value: 0
@@ -336,7 +336,7 @@ The default value is calculated from the base image.
 The Y coordinate of the center to check for alignment.
 The default value is calculated from the base image.
 
-#### Argument: errorThreshold
+#### Argument: `errorThreshold`
 
 - Type: double
 - Minimum value: 0.0
@@ -347,20 +347,20 @@ Images with an error above the error threshold will be either ignored
 or saved with a different prefix.
 See `saveBad`, `prefixBad`.
 
-#### Argument: prefix
+#### Argument: `prefix`
 
 - Type: string
 - Default value: `aligned`
 
 The prefix of the aligned output files.
 
-#### Argument: saveBad
+#### Argument: `saveBad`
 
 - Type: boolean
 
 Controls whether badly aligned images are saved.
 
-#### Argument: prefixBad
+#### Argument: `prefixBad`
 
 - Type: string
 - Default value: `badaligned`
@@ -369,7 +369,7 @@ The prefix of the badly aligned output files.
 
 ---
 
-## Script: calibrate
+## Script: `calibrate`
 
     kimage [OPTIONS] calibrate
         [--arg bias=IMAGE]
@@ -429,7 +429,7 @@ Calibrate the real images:
 
 See: http://deepskystacker.free.fr/english/theory.htm
 
-#### Argument: bias
+#### Argument: `bias`
 
 - Type: image
 
@@ -438,7 +438,7 @@ The `bias` master calibration image.
 This argument is optional.
 If no `bias` image is specified it will not be used in the calibration process.
 
-#### Argument: dark
+#### Argument: `dark`
 
 - Type: image
 
@@ -447,7 +447,7 @@ The `dark` master calibration image.
 This argument is optional.
 If no `dark` image is specified it will not be used in the calibration process.
 
-#### Argument: flat
+#### Argument: `flat`
 
 - Type: image
 
@@ -456,7 +456,7 @@ The `flat` master calibration image.
 This argument is optional.
 If no `flat` image is specified it will not be used in the calibration process.
 
-#### Argument: darkflat
+#### Argument: `darkflat`
 
 - Type: image
 
@@ -467,7 +467,7 @@ If no `flat` image is specified it will not be used in the calibration process.
 
 ---
 
-## Script: color-stretch
+## Script: `color-stretch`
 
     kimage [OPTIONS] color-stretch
         [--arg brightness=DOUBLE]
@@ -482,7 +482,7 @@ If no `flat` image is specified it will not be used in the calibration process.
 
 The colors are first brightened and then a curve is applied.
 
-#### Argument: brightness
+#### Argument: `brightness`
 
 - Type: double
 - Minimum value: 0.0
@@ -494,7 +494,7 @@ The power value of the brightness increase.
 - A power value = 0 does not change the brightness.
 - A power value < 1 increases the brightness.
 
-#### Argument: curve
+#### Argument: `curve`
 
 - Type: string
 - Allowed values:
@@ -515,29 +515,29 @@ The power value of the brightness increase.
 
 The curve shape used to modify the contrast.
 
-#### Argument: custom1X
+#### Argument: `custom1X`
 
 - Type: double
 - Default value: 0.2
 
-#### Argument: custom1Y
+#### Argument: `custom1Y`
 
 - Type: double
 - Default value: 0.1
 
-#### Argument: custom2X
+#### Argument: `custom2X`
 
 - Type: double
 - Default value: 0.8
 
-#### Argument: custom2Y
+#### Argument: `custom2Y`
 
 - Type: double
 - Default value: 0.9
 
 ---
 
-## Script: delta
+## Script: `delta`
 
     kimage [OPTIONS] delta
         [--arg factor=DOUBLE]
@@ -557,14 +557,14 @@ The `factor` argument controls how much the differences are exaggerated.
 
 This script is a useful to compare images, especially outputs of other scripts with different arguments.
 
-#### Argument: factor
+#### Argument: `factor`
 
 - Type: double
 - Default value: 5.0
 
 Controls how much the differences are exaggerated.
 
-#### Argument: channel
+#### Argument: `channel`
 
 - Type: string
 - Allowed values:
@@ -579,7 +579,7 @@ The channel used to calculate the difference between two images.
 
 ---
 
-## Script: hdr
+## Script: `hdr`
 
     kimage [OPTIONS] hdr
         [--arg saturationBlurRadius=INT]
@@ -592,29 +592,29 @@ The channel used to calculate the difference between two images.
 
 Calculates for every pixel the values with the best exposure and merges them into a single HDR image.
 
-#### Argument: saturationBlurRadius
+#### Argument: `saturationBlurRadius`
 
 - Type: int
 - Default value: 3
 
-#### Argument: contrastWeight
+#### Argument: `contrastWeight`
 
 - Type: double
 - Default value: 0.2
 
-#### Argument: saturationWeight
+#### Argument: `saturationWeight`
 
 - Type: double
 - Default value: 0.1
 
-#### Argument: exposureWeight
+#### Argument: `exposureWeight`
 
 - Type: double
 - Default value: 1.0
 
 ---
 
-## Script: histogram
+## Script: `histogram`
 
     kimage [OPTIONS] histogram
         [--arg width=INT]
@@ -625,14 +625,14 @@ Calculates for every pixel the values with the best exposure and merges them int
 
 The values of every channel (RGB) are counted and a histogram is created for each channel.
 
-#### Argument: width
+#### Argument: `width`
 
 - Type: int
 - Default value: 512
 
 The width of the histogram.
 
-#### Argument: height
+#### Argument: `height`
 
 - Type: int
 - Default value: 300
@@ -641,7 +641,7 @@ The height of the histogram.
 
 ---
 
-## Script: info
+## Script: `info`
 
     kimage [OPTIONS] info
         [FILES]
@@ -650,7 +650,7 @@ The height of the histogram.
 
 ---
 
-## Script: remove-background-gradient
+## Script: `remove-background-gradient`
 
     kimage [OPTIONS] remove-background-gradient
         [--arg removePercent=DOUBLE]
@@ -666,14 +666,14 @@ This script is useful for astrophotography if the fix points are chosen to repre
 
 Use the --debug option to save intermediate images for manual analysis.
 
-#### Argument: removePercent
+#### Argument: `removePercent`
 
 - Type: double
 - Default value: 100.0
 
 The percentage of the calculated background that will be removed.
 
-#### Argument: gridSize
+#### Argument: `gridSize`
 
 - Type: int
 - Default value: 5
@@ -681,7 +681,7 @@ The percentage of the calculated background that will be removed.
 The size of the grid in the x and y axis.
 The number of grid points is the square of the `gridSize`.
 
-#### Argument: kappa
+#### Argument: `kappa`
 
 - Type: double
 - Default value: 0.5
@@ -690,7 +690,7 @@ The kappa factor is used in sigma-clipping of the grid to ignore grid points tha
 
 ---
 
-## Script: remove-background-median
+## Script: `remove-background-median`
 
     kimage [OPTIONS] remove-background-median
         [--arg removePercent=DOUBLE]
@@ -708,28 +708,28 @@ The size of the median filter can be increased to remove stars and nebulas compl
 
 Use the --debug option to save intermediate images for manual analysis.
 
-#### Argument: removePercent
+#### Argument: `removePercent`
 
 - Type: double
 - Default value: 99.0
 
 The percentage of the calculated background that will be removed.
 
-#### Argument: medianFilterPercent
+#### Argument: `medianFilterPercent`
 
 - Type: double
 - Default value: 0.0
 
 The size of the median filter in percent of the image size.
 
-#### Argument: blurFilterPercent
+#### Argument: `blurFilterPercent`
 
 - Type: double
 - Default value: 0.0
 
 The size of the blur filter in percent of the image size.
 
-#### Argument: medianFilterSize
+#### Argument: `medianFilterSize`
 
 - Type: int
 - Default value: 0
@@ -738,7 +738,7 @@ The size of the median filter in pixels.
 If this value is 0 then the `medianFilterPercent` is used to calculate it.
 If the `medianFilterPercent` is 0.0 then the median filter size is calculated automatically from the image size.
 
-#### Argument: blurFilterSize
+#### Argument: `blurFilterSize`
 
 - Type: int
 - Default value: 0
@@ -749,7 +749,7 @@ If the `blurFilterPercent` is 0.0 then the blur filter size is calculated automa
 
 ---
 
-## Script: stack
+## Script: `stack`
 
     kimage [OPTIONS] stack
         [--arg method=STRING]
@@ -775,7 +775,7 @@ After loading all images one of the following stacking methods is applied on the
 
 All methods that use sigma-clipping print a histogram with the information how many input values where actually used to stack each output value.
 
-#### Argument: method
+#### Argument: `method`
 
 - Type: string
 - Allowed values:
@@ -794,7 +794,7 @@ All methods that use sigma-clipping print a histogram with the information how m
 
 Method used to calculate the stacked image.
 
-#### Argument: kappa
+#### Argument: `kappa`
 
 - Type: double
 - Minimum value: 0.0
@@ -802,7 +802,7 @@ Method used to calculate the stacked image.
 
 The kappa factor is used in sigma-clipping to define how far from the center the outliers are allowed to be.
 
-#### Argument: iterations
+#### Argument: `iterations`
 
 - Type: int
 - Minimum value: 0
@@ -812,7 +812,7 @@ The number of iterations used in sigma-clipping to remove outliers.
 
 ---
 
-## Script: stack-average
+## Script: `stack-average`
 
     kimage [OPTIONS] stack-average
         [FILES]
@@ -824,7 +824,7 @@ This implementation is faster and uses less memory than using the generic script
 
 ---
 
-## Script: stack-max
+## Script: `stack-max`
 
     kimage [OPTIONS] stack-max
         [FILES]
@@ -836,7 +836,7 @@ This implementation is faster and uses less memory than using the generic script
 
 ---
 
-## Script: test-multi
+## Script: `test-multi`
 
     kimage [OPTIONS] test-multi
         [--arg intArg=INT]
@@ -852,7 +852,7 @@ This implementation is faster and uses less memory than using the generic script
 
 Example script as starting point for developers.
 
-#### Argument: intArg
+#### Argument: `intArg`
 
 - Type: int
 - Minimum value: 0
@@ -861,7 +861,7 @@ Example script as starting point for developers.
 
 Example argument for an int value.
 
-#### Argument: optionalIntArg
+#### Argument: `optionalIntArg`
 
 - Type: int
 - Minimum value: 0
@@ -869,7 +869,7 @@ Example argument for an int value.
 
 Example argument for an optional int value.
 
-#### Argument: doubleArg
+#### Argument: `doubleArg`
 
 - Type: double
 - Minimum value: 0.0
@@ -878,20 +878,20 @@ Example argument for an optional int value.
 
 Example argument for a double value.
 
-#### Argument: booleanArg
+#### Argument: `booleanArg`
 
 - Type: boolean
 
 Example argument for a boolean value.
 
-#### Argument: stringArg
+#### Argument: `stringArg`
 
 - Type: string
 - Default value: `undefined`
 
 Example argument for a string value.
 
-#### Argument: allowedStringArg
+#### Argument: `allowedStringArg`
 
 - Type: string
 - Allowed values:
@@ -902,7 +902,7 @@ Example argument for a string value.
 
 Example argument for a string value with some allowed strings.
 
-#### Argument: regexStringArg
+#### Argument: `regexStringArg`
 
 - Type: string
 - Must match regular expression: `a+`
@@ -912,7 +912,7 @@ Example argument for a string value with regular expression.
 
 ---
 
-## Script: test-single
+## Script: `test-single`
 
     kimage [OPTIONS] test-single
         [--arg intArg=INT]
@@ -928,7 +928,7 @@ Example argument for a string value with regular expression.
 
 Example script as starting point for developers.
 
-#### Argument: intArg
+#### Argument: `intArg`
 
 - Type: int
 - Minimum value: 0
@@ -937,7 +937,7 @@ Example script as starting point for developers.
 
 Example argument for an int value.
 
-#### Argument: optionalIntArg
+#### Argument: `optionalIntArg`
 
 - Type: int
 - Minimum value: 0
@@ -945,7 +945,7 @@ Example argument for an int value.
 
 Example argument for an optional int value.
 
-#### Argument: doubleArg
+#### Argument: `doubleArg`
 
 - Type: double
 - Minimum value: 0.0
@@ -954,20 +954,20 @@ Example argument for an optional int value.
 
 Example argument for a double value.
 
-#### Argument: booleanArg
+#### Argument: `booleanArg`
 
 - Type: boolean
 
 Example argument for a boolean value.
 
-#### Argument: stringArg
+#### Argument: `stringArg`
 
 - Type: string
 - Default value: `undefined`
 
 Example argument for a string value.
 
-#### Argument: allowedStringArg
+#### Argument: `allowedStringArg`
 
 - Type: string
 - Allowed values:
@@ -978,7 +978,7 @@ Example argument for a string value.
 
 Example argument for a string value with some allowed strings.
 
-#### Argument: regexStringArg
+#### Argument: `regexStringArg`
 
 - Type: string
 - Must match regular expression: `a+`
