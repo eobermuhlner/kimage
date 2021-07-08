@@ -35,9 +35,10 @@ object TestScript {
         //runScript(scriptCalibrate(), mapOf("biasDir" to "images/align"))
 
         //runScript(scriptRemoveVignette(), mapOf(), "images/flat_large.tif")
-        //runScript(scriptRemoveVignette(), mapOf(), "images/calibrate/light/IMG_6800.TIF")
+        runScript(scriptRemoveVignette(), mapOf(), "images/calibrate/light/IMG_6800.TIF")
+        //runScript(scriptRemoveVignette(), mapOf(), "images/align/orion1.png")
 
-        runScript(scriptTestMulti(), mapOf())
+        //runScript(scriptTestMulti(), mapOf())
     }
 
     private fun scriptRemoveBackgroundMedian(): Script =
@@ -957,6 +958,97 @@ object TestScript {
             }
         }
 
+    fun scriptRemoveBackgroundGradient(): Script =
+        kimage(0.1) {
+            name = "remove-background-gradient"
+            title = "Remove the background by subtracting an interpolated gradient"
+            description = """
+                Calculates an interpolated background image from several fix points and removes it.
+                
+                This script is useful for astrophotography if the fix points are chosen to represent the background.
+                
+                Use the --debug option to save intermediate images for manual analysis.
+                """
+            arguments {
+                double("removePercent") {
+                    description = """
+                        The percentage of the calculated background that will be removed.
+                        """
+                    default = 100.0
+                }
+                int("gridSize") {
+                    description = """
+                        The size of the grid in the x and y axis.
+                        The number of grid points is the square of the `gridSize`.
+                        """
+                    default = 5
+                }
+                double("kappa") {
+                    description = """
+                        The kappa factor is used in sigma-clipping of the grid to ignore grid points that do not contain enough background.
+                        """
+                    default = 0.5
+                }
+            }
+            single {
+                fun pointGrid(width: Int, height: Int, xCount: Int, yCount: Int): List<Pair<Int, Int>> {
+                    val grid = mutableListOf<Pair<Int, Int>>()
+                    for (x in 0 until xCount) {
+                        for (y in 0 until yCount) {
+                            val xCenter = (width.toDouble() / xCount * (x + 0.5)).toInt()
+                            val yCenter = (height.toDouble() / yCount * (y + 0.5)).toInt()
+                            grid.add(Pair(xCenter, yCenter))
+                        }
+                    }
+                    return grid
+                }
+
+                fun sigmaClipPointGrid(image: Image, grid: List<Pair<Int, Int>>, kappa: Double = 0.5): List<Pair<Int, Int>> {
+                    val gridWithMedian = grid.map {
+                        val median = image.cropCenter(100, it.first, it.second).values().fastMedian()
+                        Pair(it, median)
+                    }
+                    val gridMedian = gridWithMedian.map { it.second }.median()
+                    val gridSigma = gridWithMedian.map { it.second }.stddev()
+
+                    val low = gridMedian - gridSigma * kappa
+                    val high = gridMedian + gridSigma * kappa
+
+                    return gridWithMedian.filter { it.second in low..high } .map { it.first }
+                }
+
+                val removePercent: Double by arguments
+                val gridSize: Int by arguments
+                val kappa: Double by arguments
+
+                val grid = pointGrid(inputImage.width, inputImage.height, gridSize, gridSize)
+                val clippedGrid = sigmaClipPointGrid(inputImage, grid, kappa)
+                if (verboseMode) {
+                    println("The ${grid.size} points of the grid have been reduced to ${clippedGrid.size} by sigma-clipping")
+                }
+
+                var backgroundImage = inputImage.interpolate(clippedGrid)
+                if (debugMode) {
+                    val backgroundFile = inputFile.prefixName("background_")
+                    println("Writing $backgroundFile")
+                    ImageWriter.write(backgroundImage, backgroundFile)
+                }
+
+                if (verboseMode) println("Subtracting $removePercent% background glow from original image ...")
+                backgroundImage = backgroundImage * (removePercent/100.0)
+
+                if (debugMode) {
+                    val deltaFile = inputFile.prefixName("delta_")
+                    println("Saving $deltaFile for manual analysis")
+                    val deltaImage = deltaChannel(inputImage, backgroundImage)
+                    ImageWriter.write(deltaImage, deltaFile)
+                }
+
+                inputImage - backgroundImage
+            }
+        }
+
+
     fun scriptRemoveVignette(): Script =
         kimage(0.1) {
             name = "remove-vignette"
@@ -985,10 +1077,12 @@ object TestScript {
                     description = """
                         The kappa factor is used in sigma-clipping of the grid to ignore grid points that do not contain enough background.
                         """
-                    default = 0.5
+                    default = 2.0
                 }
             }
             single {
+                fun Float.finiteOrElse(default: Float = 0f) = if (this.isFinite()) this else default
+
                 val removePercent: Double by arguments
                 val gridSize: Int by arguments
                 val kappa: Double by arguments
@@ -999,7 +1093,17 @@ object TestScript {
                 val calculatedMaxDistance = centerX + centerY // TODO calculate better
                 val matrix = inputImage[Channel.Luminance]
                 val distanceValues = Array<MutableList<Float>>(calculatedMaxDistance) { mutableListOf() }
+                val clippedDistanceValues = Array<MutableList<Float>>(calculatedMaxDistance) { mutableListOf() }
+
+                val totalMedian = matrix.fastMedian()
+                val totalStddev = matrix.stddev()
+                val low = totalMedian - totalStddev * kappa
+                val high = totalMedian + totalStddev * kappa
+                println("totalMedian = $totalMedian")
+                println("totalStddev = $totalStddev")
+
                 var maxDistance = 0
+                var clippedMaxDistance = 0
                 for (y in 0 until inputImage.height) {
                     for (x in 0 until inputImage.width) {
                         val value = matrix.getPixel(x, y)
@@ -1008,33 +1112,102 @@ object TestScript {
                         val distance = sqrt(dx*dx + dy*dy).toInt()
                         distanceValues[distance].add(value.toFloat())
                         maxDistance = max(maxDistance, distance)
+                        if (value in low..high) {
+                            clippedDistanceValues[distance].add(value.toFloat())
+                            clippedMaxDistance = max(maxDistance, distance)
+                        }
                     }
                 }
 
-                for (i in 0 until maxDistance) {
-                    val value = distanceValues[i].toFloatArray().sigmaWinsorize(2f).medianInplace()
-                    println("  $i, $value")
+//                val reducedValues = FloatArray(maxDistance)
+//                var lastMedian = distanceValues[maxDistance-1].toFloatArray().median()
+//                val alpha = 0.01
+//                for (i in maxDistance-1 downTo 0) {
+//                    val low = lastMedian - alpha
+//                    val high = lastMedian + alpha
+//                    val value = distanceValues[i].toFloatArray().sigmaClip(low.toFloat(), high.toFloat(), keepLast = false).median()
+//                    reducedValues[i] = if (value.isFinite()) value else 0.0f
+//                    lastMedian = if (value.isFinite()) value else lastMedian
+//                }
+
+                val x = mutableListOf<Float>()
+                val y = mutableListOf<Float>()
+                for (i in 0 until clippedMaxDistance) {
+                    val median = clippedDistanceValues[i].toFloatArray().medianInplace()
+                    if (median.isFinite()) {
+                        x.add(i.toFloat())
+                        y.add(median)
+                    }
                 }
 
-                val n = 3
-                val mx = Matrix.matrixOf(
-                    n, 2,
-                    1.0, 7.0,
-                    1.0, 5.0,
-                    1.0, 2.5
-                )
-                val my = Matrix.matrixOf(
-                    n, 1,
-                    3.5,
-                    2.0,
-                    1.5
-                )
-                val w = (mx.transpose() * mx).invert() * mx.transpose() * my
+                val gaussSigma = 4000f
+                val gaussAmplitude = 0.40
+                fun gaussFunction(x: Float) = gaussAmplitude * exp(x*x/-2/(gaussSigma*gaussSigma))
 
+                val cauchySigma = 5100f
+                val cauchyAmplitude = 0.40
+                fun cauchyFunction(x: Float) = cauchyAmplitude * 1f/(1+(x/cauchySigma).pow(2f))
 
-                null
+                val polynomialFunction = polyRegression(x.toFloatArray(), y.toFloatArray())
+
+                for (i in 0 until maxDistance) {
+                    val count = distanceValues[i].size
+                    val average = distanceValues[i].toFloatArray().average().finiteOrElse()
+                    val median = distanceValues[i].toFloatArray().medianInplace().finiteOrElse()
+                    //val sigmaWinsorizeInplace = distanceValues[i].toFloatArray().sigmaClip(0.01f, keepLast=false).medianInplace().finiteOrElse()
+                    val regression = polynomialFunction(i.toFloat())
+                    val gauss = gaussFunction(i.toFloat())
+                    val cauchy = cauchyFunction(i.toFloat())
+                    //println("  $i, $average, $median, ${sigmaWinsorizeInplace}, ${reducedValues[i]}, $regression")
+                    println("  $i, $average, $median, $regression, $gauss, $cauchy")
+                }
+
+                val flatMatrix = CalculatedMatrix(inputImage.width, inputImage.height) { row, column ->
+                    val dx = (centerX-column).toDouble()
+                    val dy = (centerY-row).toDouble()
+                    val distance = sqrt(dx*dx + dy*dy).toFloat()
+                    cauchyFunction(distance)
+                }
+
+                var flatImage = MatrixImage(inputImage.width, inputImage.height,
+                    Channel.Red to flatMatrix,
+                    Channel.Green to flatMatrix,
+                    Channel.Blue to flatMatrix)
+
+                inputImage / flatImage * flatMatrix.max()
             }
         }
+
+    // based on http://rosettacode.org/wiki/Polynomial_regression#Kotlin
+    fun polyRegression(x: FloatArray, y: FloatArray): ((Float) -> Float) {
+        val xm = x.average()
+        val ym = y.average()
+        val x2m = x.map { it * it }.average()
+        val x3m = x.map { it * it * it }.average()
+        val x4m = x.map { it * it * it * it }.average()
+        val xym = x.zip(y).map { it.first * it.second }.average()
+        val x2ym = x.zip(y).map { it.first * it.first * it.second }.average()
+
+        val sxx = x2m - xm * xm
+        val sxy = xym - xm * ym
+        val sxx2 = x3m - xm * x2m
+        val sx2x2 = x4m - x2m * x2m
+        val sx2y = x2ym - x2m * ym
+
+        val b = (sxy * sx2x2 - sx2y * sxx2) / (sxx * sx2x2 - sxx2 * sxx2)
+        val c = (sx2y * sxx - sxy * sxx2) / (sxx * sx2x2 - sxx2 * sxx2)
+        val a = ym - b * xm - c * x2m
+
+        fun abc(xx: Float) = a + b * xx + c * xx * xx
+
+        println("y = $a + ${b}x + ${c}x^2\n")
+//        println(" Input  Approximation")
+//        println(" x   y     y1")
+//        for ((xi, yi) in x zip y) {
+//            println("$xi, $yi, ${abc(xi)}")
+//        }
+        return ::abc
+    }
 
     fun scriptTestMulti(): Script =
         kimage(0.1) {
