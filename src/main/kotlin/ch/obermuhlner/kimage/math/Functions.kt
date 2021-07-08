@@ -347,6 +347,12 @@ fun DoubleArray.sigmaClip(kappa: Double = 2.0, iterations: Int = 1, offset: Int 
     return array.copyOfRange(0, clippedLength)
 }
 
+fun FloatArray.sigmaClip(low: Float, high: Float, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population, center: (array: FloatArray, offset: Int, length: Int) -> Float = FloatArray::median, keepLast: Boolean = true, histogram: Histogram? = null): FloatArray {
+    val array = copyOfRange(offset, offset+length)
+    val clippedLength = array.sigmaClipInplace(low, high, 0, length, keepLast)
+    return array.copyOfRange(0, clippedLength)
+}
+
 fun FloatArray.sigmaClipInplace(kappa: Float = 2f, iterations: Int = 1, offset: Int = 0, length: Int = size-offset, standardDeviationType: StandardDeviation = StandardDeviation.Population, center: (array: FloatArray, offset: Int, length: Int) -> Float = FloatArray::median, keepLast: Boolean = true, histogram: Histogram? = null): Int {
     var currentLength = length
 
