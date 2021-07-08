@@ -220,7 +220,7 @@ kimage color-stretch --arg brightness=3 --arg curve=s-curve-strong 'remove-backg
 
 It is possible to write your own `kimage` scripts.
 
-Create a `.kimage` directory in your home directory and copy the following script info a file `spooky.kts`:
+Create a `.kimage` directory in your home directory and copy the following script into a file `.kimage/spooky.kts`:
 
 ```kotlin
 import ch.obermuhlner.kimage.*
