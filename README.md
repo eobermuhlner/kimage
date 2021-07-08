@@ -279,8 +279,6 @@ Output file: .\spooky_lena512.png
 
 The following scripts are distributed together with the `kimage` application.
 
----
-
 ## Script: `align`
 
     kimage [OPTIONS] align
@@ -549,9 +547,9 @@ The curve shape used to modify the contrast.
 The output images show the pixel-wise difference between two images on a specific channel (default is `Luminance`).
 
 The difference is color coded:
-  - black = no difference
-  - blue  = pixel in the first image is brighter
-  - red   = pixel in the first image is darker
+- black = no difference
+- blue  = pixel in the first image is brighter
+- red   = pixel in the first image is darker
 
 The `factor` argument controls how much the differences are exaggerated.
 
@@ -749,6 +747,57 @@ If the `blurFilterPercent` is 0.0 then the blur filter size is calculated automa
 
 ---
 
+## Script: `remove-vignette`
+
+    kimage [OPTIONS] remove-vignette
+        [--arg centerX=INT]
+        [--arg centerY=INT]
+        [--arg mode=STRING]
+        [--arg kappa=DOUBLE]
+        [FILES]
+
+### Remove the vignette effect from image
+
+Calculates a statistical model of the vignette effect of the input image and removes it.
+
+#### Argument: `centerX`
+
+- Type: int
+
+The X coordinate of the center of the vignette effect.
+The default value is the center of the image.
+
+#### Argument: `centerY`
+
+- Type: int
+
+The Y coordinate of the center of the vignette effect.
+The default value is the center of the image.
+
+#### Argument: `mode`
+
+- Type: string
+- Allowed values:
+  - `rgb`
+  - `gray`
+  - `luminance`
+  - `red`
+  - `green`
+  - `blue`
+- Default value: `rgb`
+
+Controls which channels are used to calculate the vignette effect.
+The `rgb` mode calculates the effect on the three color channels separately.
+
+#### Argument: `kappa`
+
+- Type: double
+- Default value: 2.0
+
+The kappa factor is used in sigma-clipping of sample values to determine the vignette effect.
+
+---
+
 ## Script: `stack`
 
     kimage [OPTIONS] stack
@@ -846,6 +895,10 @@ This implementation is faster and uses less memory than using the generic script
         [--arg stringArg=STRING]
         [--arg allowedStringArg=STRING]
         [--arg regexStringArg=STRING]
+        [--arg listOfIntArg=LIST]
+        [--arg optionalListOfIntArg=LIST]
+        [--arg recordArg=RECORD]
+        [--arg optionalRecordArg=RECORD]
         [FILES]
 
 ### Test script to show how to handle multiple images in a kimage script
@@ -909,6 +962,66 @@ Example argument for a string value with some allowed strings.
 - Default value: `aaa`
 
 Example argument for a string value with regular expression.
+
+#### Argument: `listOfIntArg`
+
+- Type: list
+- List Elements:
+  - Type: int
+  - Minimum value: 0
+  - Maximum value: 9
+
+- Minimum length: 1
+- Default values: [1, 2, 3]
+
+Example argument for a list of integer values.
+
+#### Argument: `optionalListOfIntArg`
+
+- Type: list
+- List Elements:
+  - Type: int
+  - Minimum value: 0
+  - Maximum value: 9
+
+- Minimum length: 1
+
+Example argument for an optional list of integer values.
+
+#### Argument: `recordArg`
+
+- Type: record
+- Record Elements:
+  - Name: `recordInt`
+  - Type: int
+  - Default value: 2
+
+  - Name: `recordString`
+  - Type: string
+  - Default value: `hello`
+
+  - Name: `recordDouble`
+  - Type: double
+  - Default value: 3.14
+
+
+Example argument for a record containing different values.
+
+#### Argument: `optionalRecordArg`
+
+- Type: record
+- Record Elements:
+  - Name: `optionalRecordInt`
+  - Type: int
+
+  - Name: `optionalRecordString`
+  - Type: string
+
+  - Name: `optionalRecordDouble`
+  - Type: double
+
+
+Example argument for an optional record containing different values.
 
 ---
 
