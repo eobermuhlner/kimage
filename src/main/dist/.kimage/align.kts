@@ -115,10 +115,10 @@ kimage(0.1) {
         val prefixBad: String by arguments
 
         println("Arguments (calculated from input):")
-        println("  checkRadius = $checkRadius")
-        println("  searchRadius = $searchRadius")
-        println("  centerX = $centerX")
-        println("  centerY = $centerY")
+        println("  checkRadius = ${checkRadius.get()}")
+        println("  searchRadius = ${searchRadius.get()}")
+        println("  centerX = ${centerX.get()}")
+        println("  centerY = ${centerY.get()}")
         println()
 
         if (debugMode) {
