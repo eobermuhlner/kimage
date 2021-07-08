@@ -130,10 +130,12 @@ kimage(0.1) {
                 light = light - dark.get()
             }
             if (flat.isPresent) {
-                light = light / flat.get()
+                light = light / flat.get() * flat.get().values().max()
             }
 
-            ImageWriter.write(light, inputFile.prefixName("calibrated_"))
+            val outputFile = inputFile.prefixName("calibrated_")
+            println("Saving $outputFile")
+            ImageWriter.write(light, outputFile)
         }
 
         null
