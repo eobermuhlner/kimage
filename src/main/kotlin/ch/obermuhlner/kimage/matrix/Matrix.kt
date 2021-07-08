@@ -259,11 +259,9 @@ interface Matrix : Iterable<Double> {
     }
 
     fun identity(size: Int): Matrix {
-        val m = create(size, size)
-        for (i in 0 until size) {
-            m[i, i] = 1.0;
+        return CalculatedMatrix(size, size) { row, column ->
+            if (row == column) 1.0 else 0.0
         }
-        return m;
     }
 
     fun copy(): Matrix {
