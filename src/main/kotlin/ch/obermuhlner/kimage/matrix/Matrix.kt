@@ -141,6 +141,12 @@ interface Matrix : Iterable<Double> {
         }
     }
 
+    infix fun elementDiv(other: Matrix): Matrix {
+        return copy().onEach { row, column, value ->
+            value / other[row, column]
+        }
+    }
+
     fun convolute(kernel: Matrix): Matrix {
         val m = create()
         for (row in 0 until rows) {
