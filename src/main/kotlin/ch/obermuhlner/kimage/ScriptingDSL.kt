@@ -14,6 +14,7 @@ annotation class KotlinDSL
 @KotlinDSL
 sealed class Script(val version: Double) {
     var name: String = ""
+    var code: String = ""
 }
 
 object ScriptExecutor {
@@ -267,6 +268,7 @@ class ScriptV0_1 : Script(0.1) {
             for (inputFile in inputFiles) {
                 val inputImage = read(inputFile)
                 it.executeSingleScript(
+                    inputFiles,
                     inputFile,
                     inputImage,
                     scriptArguments,
@@ -807,10 +809,12 @@ sealed class AbstractScript {
 
 @KotlinDSL
 class ScriptSingle(val executable: ScriptSingle.() -> Any?) : AbstractScript() {
+    var inputFiles: List<File> = listOf()
     var inputFile: File = File(".")
     var inputImage: Image = MatrixImage(0, 0)
 
-    fun executeSingleScript(inputFile: File, inputImage: Image, scriptArguments: ScriptArguments, arguments: Map<String, String>, verboseMode: Boolean, debugMode: Boolean, outputHandler: (File, Any?) -> Unit) {
+    fun executeSingleScript(inputFiles: List<File>, inputFile: File, inputImage: Image, scriptArguments: ScriptArguments, arguments: Map<String, String>, verboseMode: Boolean, debugMode: Boolean, outputHandler: (File, Any?) -> Unit) {
+        this.inputFiles = inputFiles
         this.inputFile = inputFile
         this.inputImage = inputImage
         this.scriptArguments = scriptArguments

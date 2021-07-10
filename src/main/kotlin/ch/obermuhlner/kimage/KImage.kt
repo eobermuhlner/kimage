@@ -1,18 +1,13 @@
 package ch.obermuhlner.kimage
 
 import ch.obermuhlner.kimage.image.*
-import ch.obermuhlner.kimage.image.Channel.*
 import ch.obermuhlner.kimage.io.ImageReader.read
 import ch.obermuhlner.kimage.io.ImageWriter
 import ch.obermuhlner.kimage.javafx.KImageApplication
-import ch.obermuhlner.kimage.javafx.KImageApplication.Companion.interactive
-import ch.obermuhlner.kotlin.javafx.*
 import com.xenomachina.argparser.ArgParser
 import com.xenomachina.argparser.default
 import com.xenomachina.argparser.mainBody
-import javafx.beans.property.SimpleBooleanProperty
-import javafx.beans.property.SimpleDoubleProperty
-import javafx.beans.property.SimpleIntegerProperty
+import javafx.application.Application
 import java.io.File
 import javax.script.*
 
@@ -66,6 +61,11 @@ class KimageCli(parser: ArgParser) {
     )
         .default(false)
 
+    private val uiMode by parser.flagging(
+        "--ui",
+        help = "UI mode"
+    ).default(false)
+
     private val scriptDirectory: String by parser.storing(
         "--script-dir",
         help = "script directory"
@@ -102,21 +102,22 @@ class KimageCli(parser: ArgParser) {
             return
         }
 
-        val scriptFileMap: MutableMap<String, File> = mutableMapOf()
         if (scriptDirectory != "") {
-            fillScriptFiles(scriptFileMap, scriptDirectory)
+            KImageManager.addScriptDirectory(File(scriptDirectory))
         }
-        fillScriptFiles(scriptFileMap, File(KImage.javaClass.protectionDomain.codeSource.location.toURI()).absolutePath)
-        fillScriptFiles(scriptFileMap, System.getProperty("user.home"))
-        fillScriptFiles(scriptFileMap, System.getProperty("user.dir"))
+
+        if (uiMode) {
+            Application.launch(KImageApplication::class.java)
+            return
+        }
 
         val commands = mutableListOf<String>()
         if (command == "") {
             if (helpMode) {
-                commands.addAll(scriptFileMap.keys.sorted())
+                commands.addAll(KImageManager.scriptNames)
             } else {
                 println("Scripts:")
-                scriptFileMap.keys.sorted().forEach {
+                KImageManager.scriptNames.forEach {
                     println("  $it")
                 }
                 return
@@ -126,26 +127,26 @@ class KimageCli(parser: ArgParser) {
         }
 
         for (command in commands) {
-            val (commandName, script, extension) = when {
-                scriptFileMap.containsKey(command) -> Triple(
+            val (commandName, scriptCode, extension) = when {
+                KImageManager.scriptNames.contains(command) -> Triple(
                     command,
-                    scriptFileMap[command]!!.readText(),
-                    scriptFileMap[command]!!.extension
+                    KImageManager.scriptFile(command).readText(),
+                    KImageManager.scriptFile(command).extension
                 )
                 File(command).exists() -> Triple(
                     File(command).nameWithoutExtension,
                     File(command).readText(),
                     File(command).extension
                 )
-                else -> Triple("output", command, "kts")
+                else -> Triple("execute", command, "kts")
             }
 
             val parametersMap: Map<String, String> = mapOf(*parameters.toTypedArray())
 
             KImageExecution(
                 commandName,
-                command == script,
-                script,
+                command == scriptCode,
+                scriptCode,
                 extension,
                 parametersMap,
                 fileNames,
@@ -157,13 +158,33 @@ class KimageCli(parser: ArgParser) {
             ).execute()
         }
     }
+}
 
-    private fun fillScriptFiles(scriptFilesMap: MutableMap<String, File>, path: String?) {
-        if (path == null) {
-            return
+object KImageManager {
+
+    private val mutableScriptFiles = mutableMapOf<String, File>()
+
+    val scriptNames get() = mutableScriptFiles.keys.sorted()
+
+    init {
+        fillScriptFiles(mutableScriptFiles, File(KImage.javaClass.protectionDomain.codeSource.location.toURI()))
+
+        System.getProperty("user.home")?.let {
+            fillScriptFiles(mutableScriptFiles, File(it))
         }
+        System.getProperty("user.dir")?.let {
+            fillScriptFiles(mutableScriptFiles, File(it))
+        }
+    }
 
-        var current: File? = File(path)
+    fun addScriptDirectory(directory: File) {
+        fillScriptFiles(mutableScriptFiles, directory)
+    }
+
+    fun scriptFile(scriptName: String) = mutableScriptFiles[scriptName]!!
+
+    private fun fillScriptFiles(scriptFilesMap: MutableMap<String, File>, path: File) {
+        var current: File? = path
         while (current != null && current.exists()) {
             if (current.isDirectory) {
                 val currentScriptDir = File(current, ".kimage")
@@ -203,7 +224,7 @@ class KimageCli(parser: ArgParser) {
 class KImageExecution(
     private val commandName: String,
     private val lowLevelExecution: Boolean,
-    private val originalScript: String,
+    private val code: String,
     private val extension: String,
     private val parametersMap: Map<String, String>,
     private val filenames: List<String>,
@@ -215,130 +236,71 @@ class KImageExecution(
 ) {
     fun execute() {
         try {
-            val script = addImportsToScript(originalScript, extension)
-
-            val determinedSingleMode = script.contains("require(singleMode)") || lowLevelExecution
-
-            val manager = ScriptEngineManager()
-            val engine = manager.getEngineByExtension(extension)
-
-            if (engine == null) {
-                println("Script language not supported: $extension")
-                return
-            }
-
             val inputFiles = filenames.map { File(it) }
-
-            executeScript(engine, script, inputFiles, determinedSingleMode)
+            ScriptExecutor.executeScript(script(), parametersMap, inputFiles, helpMode, verboseMode, debugMode, outputPrefix, outputDirectory)
         } catch (ex: Exception) {
             println("Failed to execute $commandName:")
             ex.printStackTrace()
         }
     }
 
-    private fun executeScript(
-        engine: ScriptEngine,
-        script: String,
-        inputFiles: List<File>,
-        determinedSingleMode: Boolean
-    ) {
-        val scriptInfo = executeScriptLowLevel(engine, script, inputFiles, parametersMap, determinedSingleMode)
-        if (scriptInfo != null) {
-            if (scriptInfo.name == "") {
-                scriptInfo.name = commandName
-            }
-            if (scriptInfo.name != commandName) {
-                println("Warning: Script file name '$commandName' does not match name declared in script '${scriptInfo.name}'")
-            }
-            ScriptExecutor.executeScript(scriptInfo, parametersMap, inputFiles, helpMode, verboseMode, debugMode, outputPrefix, outputDirectory)
-        }
+    fun script(): Script {
+        val manager = ScriptEngineManager()
+        val engine = manager.getEngineByExtension(extension)
+            ?: throw IllegalArgumentException("Script language not supported: $extension")
+
+        return createScript(engine, addImportsToScript(code, extension))
     }
 
-    private fun executeScriptLowLevel(
+    private fun createScript(
         engine: ScriptEngine,
-        script: String,
-        inputFiles: List<File>,
-        parametersMap: Map<String, String>,
-        singleMode: Boolean
-    ): Script? {
-        if (filenames.isEmpty()) {
-            initCommonParameters(engine, false, inputFiles, parametersMap)
+        code: String
+    ): Script {
+        val script = executeScriptLowLevel(engine, code)
 
-            val scriptInfo = executeScriptLowLevel(engine, script, ScriptExecutor.outputFile(File("noinput.png"), outputPrefix, outputDirectory))
-            if (scriptInfo != null) {
-                return scriptInfo
-            }
-        } else {
-            if (singleMode) {
-                for (filename in filenames) {
-                    val inputFile = File(filename)
-                    if (inputFile.exists()) {
-                        if (verboseMode) {
-                            println("Processing single file: $inputFile")
-                        }
+        script.code = code
 
-                        val inputImage = read(inputFile)
-                        initCommonParameters(engine, true, inputFiles, parametersMap)
-                        initSingleFileParameters(engine, inputFile, inputImage)
-
-                        val scriptInfo = executeScriptLowLevel(
-                            engine,
-                            script,
-                            ScriptExecutor.outputFile(inputFile, outputPrefix, outputDirectory)
-                        )
-                        if (scriptInfo != null) {
-                            return scriptInfo
-                        }
-                    } else {
-                        println("File not found: $inputFile")
-                    }
-                    println()
-                }
-            } else {
-                if (verboseMode) {
-                    println("Processing files: $filenames")
-                }
-
-                initCommonParameters(engine, false, inputFiles, parametersMap)
-
-                val scriptInfo = executeScriptLowLevel(engine, script, ScriptExecutor.outputFile(inputFiles[0], outputPrefix, outputDirectory))
-                if (scriptInfo != null) {
-                    return scriptInfo
-                }
-            }
+        if (script.name == "") {
+            script.name = commandName
+        }
+        if (script.name != commandName) {
+            println("Warning: Script file name '$commandName' does not match name declared in script '${script.name}'")
         }
 
-        return null
+        return script
+    }
+
+    private fun createDummyScript(engine: ScriptEngine, code: String): Script {
+        return kimage(0.1) {
+            title = "Executes code passed directly to kimage"
+            description = """
+                This is a custom command executing the code directly.
+            """
+            single {
+                setVariable(engine, "kimageVersion", KImage.VERSION)
+                setVariable(engine, "verboseMode", verboseMode)
+                setVariable(engine, "outputDirectory", outputDirectory)
+                setVariable(engine, "outputPrefix", outputPrefix)
+
+                setVariable(engine, "singleMode", true)
+                setVariable(engine, "multiMode", false)
+                setVariable(engine, "inputFiles", inputFiles)
+
+                setVariable(engine, "inputFile", inputFile)
+                setVariable(engine, "inputImage", inputImage)
+
+                engine.put("inputParameters", rawArguments)
+
+                engine.eval(code)
+            }
+        }
     }
 
     private fun addImportsToScript(originalScript: String, extension: String): String {
         return if (extension != "kts" || originalScript.contains(IMPORT_REGEX)) {
             originalScript
         } else {
-            IMPORT_STATEMENTS + originalScript
-        }
-    }
-
-    private fun initCommonParameters(
-        engine: ScriptEngine,
-        singleMode: Boolean,
-        inputFiles: List<File>,
-        parametersMap: Map<String, String>
-    ) {
-        setVariable(engine, "kimageVersion", KImage.VERSION)
-        setVariable(engine, "verboseMode", verboseMode)
-        setVariable(engine, "outputDirectory", outputDirectory)
-        setVariable(engine, "outputPrefix", outputPrefix)
-
-        setVariable(engine, "singleMode", singleMode)
-        setVariable(engine, "multiMode", !singleMode)
-        setVariable(engine, "inputFiles", inputFiles)
-
-        engine.put("inputParameters", parametersMap)
-        if (verboseMode) {
-            parametersMap.forEach {
-                println("  inputParameters[${it.key}] = ${it.value}")
-            }
+            IMPORT_STATEMENTS + "\n" + originalScript
         }
     }
 
@@ -353,36 +315,23 @@ class KImageExecution(
         }
     }
 
-    private fun initSingleFileParameters(
-        engine: ScriptEngine,
-        inputFile: File,
-        inputImage: Image
-    ) {
-        setVariable(engine, "inputFile", inputFile)
-        setVariable(engine, "inputImage", inputImage)
-    }
+    private fun executeScriptLowLevel(engine: ScriptEngine, code: String): Script {
+        if (!code.contains(Regex("kimage\\([0-9]+.[0-9]+\\)"))) {
+            return createDummyScript(engine, code)
+        }
 
-    private fun executeScriptLowLevel(engine: ScriptEngine, script: String, outputFile: File): Script? {
         val startMillis = System.currentTimeMillis()
-        val result = engine.eval(script)
+        val result = engine.eval(code)
         val endMillis = System.currentTimeMillis()
         val deltaMillis = endMillis - startMillis
 
         if (verboseMode) {
-            println("Processed in $deltaMillis ms")
+            println("Compiled in $deltaMillis ms")
         }
 
-        var output = engine.get("output")
-        if (output == null) {
-            output = result
-        }
-
-        return when (output) {
-            is Script -> output
-            else -> {
-                outputHandler(outputFile, output)
-                null
-            }
+        return when (result) {
+            is Script -> result
+            else -> throw IllegalArgumentException("Script code does not return a valid kimage script: $result")
         }
     }
 
@@ -402,71 +351,6 @@ class KImageExecution(
         }
     }
 
-    private fun example() {
-        //val originalImage = ImageReader.read(File("images/animal.png"))
-        //val originalImage = ImageReader.read(File("images/orion_small_compress0.png"))
-        val originalImage = read(File("images/orion_32bit.tif"))
-
-//        val originalImage = interactive {
-//            openImageFile(initialDirectory = File("images"))
-//        }
-
-        interactive {
-            setCurrentImage(originalImage, "Original")
-
-            val radiusProperty = SimpleIntegerProperty(3)
-            val recursiveProperty = SimpleBooleanProperty(true)
-            form {
-                children += vbox {
-                    children += label("Median Radius:")
-                    children += textfield(radiusProperty) {}
-                    children += checkbox(recursiveProperty) {}
-                }
-            }
-
-            filter("Median") {
-                medianPixelFilter(radiusProperty.get())
-            }
-        }
-
-        interactive {
-            val radiusProperty = SimpleIntegerProperty(3)
-            form {
-                children += vbox {
-                    children += label("Blur Radius:")
-                    children += textfield(radiusProperty) {}
-                }
-            }
-            filter("Blur") {
-                gaussianBlurFilter(radiusProperty.get())
-            }
-        }
-
-        interactive {
-            val removalFactorProperty = SimpleDoubleProperty(1.0)
-            form {
-                children += vbox {
-                    children += label("Removal Factor:")
-                    children += textfield(removalFactorProperty, KImageApplication.PERCENT_FORMAT) {}
-                }
-            }
-            filterArea("Subtract") { x, y, w, h ->
-                val croppedOriginalImage = originalImage.crop(x, y, w, h)
-                MatrixImage(
-                    this.width,
-                    this.height,
-                    Red to croppedOriginalImage[Red] - this[Red] * removalFactorProperty.get(),
-                    Green to croppedOriginalImage[Green] - this[Green] * removalFactorProperty.get(),
-                    Blue to croppedOriginalImage[Blue] - this[Blue] * removalFactorProperty.get()
-                )
-            }
-        }
-
-        interactive {
-            ImageWriter.write(currentImage!!, File("images/background_removed.png"))
-        }
-    }
-
     companion object {
         private val IMPORT_STATEMENTS = """
             import ch.obermuhlner.kimage.*
@@ -478,6 +362,7 @@ class KImageExecution(
             import java.io.*
             import java.util.Optional
             import kotlin.math.*
+            
         """.trimIndent()
 
         private val IMPORT_REGEX = Regex("^import")

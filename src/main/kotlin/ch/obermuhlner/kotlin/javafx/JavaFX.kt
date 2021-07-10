@@ -77,6 +77,15 @@ fun <T> combobox(items: List<T>, initializer: ComboBox<T>.() -> Unit)
 fun <T> combobox(items: ObservableList<T>, initializer: ComboBox<T>.() -> Unit)
         = ComboBox(items).apply(initializer)
 
+fun <T> listview(items: Array<T>, initializer: ListView<T>.() -> Unit)
+        = ListView(FXCollections.observableArrayList(*items)).apply(initializer)
+
+fun <T> listview(items: List<T>, initializer: ListView<T>.() -> Unit)
+        = ListView(FXCollections.observableArrayList(items)).apply(initializer)
+
+fun <T> listview(items: ObservableList<T>, initializer: ListView<T>.() -> Unit)
+        = ListView(items).apply(initializer)
+
 fun checkbox(initializer: CheckBox.() -> Unit)
         = CheckBox().apply(initializer)
 
