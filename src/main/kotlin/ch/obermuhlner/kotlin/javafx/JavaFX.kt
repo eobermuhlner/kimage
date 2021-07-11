@@ -116,6 +116,10 @@ fun textfield(doubleProperty: DoubleProperty, format: Format = KImageApplication
     return field
 }
 
+fun textarea(initializer: TextArea.() -> Unit)
+        = TextArea().apply(initializer)
+
+
 fun imageview(image: Image, initializer: ImageView.() -> Unit)
         = ImageView(image).apply(initializer)
 
