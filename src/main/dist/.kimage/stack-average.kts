@@ -26,7 +26,7 @@ kimage(0.1) {
             stacked = if (stacked == null) {
                 image
             } else {
-                stacked + image
+                stacked + image.crop(0, 0, stacked.width, stacked.height)
             }
         }
 
