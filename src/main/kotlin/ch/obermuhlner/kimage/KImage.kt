@@ -1,7 +1,6 @@
 package ch.obermuhlner.kimage
 
 import ch.obermuhlner.kimage.image.*
-import ch.obermuhlner.kimage.io.ImageReader.read
 import ch.obermuhlner.kimage.io.ImageWriter
 import ch.obermuhlner.kimage.javafx.KImageApplication
 import com.xenomachina.argparser.ArgParser
@@ -143,26 +142,40 @@ class KimageCli(parser: ArgParser) {
 
             val parametersMap: Map<String, String> = mapOf(*parameters.toTypedArray())
 
-            KImageExecution(
-                commandName,
-                command == scriptCode,
-                scriptCode,
-                extension,
+            val script = KImageManager.script(command)
+
+            KImageManager.executeScript(
+                script,
                 parametersMap,
-                fileNames,
-                if (outputPrefix == "") commandName else outputPrefix,
-                outputDirectory,
+                fileNames.map { File(it) },
                 helpMode,
                 verboseMode,
-                debugMode
-            ).execute()
+                debugMode,
+                if (outputPrefix == "") commandName else outputPrefix,
+                outputDirectory
+            )
         }
     }
 }
 
 object KImageManager {
+    private val IMPORT_STATEMENTS = """
+        import ch.obermuhlner.kimage.*
+        import ch.obermuhlner.kimage.align.*
+        import ch.obermuhlner.kimage.filter.*
+        import ch.obermuhlner.kimage.image.*
+        import ch.obermuhlner.kimage.io.*
+        import ch.obermuhlner.kimage.math.*
+        import java.io.*
+        import java.util.Optional
+        import kotlin.math.*
+        
+    """.trimIndent()
+
+    private val IMPORT_REGEX = Regex("^import")
 
     private val mutableScriptFiles = mutableMapOf<String, File>()
+    private val scriptCache = mutableMapOf<String, Script>()
 
     val scriptNames get() = mutableScriptFiles.keys.sorted()
 
@@ -219,55 +232,120 @@ object KImageManager {
             scriptFilesMap[name] = file
         }
     }
-}
 
-class KImageExecution(
-    private val commandName: String,
-    private val lowLevelExecution: Boolean,
-    private val code: String,
-    private val extension: String,
-    private val parametersMap: Map<String, String>,
-    private val filenames: List<String>,
-    private val outputPrefix: String,
-    private val outputDirectory: String,
-    private val helpMode: Boolean,
-    private val verboseMode: Boolean,
-    private val debugMode: Boolean
-) {
-    fun execute() {
-        try {
-            val inputFiles = filenames.map { File(it) }
-            ScriptExecutor.executeScript(script(), parametersMap, inputFiles, helpMode, verboseMode, debugMode, outputPrefix, outputDirectory)
-        } catch (ex: Exception) {
-            println("Failed to execute $commandName:")
-            ex.printStackTrace()
+    fun script(command: String): Script {
+        val cachedScript = scriptCache[command]
+        cachedScript?.let {
+            return it
         }
-    }
 
-    fun script(): Script {
+        val file = scriptFile(command)
+        val code = file.readText()
+        val extension = file.extension
+
         val manager = ScriptEngineManager()
         val engine = manager.getEngineByExtension(extension)
             ?: throw IllegalArgumentException("Script language not supported: $extension")
 
-        return createScript(engine, addImportsToScript(code, extension))
+        return createScript(command, engine, addImportsToScript(code, extension))
     }
 
-    private fun createScript(
-        engine: ScriptEngine,
-        code: String
-    ): Script {
+    fun executeScript(
+        script: Script,
+        arguments: Map<String, String>,
+        inputFiles: List<File>,
+        helpMode: Boolean,
+        verboseMode: Boolean,
+        debugMode: Boolean,
+        outputPrefix: String,
+        outputDirectory: String
+    ) {
+        if (helpMode) {
+            when (script) {
+                is ScriptV0_1 -> {
+                    script.help()
+                }
+            }
+        } else {
+            when (script) {
+                is ScriptV0_1 -> {
+                    script.execute(inputFiles, arguments, verboseMode, debugMode) { inputFile, output ->
+                        outputHandler(outputFile(inputFile, outputPrefix, outputDirectory), output)
+                    }
+                }
+            }
+        }
+    }
+
+    // TODO get rid of duplicate impl
+    private fun outputHandler(outputFile: File, output: Any?): Unit {
+        when(output) {
+            is Image -> {
+                println("Output file: $outputFile")
+                ImageWriter.write(output, outputFile)
+            }
+            Unit -> {}
+            null -> {}
+            else -> {
+                println("Output: $output")
+                println()
+            }
+        }
+    }
+
+    fun outputFile(imageFile: File, prefix: String, directoryName: String): File {
+        val directoryFile = when {
+            directoryName != "" -> File(directoryName)
+            imageFile.parent != null -> File(imageFile.parent)
+            else -> File(".")
+        }
+
+        var file = File(directoryFile, "${prefix}_" + imageFile.name)
+        var index = 1
+        while (file.exists()) {
+            file = File(directoryFile, "${prefix}_${index}_" + imageFile.name)
+            index++
+        }
+        return file
+    }
+
+    private fun createScript(command: String, engine: ScriptEngine, code: String): Script {
         val script = executeScriptLowLevel(engine, code)
 
         script.code = code
 
         if (script.name == "") {
-            script.name = commandName
+            script.name = command
         }
-        if (script.name != commandName) {
-            println("Warning: Script file name '$commandName' does not match name declared in script '${script.name}'")
+        if (script.name != command) {
+            println("Warning: Script file name '$command' does not match name declared in script '${script.name}'")
         }
 
         return script
+    }
+
+    private fun addImportsToScript(originalScript: String, extension: String): String {
+        return if (extension != "kts" || originalScript.contains(IMPORT_REGEX)) {
+            originalScript
+        } else {
+            IMPORT_STATEMENTS + "\n" + originalScript
+        }
+    }
+
+    private fun executeScriptLowLevel(engine: ScriptEngine, code: String): Script {
+        if (!code.contains(Regex("kimage\\([0-9]+.[0-9]+\\)"))) {
+            return createDummyScript(engine, code)
+        }
+
+        val startMillis = System.currentTimeMillis()
+        val result = engine.eval(code)
+        val endMillis = System.currentTimeMillis()
+        val deltaMillis = endMillis - startMillis
+
+        return when (result) {
+            is Script -> result
+            else -> throw IllegalArgumentException("Script code does not return a valid kimage script: $result")
+        }
     }
 
     private fun createDummyScript(engine: ScriptEngine, code: String): Script {
@@ -279,8 +357,8 @@ class KImageExecution(
             single {
                 setVariable(engine, "kimageVersion", KImage.VERSION)
                 setVariable(engine, "verboseMode", verboseMode)
-                setVariable(engine, "outputDirectory", outputDirectory)
-                setVariable(engine, "outputPrefix", outputPrefix)
+//                setVariable(engine, "outputDirectory", outputDirectory)
+//                setVariable(engine, "outputPrefix", outputPrefix)
 
                 setVariable(engine, "singleMode", true)
                 setVariable(engine, "multiMode", false)
@@ -296,76 +374,15 @@ class KImageExecution(
         }
     }
 
-    private fun addImportsToScript(originalScript: String, extension: String): String {
-        return if (extension != "kts" || originalScript.contains(IMPORT_REGEX)) {
-            originalScript
-        } else {
-            IMPORT_STATEMENTS + "\n" + originalScript
-        }
-    }
-
     private fun setVariable(
         engine: ScriptEngine,
         name: String,
         value: Any?
     ) {
         engine.put(name, value)
-        if (verboseMode) {
-            println("  $name = $value")
-        }
-    }
-
-    private fun executeScriptLowLevel(engine: ScriptEngine, code: String): Script {
-        if (!code.contains(Regex("kimage\\([0-9]+.[0-9]+\\)"))) {
-            return createDummyScript(engine, code)
-        }
-
-        val startMillis = System.currentTimeMillis()
-        val result = engine.eval(code)
-        val endMillis = System.currentTimeMillis()
-        val deltaMillis = endMillis - startMillis
-
-        if (verboseMode) {
-            println("Compiled in $deltaMillis ms")
-        }
-
-        return when (result) {
-            is Script -> result
-            else -> throw IllegalArgumentException("Script code does not return a valid kimage script: $result")
-        }
-    }
-
-    private fun outputHandler(outputFile: File, output: Any?): Unit {
-        when(output) {
-            is Image -> {
-                println("Output file: $outputFile")
-                ImageWriter.write(output, outputFile)
-                println()
-            }
-            Unit -> {}
-            null -> {}
-            else -> {
-                println("Output: $output")
-                println()
-            }
-        }
-    }
-
-    companion object {
-        private val IMPORT_STATEMENTS = """
-            import ch.obermuhlner.kimage.*
-            import ch.obermuhlner.kimage.align.*
-            import ch.obermuhlner.kimage.filter.*
-            import ch.obermuhlner.kimage.image.*
-            import ch.obermuhlner.kimage.io.*
-            import ch.obermuhlner.kimage.math.*
-            import java.io.*
-            import java.util.Optional
-            import kotlin.math.*
-            
-        """.trimIndent()
-
-        private val IMPORT_REGEX = Regex("^import")
+//        if (verboseMode) {
+//            println("  $name = $value")
+//        }
     }
 }
 

@@ -17,73 +17,12 @@ sealed class Script(val version: Double) {
     var code: String = ""
 }
 
-object ScriptExecutor {
-    fun executeScript(
-        script: Script,
-        arguments: Map<String, String>,
-        inputFiles: List<File>,
-        helpMode: Boolean,
-        verboseMode: Boolean,
-        debugMode: Boolean,
-        outputPrefix: String,
-        outputDirectory: String
-    ) {
-        if (helpMode) {
-            when (script) {
-                is ScriptV0_1 -> {
-                    script.help()
-                }
-            }
-        } else {
-            when (script) {
-                is ScriptV0_1 -> {
-                    script.execute(inputFiles, arguments, verboseMode, debugMode) { inputFile, output ->
-                        outputHandler(outputFile(inputFile, outputPrefix, outputDirectory), output)
-                    }
-                }
-            }
-        }
-    }
-
-    // TODO get rid of duplicate impl
-    private fun outputHandler(outputFile: File, output: Any?): Unit {
-        when(output) {
-            is Image -> {
-                println("Output file: $outputFile")
-                ImageWriter.write(output, outputFile)
-            }
-            Unit -> {}
-            null -> {}
-            else -> {
-                println("Output: $output")
-                println()
-            }
-        }
-    }
-
-    fun outputFile(imageFile: File, prefix: String, directoryName: String): File {
-        val directoryFile = when {
-            directoryName != "" -> File(directoryName)
-            imageFile.parent != null -> File(imageFile.parent)
-            else -> File(".")
-        }
-
-        var file = File(directoryFile, "${prefix}_" + imageFile.name)
-        var index = 1
-        while (file.exists()) {
-            file = File(directoryFile, "${prefix}_${index}_" + imageFile.name)
-            index++
-        }
-        return file
-    }
-}
-
 @KotlinDSL
 class ScriptV0_1 : Script(0.1) {
     var title = ""
     var description = ""
 
-    private var scriptArguments: ScriptArguments = ScriptArguments()
+    var scriptArguments: ScriptArguments = ScriptArguments()
 
     private var scriptSingle: ScriptSingle? = null
     private var scriptMulti: ScriptMulti? = null
