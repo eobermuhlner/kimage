@@ -5,15 +5,20 @@ import ch.obermuhlner.kimage.ScriptV0_1
 import ch.obermuhlner.kimage.io.ImageReader
 import ch.obermuhlner.kotlin.javafx.*
 import javafx.application.Application
+import javafx.application.Platform
 import javafx.beans.property.ReadOnlyStringWrapper
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleStringProperty
+import javafx.beans.property.StringProperty
 import javafx.collections.FXCollections
 import javafx.event.EventHandler
 import javafx.geometry.Insets
 import javafx.scene.Group
 import javafx.scene.Node
 import javafx.scene.Scene
+import javafx.scene.control.ContextMenu
+import javafx.scene.control.TableRow
+import javafx.scene.control.TextArea
 import javafx.scene.control.Tooltip
 import javafx.scene.image.ImageView
 import javafx.scene.layout.VBox
@@ -21,7 +26,7 @@ import javafx.scene.text.Font
 import javafx.stage.DirectoryChooser
 import javafx.stage.FileChooser
 import javafx.stage.Stage
-import java.io.File
+import java.io.*
 import java.nio.file.Paths
 import java.text.DecimalFormat
 
@@ -32,19 +37,21 @@ class KImageApplication : Application() {
     val inputImageView = ImageView()
     val outputImageView = ImageView()
     val commandArgumentEditor = VBox(SPACING)
+    val logTextArea = TextArea()
 
     val inputDirectoryProperty = SimpleStringProperty(Paths.get(System.getProperty("user.home", ".")).toString())
     val outputDirectoryProperty = SimpleStringProperty(Paths.get(System.getProperty("user.home", ".")).toString())
+    val outputHideOldFilesProperty = SimpleBooleanProperty()
 
     private val inputFiles = FXCollections.observableArrayList<File>()
     private val scriptNames = FXCollections.observableArrayList<String>()
     private val outputFiles = FXCollections.observableArrayList<File>()
-
+    private val hiddenOutputFiles = mutableListOf<File>()
 
     override fun start(primaryStage: Stage) {
         this.primaryStage = primaryStage
 
-        val root = Group()
+        val root = VBox()
         val scene = Scene(root)
 
         root.children += createMainEditor()
@@ -53,7 +60,7 @@ class KImageApplication : Application() {
         primaryStage.show()
 
         scriptNames.setAll(KImageManager.scriptNames)
-        updateOutputDirectoryFiles()
+        updateOutputDirectoryFiles(outputHideOldFilesProperty.get())
     }
 
     private fun createMainEditor(): Node {
@@ -67,20 +74,33 @@ class KImageApplication : Application() {
                     font = Font.font(font.size * TITLE_FONT_SIZE)
                 }
 
-                left = listview(scriptNames) {
-                    selectionModel.selectedItemProperty().addListener { _, _, selected ->
-                        selected?.let {
-                            showCommandEditor(it)
+                center = gridpane {
+                    row {
+                        cell {
+                            listview(scriptNames) {
+                                selectionModel.selectedItemProperty().addListener { _, _, selected ->
+                                    selected?.let {
+                                        showCommandEditor(it)
+                                    }
+                                }
+                            }
+                        }
+                        cell {
+                            vbox(SPACING) {
+                                padding = Insets(0.0, SPACING, 0.0, SPACING)
+
+                                minWidth = ARGUMENT_EDITOR_WIDTH.toDouble()
+                                minHeight = ARGUMENT_EDITOR_HEIGHT.toDouble()
+                                children += commandArgumentEditor
+                            }
                         }
                     }
-                }
-
-                center = vbox(SPACING) {
-                    padding = Insets(0.0, SPACING, 0.0, SPACING)
-
-                    minWidth = ARGUMENT_EDITOR_WIDTH.toDouble()
-                    minHeight = ARGUMENT_EDITOR_HEIGHT.toDouble()
-                    children += commandArgumentEditor
+                    row {
+                        cell(2, 1) {
+                            node(logTextArea) {
+                            }
+                        }
+                    }
                 }
             }
 
@@ -97,11 +117,18 @@ class KImageApplication : Application() {
             children += hbox(SPACING) {
                 children += button("Add...") {
                     onAction = EventHandler {
-                        val files = openImageFiles()
+                        val files = openImageFiles(File(inputDirectoryProperty.get()))
                         files?.let {
-                            inputFiles.clear()
+                            if (it.isNotEmpty()) {
+                                inputDirectoryProperty.set(it[0].path)
+                            }
                             inputFiles.addAll(it)
                         }
+                    }
+                }
+                children += button("Clear") {
+                    onAction = EventHandler {
+                        inputFiles.clear()
                     }
                 }
             }
@@ -110,13 +137,28 @@ class KImageApplication : Application() {
                 minWidth = FILE_TABLE_WIDTH.toDouble()
                 minHeight = FILE_TABLE_HEIGHT.toDouble()
 
+                setRowFactory {
+                    val tableRow = TableRow<File>()
+                    tableRow.contextMenu = ContextMenu(
+                        menuitem("Remove") {
+                            onAction = EventHandler {
+                                inputFiles.remove(tableRow.item)
+                                updateImageView(inputImageView, null)
+                            }
+                        }
+                    )
+                    tableRow
+                }
+
                 column<String>("Name", { file -> ReadOnlyStringWrapper(file?.name) }) {
+                    this.prefWidth = 200.0
                 }
                 column<String>("Path", { file -> ReadOnlyStringWrapper(file?.path) }) {
+                    this.prefWidth = 200.0
                 }
 
                 selectionModel.selectedItemProperty().addListener { _, _, selected ->
-                    updateInputImageView(selected)
+                    updateImageView(inputImageView, selected)
                 }
             }
 
@@ -135,10 +177,10 @@ class KImageApplication : Application() {
             }
 
             children += hbox(SPACING) {
-                children += label("Output Directory:")
+                children += label("Directory:")
                 children += textfield(outputDirectoryProperty) {
                     textProperty().addListener { _, _, _ ->
-                        updateOutputDirectoryFiles()
+                        updateOutputDirectoryFiles(outputHideOldFilesProperty.get())
                     }
                 }
                 children += button("Pick...") {
@@ -149,6 +191,15 @@ class KImageApplication : Application() {
                         }
                     }
                 }
+                children += togglebutton("Hide") {
+                    selectedProperty().bindBidirectional(outputHideOldFilesProperty)
+                    outputHideOldFilesProperty.addListener { _, _, value ->
+                        if (value == false) {
+                            hiddenOutputFiles.clear()
+                        }
+                        updateOutputDirectoryFiles(value)
+                    }
+                }
             }
 
             children += tableview(outputFiles) {
@@ -156,12 +207,14 @@ class KImageApplication : Application() {
                 minHeight = FILE_TABLE_HEIGHT.toDouble()
 
                 column<String>("Name", { file -> ReadOnlyStringWrapper(file?.name) }) {
+                    this.prefWidth = 200.0
                 }
                 column<String>("Path", { file -> ReadOnlyStringWrapper(file?.path) }) {
+                    this.prefWidth = 200.0
                 }
 
                 selectionModel.selectedItemProperty().addListener { _, _, selected ->
-                    updateOutputImageView(selected)
+                    updateImageView(outputImageView, selected)
                 }
             }
 
@@ -173,16 +226,14 @@ class KImageApplication : Application() {
         }
     }
 
-    private fun updateInputImageView(selectedFile: File) {
-        val image = ImageReader.read(selectedFile)
-        val writableImage = JavaFXImageUtil.toWritableImage(image)
-        inputImageView.image = writableImage
-    }
-
-    private fun updateOutputImageView(selectedFile: File) {
-        val image = ImageReader.read(selectedFile)
-        val writableImage = JavaFXImageUtil.toWritableImage(image)
-        outputImageView.image = writableImage
+    private fun updateImageView(imageView: ImageView, selectedFile: File?) {
+        if (selectedFile == null) {
+            imageView.image = null
+        } else {
+            val image = ImageReader.read(selectedFile)
+            val writableImage = JavaFXImageUtil.toWritableImage(image)
+            imageView.image = writableImage
+        }
     }
 
     private fun showCommandEditor(command: String) {
@@ -192,27 +243,17 @@ class KImageApplication : Application() {
         val debugModeProperty = SimpleBooleanProperty(false)
 
         node(commandArgumentEditor) {
-            children += checkbox(verboseModeProperty) {
-                text = "Verbose"
-            }
-            children += checkbox(debugModeProperty) {
-                text = "Debug"
-            }
-
-            children += label("Command: $command")
-
             val script = KImageManager.script(command)
 
             if (script is ScriptV0_1) {
-                children += label(script.title)
-
-                children += textarea {
-                    text = script.description.trimIndent()
+                children += label(script.title) {
+                    font = Font.font(font.size * SUB_TITLE_FONT_SIZE)
                 }
 
                 val argumentStrings = mutableMapOf<String, String>()
                 children += gridpane {
-                    spacing = SPACING
+                    hgap = SPACING
+                    vgap = SPACING
 
                     for (argument in script.scriptArguments.arguments) {
                         row {
@@ -230,28 +271,64 @@ class KImageApplication : Application() {
                             }
                         }
                     }
+
+                    row {
+                        cell {
+                            label("")
+                        }
+                        cell {
+                            checkbox(verboseModeProperty) {
+                                text = "Verbose"
+                            }
+                        }
+                    }
+                    row {
+                        cell {
+                            label("")
+                        }
+                        cell {
+                            checkbox(debugModeProperty) {
+                                text = "Debug"
+                            }
+                        }
+                    }
+
                 }
 
                 children += button("Run") {
                     onAction = EventHandler {
-                        KImageManager.executeScript(
-                            script,
-                            argumentStrings,
-                            inputFiles,
-                            false,
-                            verboseModeProperty.get(),
-                            debugModeProperty.get(),
-                            command,
-                            outputDirectoryProperty.get()
-                        )
-                        updateOutputDirectoryFiles()
+                        isDisable = true
+                        Thread {
+                            val systemOut = System.out
+                            try {
+                                System.setOut(PrintStream(LogOutputStream(logTextArea)))
+
+                                KImageManager.executeScript(
+                                    script,
+                                    argumentStrings,
+                                    inputFiles,
+                                    false,
+                                    verboseModeProperty.get(),
+                                    debugModeProperty.get(),
+                                    command,
+                                    outputDirectoryProperty.get()
+                                )
+                            } finally {
+                                System.setOut(systemOut)
+                                Platform.runLater {
+                                    this@button.isDisable = false
+                                }
+                            }
+                        }.start()
+
+                        updateOutputDirectoryFiles(false)
                     }
                 }
             }
         }
     }
 
-    private fun updateOutputDirectoryFiles() {
+    private fun updateOutputDirectoryFiles(hideOldFiles: Boolean) {
         outputFiles.clear()
 
         val dir = File(outputDirectoryProperty.get())
@@ -260,10 +337,15 @@ class KImageApplication : Application() {
         }
 
         val files = dir.listFiles { f -> f.isFile }
-        outputFiles.addAll(files)
+        if (hideOldFiles) {
+            hiddenOutputFiles.clear()
+            hiddenOutputFiles.addAll(files)
+        } else {
+            outputFiles.addAll(files)
+        }
     }
 
-    fun openImageFiles(initialDirectory: File = File(inputDirectoryProperty.get()), title: String = "Open Images"): List<File>? {
+    fun openImageFiles(initialDirectory: File, title: String = "Open Images"): List<File>? {
         val fileChooser = FileChooser()
         fileChooser.initialDirectory = initialDirectory
         fileChooser.title = title
@@ -272,7 +354,7 @@ class KImageApplication : Application() {
         return fileChooser.showOpenMultipleDialog(primaryStage)
     }
 
-    fun openDir(initialDirectory: File = File(outputDirectoryProperty.get()), title: String = "Pick Directory"): File? {
+    fun openDir(initialDirectory: File, title: String = "Select Directory"): File? {
         val directoryChooser = DirectoryChooser()
         directoryChooser.initialDirectory = initialDirectory
         directoryChooser.title = title
@@ -295,6 +377,7 @@ class KImageApplication : Application() {
         private const val ARGUMENT_EDITOR_HEIGHT = 400
 
         private const val TITLE_FONT_SIZE = 1.5
+        private const val SUB_TITLE_FONT_SIZE = 1.2
 
         val INTEGER_FORMAT = DecimalFormat("##0")
         val DOUBLE_FORMAT = DecimalFormat("##0.000")
@@ -303,6 +386,22 @@ class KImageApplication : Application() {
         @JvmStatic
         fun main(args: Array<String>) {
             launch(KImageApplication::class.java)
+        }
+    }
+}
+
+class LogOutputStream(private val textArea: TextArea) : OutputStream() {
+    private val buffer = mutableListOf<Byte>()
+
+    override fun write(b: Int) {
+        buffer.add(b.toByte())
+        if (b.toChar() == '\n') {
+            val string = String(buffer.toByteArray())
+            buffer.clear()
+
+            Platform.runLater {
+                textArea.appendText(string)
+            }
         }
     }
 }

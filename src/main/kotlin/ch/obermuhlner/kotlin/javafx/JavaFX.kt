@@ -60,6 +60,11 @@ fun button(initializer: Button.() -> Unit)
 fun button(text: String, initializer: Button.() -> Unit)
         = Button(text).apply(initializer)
 
+fun togglebutton(initializer: ToggleButton.() -> Unit)
+        = ToggleButton().apply(initializer)
+
+fun togglebutton(text: String, initializer: ToggleButton.() -> Unit)
+        = ToggleButton(text).apply(initializer)
 
 fun spinner(min: Double, max: Double, initialValue: Double, initializer: Spinner<Number>.() -> Unit)
         = Spinner<Number>(min, max, initialValue).apply(initializer)
