@@ -32,6 +32,11 @@ dependencies {
 
     implementation 'com.xenomachina:kotlin-argparser:2.0.7'
 
+    // https://kordamp.org/ikonli/#_material2_icons_latest
+    implementation 'org.kordamp.ikonli:ikonli-javafx:12.2.0'
+    implementation 'org.kordamp.ikonli:ikonli-fontawesome5-pack:12.2.0'
+    implementation 'org.kordamp.ikonli:ikonli-material2-pack:12.2.0'
+
     testImplementation group: 'junit', name: 'junit', version: '4.12'
 }
 

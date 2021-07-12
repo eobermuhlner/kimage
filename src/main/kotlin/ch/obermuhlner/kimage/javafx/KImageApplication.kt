@@ -22,6 +22,7 @@ import javafx.stage.DirectoryChooser
 import javafx.stage.FileChooser
 import javafx.stage.Stage
 import javafx.util.converter.IntegerStringConverter
+import org.kordamp.ikonli.javafx.FontIcon
 import java.io.*
 import java.nio.file.Paths
 import java.text.DecimalFormat
@@ -113,7 +114,8 @@ class KImageApplication : Application() {
             }
 
             children += hbox(SPACING) {
-                children += button("Add...") {
+                children += button(FontIcon()) {
+                    id = "file-button"
                     onAction = EventHandler {
                         val files = openImageFiles(File(inputDirectoryProperty.get()))
                         files?.let {
@@ -124,7 +126,8 @@ class KImageApplication : Application() {
                         }
                     }
                 }
-                children += button("Clear") {
+                children += button(FontIcon()) {
+                    id = "clear-button"
                     onAction = EventHandler {
                         inputFiles.clear()
                     }
@@ -181,7 +184,8 @@ class KImageApplication : Application() {
                         updateOutputDirectoryFiles(outputHideOldFilesProperty.get())
                     }
                 }
-                children += button("Pick...") {
+                children += button(FontIcon()) {
+                    id = "folder-button"
                     onAction = EventHandler {
                         val file = openDir(File(outputDirectoryProperty.get()))
                         file?.let {
@@ -189,7 +193,8 @@ class KImageApplication : Application() {
                         }
                     }
                 }
-                children += togglebutton("Hide") {
+                children += togglebutton(FontIcon()) {
+                    id = "hide-button"
                     selectedProperty().bindBidirectional(outputHideOldFilesProperty)
                     outputHideOldFilesProperty.addListener { _, _, value ->
                         if (value == false) {
@@ -263,6 +268,7 @@ class KImageApplication : Application() {
                                 when (argument) {
                                     is ScriptBooleanArg -> {
                                         checkbox {
+                                            tooltip = Tooltip(argument.description)
                                             argument.default?.let {
                                                 isSelected = it
                                             }
@@ -273,6 +279,7 @@ class KImageApplication : Application() {
                                     }
                                     is ScriptIntArg -> {
                                         textfield {
+                                            tooltip = Tooltip(argument.description)
                                             textFormatter = TextFormatter(IntegerStringConverter(), argument.default) { change ->
                                                 filter(change, Regex("-?[0-9]*"))
                                             }
@@ -283,6 +290,7 @@ class KImageApplication : Application() {
                                     }
                                     is ScriptDoubleArg -> {
                                         textfield {
+                                            tooltip = Tooltip(argument.description)
                                             textFormatter = textFormatter(argument.default, argument.min, argument.max)
                                             textProperty().addListener { _, _, value ->
                                                 argumentStrings[argument.name] = value
@@ -292,6 +300,7 @@ class KImageApplication : Application() {
                                     is ScriptStringArg -> {
                                         if (argument.allowed.isNotEmpty()) {
                                             combobox(argument.allowed) {
+                                                tooltip = Tooltip(argument.description)
                                                 value = argument.default
                                                 selectionModel.selectedItemProperty().addListener { _, _, value ->
                                                     argumentStrings[argument.name] = value
@@ -299,6 +308,7 @@ class KImageApplication : Application() {
                                             }
                                         } else {
                                             textfield {
+                                                tooltip = Tooltip(argument.description)
                                                 textProperty().addListener { _, _, value ->
                                                     argumentStrings[argument.name] = value
                                                 }
@@ -311,23 +321,45 @@ class KImageApplication : Application() {
                                         }
                                     }
                                     is ScriptFileArg -> {
-                                        textfield {
-                                            text = argument.default?.toString()
-                                            textProperty().addListener { _, _, value ->
-                                                pseudoClassStateChanged(INVALID, !argument.isValid(value, inputDirectoryProperty.get()))
+                                        hbox {
+                                            val fileProperty = SimpleStringProperty()
+                                            fileProperty.addListener { _, _, value ->
                                                 argumentStrings[argument.name] = value
+                                            }
+                                            children += textfield(fileProperty) {
+                                                // TODO relative to input or output dir?
+                                                tooltip = Tooltip(argument.description)
+                                                text = argument.default?.toString()
+                                                textProperty().addListener { _, _, value ->
+                                                    pseudoClassStateChanged(INVALID, !argument.isValid(value, inputDirectoryProperty.get()))
+                                                }
+                                            }
+                                            children += button(FontIcon()) {
+                                                id = if (argument.isDirectory == true) "folder-button" else "file-button"
+                                                onAction = EventHandler {
+                                                    if (argument.isDirectory == true) {
+                                                        val file = openDir(File(inputDirectoryProperty.get()))
+                                                        file?.let {
+                                                            fileProperty.set(it.toRelativeString(File(inputDirectoryProperty.get())))
+                                                        }
+                                                    } else {
+                                                        val file = openFile(File(inputDirectoryProperty.get()))
+                                                        file?.let {
+                                                            fileProperty.set(it.toRelativeString(File(inputDirectoryProperty.get())))
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }
                                     }
                                     else -> {
                                         textfield {
+                                            tooltip = Tooltip(argument.description)
                                             textProperty().addListener { _, _, value ->
                                                 argumentStrings[argument.name] = value
                                             }
                                         }
                                     }
-                                }.apply {
-                                    tooltip = Tooltip(argument.description)
                                 }
                             }
                         }
@@ -419,6 +451,13 @@ class KImageApplication : Application() {
         fileChooser.extensionFilters.add(FileChooser.ExtensionFilter("Image", "*.tif", "*.tiff", "*.png", "*.jpg", "*.jpeg"))
         fileChooser.extensionFilters.add(FileChooser.ExtensionFilter("All", "*"))
         return fileChooser.showOpenMultipleDialog(primaryStage)
+    }
+
+    fun openFile(initialDirectory: File, title: String = "Select File"): File? {
+        val fileChooser = FileChooser()
+        fileChooser.initialDirectory = initialDirectory
+        fileChooser.title = title
+        return fileChooser.showOpenDialog(primaryStage)
     }
 
     fun openDir(initialDirectory: File, title: String = "Select Directory"): File? {

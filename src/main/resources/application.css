@@ -7,6 +7,26 @@
     -fx-font-size: 14px;
 }
 
+#file-button .ikonli-font-icon {
+    -fx-icon-code: "far-file";
+    -fx-icon-color: dimgrey;
+}
+
+#folder-button .ikonli-font-icon {
+    -fx-icon-code: "far-folder-open";
+    -fx-icon-color: dimgrey;
+}
+
+#hide-button .ikonli-font-icon {
+    -fx-icon-code: "far-eye-slash";
+    -fx-icon-color: dimgrey;
+}
+
+#clear-button .ikonli-font-icon {
+    -fx-icon-code: "mdal-clear";
+    -fx-icon-color: dimgrey;
+}
+
 TextField:invalid {
     -fx-background-color: derive(red, 99%);
 }
