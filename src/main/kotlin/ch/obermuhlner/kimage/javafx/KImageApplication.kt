@@ -1,7 +1,6 @@
 package ch.obermuhlner.kimage.javafx
 
-import ch.obermuhlner.kimage.KImageManager
-import ch.obermuhlner.kimage.ScriptV0_1
+import ch.obermuhlner.kimage.*
 import ch.obermuhlner.kimage.io.ImageReader
 import ch.obermuhlner.kotlin.javafx.*
 import javafx.application.Application
@@ -9,23 +8,20 @@ import javafx.application.Platform
 import javafx.beans.property.ReadOnlyStringWrapper
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleStringProperty
-import javafx.beans.property.StringProperty
 import javafx.collections.FXCollections
+import javafx.css.PseudoClass
 import javafx.event.EventHandler
 import javafx.geometry.Insets
-import javafx.scene.Group
 import javafx.scene.Node
 import javafx.scene.Scene
-import javafx.scene.control.ContextMenu
-import javafx.scene.control.TableRow
-import javafx.scene.control.TextArea
-import javafx.scene.control.Tooltip
+import javafx.scene.control.*
 import javafx.scene.image.ImageView
 import javafx.scene.layout.VBox
 import javafx.scene.text.Font
 import javafx.stage.DirectoryChooser
 import javafx.stage.FileChooser
 import javafx.stage.Stage
+import javafx.util.converter.IntegerStringConverter
 import java.io.*
 import java.nio.file.Paths
 import java.text.DecimalFormat
@@ -56,6 +52,8 @@ class KImageApplication : Application() {
 
         root.children += createMainEditor()
 
+        scene.stylesheets.add(KImageApplication::class.java.getResource("/application.css").toExternalForm());
+
         primaryStage.scene = scene
         primaryStage.show()
 
@@ -71,7 +69,7 @@ class KImageApplication : Application() {
                 padding = Insets(0.0, SPACING, 0.0, SPACING)
 
                 top = label("Processing:") {
-                    font = Font.font(font.size * TITLE_FONT_SIZE)
+                    styleClass += "header1"
                 }
 
                 center = gridpane {
@@ -111,7 +109,7 @@ class KImageApplication : Application() {
     private fun createInputFilesEditor(): Node {
         return vbox(SPACING) {
             children += label("Input Files:") {
-                font = Font.font(font.size * TITLE_FONT_SIZE)
+                styleClass += "header1"
             }
 
             children += hbox(SPACING) {
@@ -120,7 +118,7 @@ class KImageApplication : Application() {
                         val files = openImageFiles(File(inputDirectoryProperty.get()))
                         files?.let {
                             if (it.isNotEmpty()) {
-                                inputDirectoryProperty.set(it[0].path)
+                                inputDirectoryProperty.set(it[0].parent)
                             }
                             inputFiles.addAll(it)
                         }
@@ -173,7 +171,7 @@ class KImageApplication : Application() {
     private fun createOutputFilesEditor(): Node {
         return vbox(SPACING) {
             children += label("Output Files:") {
-                font = Font.font(font.size * TITLE_FONT_SIZE)
+                styleClass += "header1"
             }
 
             children += hbox(SPACING) {
@@ -247,7 +245,7 @@ class KImageApplication : Application() {
 
             if (script is ScriptV0_1) {
                 children += label(script.title) {
-                    font = Font.font(font.size * SUB_TITLE_FONT_SIZE)
+                    styleClass += "header2"
                 }
 
                 val argumentStrings = mutableMapOf<String, String>()
@@ -262,11 +260,77 @@ class KImageApplication : Application() {
                                 }
                             }
                             cell {
-                                textfield {
-                                    tooltip = Tooltip(argument.description)
-                                    textProperty().addListener { _, _, value ->
-                                        argumentStrings[argument.name] = value
+                                when (argument) {
+                                    is ScriptBooleanArg -> {
+                                        checkbox {
+                                            argument.default?.let {
+                                                isSelected = it
+                                            }
+                                            textProperty().addListener { _, _, value ->
+                                                argumentStrings[argument.name] = value
+                                            }
+                                        }
                                     }
+                                    is ScriptIntArg -> {
+                                        textfield {
+                                            textFormatter = TextFormatter(IntegerStringConverter(), argument.default) { change ->
+                                                filter(change, Regex("-?[0-9]*"))
+                                            }
+                                            textProperty().addListener { _, _, value ->
+                                                argumentStrings[argument.name] = value
+                                            }
+                                        }
+                                    }
+                                    is ScriptDoubleArg -> {
+                                        textfield {
+                                            textFormatter = textFormatter(argument.default, argument.min, argument.max)
+                                            textProperty().addListener { _, _, value ->
+                                                argumentStrings[argument.name] = value
+                                            }
+                                        }
+                                    }
+                                    is ScriptStringArg -> {
+                                        if (argument.allowed.isNotEmpty()) {
+                                            combobox(argument.allowed) {
+                                                value = argument.default
+                                                selectionModel.selectedItemProperty().addListener { _, _, value ->
+                                                    argumentStrings[argument.name] = value
+                                                }
+                                            }
+                                        } else {
+                                            textfield {
+                                                textProperty().addListener { _, _, value ->
+                                                    argumentStrings[argument.name] = value
+                                                }
+                                                argument.regex?.let {
+                                                    textFormatter = TextFormatter(TextFormatter.IDENTITY_STRING_CONVERTER, argument.default) { change ->
+                                                        filter(change, Regex(it))
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    is ScriptFileArg -> {
+                                        textfield {
+                                            text = argument.default?.toString()
+                                            textProperty().addListener { _, _, value ->
+                                                pseudoClassStateChanged(INVALID, !argument.isValid(value, inputDirectoryProperty.get()))
+                                                argumentStrings[argument.name] = value
+                                            }
+                                        }
+                                        button() {
+
+                                        }
+                                    }
+                                    else -> {
+                                        textfield {
+                                            textProperty().addListener { _, _, value ->
+                                                argumentStrings[argument.name] = value
+                                            }
+                                        }
+                                    }
+                                }.apply {
+                                    tooltip = Tooltip(argument.description)
                                 }
                             }
                         }
@@ -274,21 +338,19 @@ class KImageApplication : Application() {
 
                     row {
                         cell {
-                            label("")
+                            label("Verbose")
                         }
                         cell {
                             checkbox(verboseModeProperty) {
-                                text = "Verbose"
                             }
                         }
                     }
                     row {
                         cell {
-                            label("")
+                            label("Debug")
                         }
                         cell {
                             checkbox(debugModeProperty) {
-                                text = "Debug"
                             }
                         }
                     }
@@ -325,6 +387,14 @@ class KImageApplication : Application() {
                     }
                 }
             }
+        }
+    }
+
+    private fun filter(change: TextFormatter.Change, regex: Regex, func: (TextFormatter.Change) -> Boolean = { true }): TextFormatter.Change? {
+        if (change.controlNewText.matches(regex)) {
+            return change
+        } else {
+            return null
         }
     }
 
@@ -376,12 +446,11 @@ class KImageApplication : Application() {
         private const val ARGUMENT_EDITOR_WIDTH = 400
         private const val ARGUMENT_EDITOR_HEIGHT = 400
 
-        private const val TITLE_FONT_SIZE = 1.5
-        private const val SUB_TITLE_FONT_SIZE = 1.2
-
         val INTEGER_FORMAT = DecimalFormat("##0")
         val DOUBLE_FORMAT = DecimalFormat("##0.000")
         val PERCENT_FORMAT = DecimalFormat("##0.000%")
+
+        val INVALID = PseudoClass.getPseudoClass("invalid")
 
         @JvmStatic
         fun main(args: Array<String>) {

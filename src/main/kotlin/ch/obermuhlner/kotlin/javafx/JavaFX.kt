@@ -18,6 +18,8 @@ import javafx.scene.layout.HBox
 import javafx.scene.layout.VBox
 import javafx.scene.shape.Circle
 import javafx.scene.shape.Rectangle
+import javafx.util.converter.DoubleStringConverter
+import javafx.util.converter.IntegerStringConverter
 import java.text.Format
 import java.util.function.Function
 
@@ -124,6 +126,53 @@ fun textfield(doubleProperty: DoubleProperty, format: Format = KImageApplication
 fun textarea(initializer: TextArea.() -> Unit)
         = TextArea().apply(initializer)
 
+fun textFormatter(defaultValue: Int?, min: Int? = null, max: Int? = null): TextFormatter<Int> {
+    val converter = IntegerStringConverter()
+    return TextFormatter(converter, defaultValue) { change ->
+        filter(change, Regex("-?[0-9]*")) {
+            val value = converter.fromString(change.controlNewText)
+            if (value != null) {
+                if (min != null && value < min) {
+                    false
+                } else if (max != null && value > max) {
+                    false
+                } else {
+                    true
+                }
+            } else {
+                defaultValue != null
+            }
+        }
+    }
+}
+
+fun textFormatter(defaultValue: Double?, min: Double? = null, max: Double? = null): TextFormatter<Double> {
+    val converter = DoubleStringConverter()
+    return TextFormatter(converter, defaultValue) { change ->
+        filter(change, Regex("-?[0-9]*\\.?[0-9]*")) {
+            val value = converter.fromString(change.controlNewText)
+            if (value != null) {
+                if (min != null && value < min) {
+                    false
+                } else if (max != null && value > max) {
+                    false
+                } else {
+                    true
+                }
+            } else {
+                defaultValue != null
+            }
+        }
+    }
+}
+
+private fun filter(change: TextFormatter.Change, regex: Regex, func: (TextFormatter.Change) -> Boolean = { true }): TextFormatter.Change? {
+    if (change.controlNewText.matches(regex) && func(change)) {
+        return change
+    } else {
+        return null
+    }
+}
 
 fun imageview(image: Image, initializer: ImageView.() -> Unit)
         = ImageView(image).apply(initializer)

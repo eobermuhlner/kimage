@@ -524,14 +524,14 @@ open class ScriptFileArg(mandatory: Boolean = true) : ScriptArg("file", mandator
     override val hasDefault: Boolean
         get() = default != null
 
-    fun toFileValue(stringValue: String?): File {
+    fun toFileValue(stringValue: String?, parent: String? = null): File {
         if (stringValue == null) {
             default?.let {
-                return it;
+                return if (it.isAbsolute) toFileValue(it.toString()) else toFileValue(it.toString(), parent)
             }
             throw ScriptArgumentException("Argument $name is mandatory")
         }
-        val file = File(stringValue)
+        val file = File(parent, stringValue)
         allowedExtensions?.let {
             if (file.extension in it) {
                 throw ScriptArgumentException("Argument $name must have one of the extensions $allowedExtensions but has ${file.extension}: $file")
@@ -559,10 +559,19 @@ open class ScriptFileArg(mandatory: Boolean = true) : ScriptArg("file", mandator
         }
         canWrite?.let {
             if (!file.canWrite()) {
-                throw ScriptArgumentException("Argument $name must be writeable: $file")
+                throw ScriptArgumentException("Argument $name must be writable: $file")
             }
         }
         return file
+    }
+
+    fun isValid(stringValue: String, parent: String? = null): Boolean {
+        return try {
+            toFileValue(stringValue, parent)
+            true
+        } catch (ex: ScriptArgumentException) {
+            false
+        }
     }
 }
 

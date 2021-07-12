@@ -1,0 +1,13 @@
+
+.header1 {
+    -fx-font-size: 16px;
+}
+
+.header2 {
+    -fx-font-size: 14px;
+}
+
+TextField:invalid {
+    -fx-background-color: derive(red, 99%);
+}
+
