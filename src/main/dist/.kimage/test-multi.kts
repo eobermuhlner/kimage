@@ -65,6 +65,14 @@ kimage(0.1) {
                 max = 9
             }
         }
+        file("fileArg") {
+            description = "Example argument for a file."
+            isFile = true
+        }
+        file("dirArg") {
+            description = "Example argument for a directory."
+            isDirectory = true
+        }
         optionalList("optionalListOfIntArg") {
             description = "Example argument for an optional list of integer values."
             min = 1
