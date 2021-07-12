@@ -318,9 +318,6 @@ class KImageApplication : Application() {
                                                 argumentStrings[argument.name] = value
                                             }
                                         }
-                                        button() {
-
-                                        }
                                     }
                                     else -> {
                                         textfield {
