@@ -172,7 +172,7 @@ kimage(0.1) {
                 "custom2" -> {
                     Pair(
                         listOf(0.0, custom1X, custom2X, 1.0),
-                        listOf(0.0, custom1X, custom2Y, 1.0)
+                        listOf(0.0, custom1Y, custom2Y, 1.0)
                     )
                 }
                 else -> throw IllegalArgumentException("Unknown curve: $curve")
