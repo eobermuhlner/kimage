@@ -34,14 +34,14 @@ class KImageApplication : Application() {
 
     private lateinit var primaryStage: Stage
 
-    val inputImageView = ImageView()
-    val outputImageView = ImageView()
-    val commandArgumentEditor = VBox(SPACING)
-    val logTextArea = TextArea()
+    private val inputImageView = ImageView()
+    private val outputImageView = ImageView()
+    private val commandArgumentEditor = VBox(SPACING)
+    private val logTextArea = TextArea()
 
-    val inputDirectoryProperty = SimpleStringProperty(Paths.get(System.getProperty("user.home", ".")).toString())
-    val outputDirectoryProperty = SimpleStringProperty(Paths.get(System.getProperty("user.home", ".")).toString())
-    val outputHideOldFilesProperty = SimpleBooleanProperty()
+    private val inputDirectoryProperty = SimpleStringProperty(Paths.get(System.getProperty("user.home", ".")).toString())
+    private val outputDirectoryProperty = SimpleStringProperty(Paths.get(System.getProperty("user.home", ".")).toString())
+    private val outputHideOldFilesProperty = SimpleBooleanProperty()
 
     private val inputFiles = FXCollections.observableArrayList<File>()
     private val scriptNames = FXCollections.observableArrayList<String>()
