@@ -49,12 +49,23 @@
     -fx-icon-size: 16px;
     -fx-icon-color: dimgray;
 }
+#remove-icon:focused .ikonli-font-icon {
+    -fx-icon-code: "mdi2f-file-remove-outline";
+    -fx-icon-size: 16px;
+    -fx-icon-color: white;
+}
 
 #delete-forever-icon .ikonli-font-icon {
     -fx-icon-code: "mdi2d-delete-forever-outline";
     -fx-icon-size: 16px;
     -fx-icon-color: dimgray;
 }
+#delete-forever-icon:focused .ikonli-font-icon {
+    -fx-icon-code: "mdi2d-delete-forever-outline";
+    -fx-icon-size: 16px;
+    -fx-icon-color: white;
+}
+
 
 #play-icon .ikonli-font-icon {
     -fx-icon-code: "mdi2p-play";
@@ -62,7 +73,13 @@
     -fx-icon-color: dimgray;
 }
 
-#arrow-forward-icon .ikonli-font-icon {
+#arrow-up-icon .ikonli-font-icon {
+    -fx-icon-code: "mdi2a-arrow-up";
+    -fx-icon-size: 16px;
+    -fx-icon-color: dimgray;
+}
+
+#bold-arrow-right-icon .ikonli-font-icon {
     -fx-icon-code: "mdi2a-arrow-right-bold-outline";
     -fx-icon-size: 16px;
     -fx-icon-color: dimgray;

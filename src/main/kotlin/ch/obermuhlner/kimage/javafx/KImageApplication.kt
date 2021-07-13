@@ -8,9 +8,7 @@ import com.vladsch.flexmark.parser.Parser
 import com.vladsch.flexmark.util.data.MutableDataSet
 import javafx.application.Application
 import javafx.application.Platform
-import javafx.beans.property.ReadOnlyStringWrapper
-import javafx.beans.property.SimpleBooleanProperty
-import javafx.beans.property.SimpleStringProperty
+import javafx.beans.property.*
 import javafx.collections.FXCollections
 import javafx.css.PseudoClass
 import javafx.event.EventHandler
@@ -26,6 +24,7 @@ import javafx.stage.*
 import javafx.util.converter.IntegerStringConverter
 import org.kordamp.ikonli.javafx.FontIcon
 import java.io.*
+import java.nio.file.Files
 import java.nio.file.Paths
 import java.text.DecimalFormat
 
@@ -63,6 +62,11 @@ class KImageApplication : Application() {
         inputDirectoryProperty.addListener { _, _, value ->
             if (useInputDirectoryAsOutputDirectoryProperty.get()) {
                 outputDirectoryProperty.set(value)
+            }
+        }
+        useInputDirectoryAsOutputDirectoryProperty.addListener { _, _, value ->
+            if (value) {
+                outputDirectoryProperty.set(inputDirectoryProperty.get())
             }
         }
 
@@ -169,7 +173,12 @@ class KImageApplication : Application() {
                 minHeight = FILE_TABLE_HEIGHT.toDouble()
 
                 setRowFactory {
-                    val tableRow = TableRow<File>()
+                    val tableRow = object: TableRow<File>() {
+                        override fun updateItem(item: File?, empty: Boolean) {
+                            super.updateItem(item, empty)
+                            tooltip = if (item == null) null else Tooltip(item.toString())
+                        }
+                    }
                     tableRow.contextMenu = ContextMenu(
                         menuitem("Remove", FontIcon()) {
                             id = "remove-icon"
@@ -185,8 +194,8 @@ class KImageApplication : Application() {
                 column<String>("Name", { file -> ReadOnlyStringWrapper(file?.name) }) {
                     this.prefWidth = 200.0
                 }
-                column<String>("Path", { file -> ReadOnlyStringWrapper(file?.path) }) {
-                    this.prefWidth = 200.0
+                column<Number>("Size", { file -> ReadOnlyLongWrapper(Files.size(file.toPath())) }) {
+                    this.prefWidth = 100.0
                 }
 
                 selectionModel.selectedItemProperty().addListener { _, _, selected ->
@@ -210,7 +219,7 @@ class KImageApplication : Application() {
 
             children += hbox(SPACING) {
                 children += togglebutton(FontIcon()) {
-                    id = "arrow-forward-icon"
+                    id = "bold-arrow-right-icon"
                     tooltip = Tooltip("Use input directory as output directory.")
                     selectedProperty().bindBidirectional(useInputDirectoryAsOutputDirectoryProperty)
                 }
@@ -235,6 +244,17 @@ class KImageApplication : Application() {
                         }
                     }
                 }
+                children += button(FontIcon()) {
+                    id = "arrow-up-icon"
+                    tooltip = Tooltip("Go to parent directory.")
+                    disableProperty().bind(useInputDirectoryAsOutputDirectoryProperty)
+                    onAction = EventHandler {
+                        val file = File(outputDirectoryProperty.get()).parentFile
+                        file?.let {
+                            outputDirectoryProperty.set(it.path)
+                        }
+                    }
+                }
                 children += togglebutton(FontIcon()) {
                     id = "hide-icon"
                     tooltip = Tooltip("Hide already existing files and show only newly added output files.")
@@ -251,9 +271,15 @@ class KImageApplication : Application() {
             children += tableview(outputFiles) {
                 minWidth = FILE_TABLE_WIDTH.toDouble()
                 minHeight = FILE_TABLE_HEIGHT.toDouble()
+                selectionModel.selectionMode = SelectionMode.MULTIPLE
 
                 setRowFactory {
-                    val tableRow = TableRow<File>()
+                    val tableRow = object: TableRow<File>() {
+                        override fun updateItem(item: File?, empty: Boolean) {
+                            super.updateItem(item, empty)
+                            tooltip = if (item == null) null else Tooltip(item.toString())
+                        }
+                    }
                     tableRow.contextMenu = ContextMenu(
                         menuitem("Delete", FontIcon()) {
                             id = "delete-forever-icon"
@@ -270,8 +296,8 @@ class KImageApplication : Application() {
                 column<String>("Name", { file -> ReadOnlyStringWrapper(file?.name) }) {
                     this.prefWidth = 200.0
                 }
-                column<String>("Path", { file -> ReadOnlyStringWrapper(file?.path) }) {
-                    this.prefWidth = 200.0
+                column<Number>("Size", { file -> ReadOnlyLongWrapper(Files.size(file.toPath())) }) {
+                    this.prefWidth = 100.0
                 }
 
                 selectionModel.selectedItemProperty().addListener { _, _, selected ->
