@@ -15,43 +15,55 @@
 }
 
 #file-icon .ikonli-font-icon {
-    -fx-icon-code: "mdoal-insert_drive_file";
+    -fx-icon-code: "mdi2f-file-outline";
+    -fx-icon-size: 16px;
+    -fx-icon-color: dimgray;
+}
+
+#files-icon .ikonli-font-icon {
+    -fx-icon-code: "mdi2f-file-multiple-outline";
+    -fx-icon-size: 16px;
     -fx-icon-color: dimgray;
 }
 
 #folder-icon .ikonli-font-icon {
-    -fx-icon-code: "mdoal-folder";
+    -fx-icon-code: "mdi2f-folder-outline";
+    -fx-icon-size: 16px;
     -fx-icon-color: dimgray;
 }
 
 #hide-icon .ikonli-font-icon {
-    -fx-icon-code: "far-eye-slash";
+    -fx-icon-code: "mdi2e-eye-off-outline";
+    -fx-icon-size: 16px;
     -fx-icon-color: dimgray;
 }
 
 #clear-icon .ikonli-font-icon {
-    -fx-icon-code: "mdoal-clear";
+    -fx-icon-code: "mdi2n-notification-clear-all";
+    -fx-icon-size: 16px;
     -fx-icon-color: dimgray;
 }
 
 #remove-icon .ikonli-font-icon {
-    -fx-icon-code: "mdmz-remove";
+    -fx-icon-code: "mdi2f-file-remove-outline";
+    -fx-icon-size: 16px;
     -fx-icon-color: dimgray;
 }
 
 #delete-forever-icon .ikonli-font-icon {
-    -fx-icon-code: "mdoal-delete_forever";
+    -fx-icon-code: "mdi2d-delete-forever-outline";
+    -fx-icon-size: 16px;
     -fx-icon-color: dimgray;
 }
 
 #play-icon .ikonli-font-icon {
-    -fx-icon-code: "mdomz-play_arrow";
+    -fx-icon-code: "mdi2p-play";
     -fx-icon-size: 16px;
     -fx-icon-color: dimgray;
 }
 
 #arrow-forward-icon .ikonli-font-icon {
-    -fx-icon-code: "mdoal-arrow_forward";
+    -fx-icon-code: "mdi2a-arrow-right-bold-outline";
     -fx-icon-size: 16px;
     -fx-icon-color: dimgray;
 }
