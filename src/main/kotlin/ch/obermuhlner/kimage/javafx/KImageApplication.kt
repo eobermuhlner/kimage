@@ -23,6 +23,7 @@ import javafx.scene.image.WritableImage
 import javafx.scene.input.MouseEvent
 import javafx.scene.layout.VBox
 import javafx.scene.paint.Color
+import javafx.scene.text.Font
 import javafx.scene.web.WebView
 import javafx.stage.*
 import javafx.util.converter.IntegerStringConverter
@@ -61,6 +62,9 @@ class KImageApplication : Application() {
     private val logTextArea = TextArea()
     private val docuTextArea = TextArea()
     private val docuWebView = WebView()
+    private val codeTextArea = TextArea().apply {
+        font = Font.font("monospace")
+    }
 
     private val zoomCenterXProperty = SimpleIntegerProperty()
     private val zoomCenterYProperty = SimpleIntegerProperty()
@@ -169,6 +173,11 @@ class KImageApplication : Application() {
                                 }
                                 tabs += tab("Documentation Markdown") {
                                     content = node(docuTextArea) {
+                                        isEditable = false
+                                    }
+                                }
+                                tabs += tab("Code") {
+                                    content = node(codeTextArea) {
                                         isEditable = false
                                     }
                                 }
@@ -450,6 +459,8 @@ class KImageApplication : Application() {
                 val renderer = HtmlRenderer.builder(options).build()
                 val html = renderer.render(parser.parse(docu))
                 docuWebView.engine.loadContent(html)
+
+                codeTextArea.text = script.code
 
                 infoTabPane.selectionModel.select(infoTabDocu)
 
