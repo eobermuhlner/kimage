@@ -83,6 +83,9 @@ fun spinner(min: Double, max: Double, initialValue: Double, initializer: Spinner
 fun spinner(min: Int, max: Int, initialValue: Int, initializer: Spinner<Number>.() -> Unit)
         = Spinner<Number>(min, max, initialValue).apply(initializer)
 
+fun slider(min: Double, max: Double, initialValue: Double, initializer: Slider.() -> Unit)
+        = Slider(min, max, initialValue).apply(initializer)
+
 
 fun <T> combobox(items: Array<T>, initializer: ComboBox<T>.() -> Unit)
         = combobox(FXCollections.observableArrayList(*items), initializer)
