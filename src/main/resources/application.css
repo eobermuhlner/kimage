@@ -7,25 +7,39 @@
     -fx-font-size: 14px;
 }
 
+.tooltip {
+     -fx-background-radius: 0 0 0 0;
+     -fx-background-color: whitesmoke;
+     -fx-border-color: darkgray;
+     -fx-text-fill: black;
+}
+
 #file-button .ikonli-font-icon {
     -fx-icon-code: "far-file";
-    -fx-icon-color: dimgrey;
+    -fx-icon-color: dimgray;
 }
 
 #folder-button .ikonli-font-icon {
     -fx-icon-code: "far-folder-open";
-    -fx-icon-color: dimgrey;
+    -fx-icon-color: dimgray;
 }
 
 #hide-button .ikonli-font-icon {
     -fx-icon-code: "far-eye-slash";
-    -fx-icon-color: dimgrey;
+    -fx-icon-color: dimgray;
 }
 
 #clear-button .ikonli-font-icon {
     -fx-icon-code: "mdal-clear";
-    -fx-icon-color: dimgrey;
+    -fx-icon-color: dimgray;
 }
+
+#play-button .ikonli-font-icon {
+    -fx-icon-code: "mdomz-play_arrow";
+    -fx-icon-size: 16px;
+    -fx-icon-color: dimgray;
+}
+
 
 TextField:invalid {
     -fx-background-color: derive(red, 99%);
