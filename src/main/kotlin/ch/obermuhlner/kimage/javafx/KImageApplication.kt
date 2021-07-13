@@ -71,6 +71,9 @@ class KImageApplication : Application() {
         }
 
         scriptNames.setAll(KImageManager.scriptNames)
+        if (scriptNames.isNotEmpty()) {
+            KImageManager.script(scriptNames[0]) // trigger compilation of first script
+        }
         updateOutputDirectoryFiles(outputHideOldFilesProperty.get())
 
         primaryStage.scene = scene
@@ -171,6 +174,7 @@ class KImageApplication : Application() {
             children += tableview(inputFiles) {
                 minWidth = FILE_TABLE_WIDTH.toDouble()
                 minHeight = FILE_TABLE_HEIGHT.toDouble()
+                selectionModel.selectionMode = SelectionMode.MULTIPLE
 
                 setRowFactory {
                     val tableRow = object: TableRow<File>() {
@@ -180,11 +184,13 @@ class KImageApplication : Application() {
                         }
                     }
                     tableRow.contextMenu = ContextMenu(
-                        menuitem("Remove", FontIcon()) {
+                        menuitem("Remove from list", FontIcon()) {
                             id = "remove-icon"
                             onAction = EventHandler {
-                                inputFiles.remove(tableRow.item)
-                                updateImageView(inputImageView, null)
+                                selectionModel.selectedItems.toList().forEach {
+                                    inputFiles.remove(it)
+                                }
+                                updateImageView(inputImageView, selectionModel.selectedItem)
                             }
                         }
                     )
@@ -281,12 +287,14 @@ class KImageApplication : Application() {
                         }
                     }
                     tableRow.contextMenu = ContextMenu(
-                        menuitem("Delete", FontIcon()) {
+                        menuitem("Delete file forever", FontIcon()) {
                             id = "delete-forever-icon"
                             onAction = EventHandler {
-                                outputFiles.remove(tableRow.item)
-                                updateImageView(outputImageView, null)
-                                tableRow.item.delete()
+                                selectionModel.selectedItems.toList().forEach {
+                                    outputFiles.remove(it)
+                                    it.delete()
+                                }
+                                updateImageView(outputImageView, selectionModel.selectedItem)
                             }
                         }
                     )
