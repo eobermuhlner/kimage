@@ -30,7 +30,6 @@ fun <T: Node> node(node: T, initializer: T.() -> Unit)
 fun hbox(initializer: HBox.() -> Unit)
         = HBox().apply(initializer)
 
-
 fun hbox(spacing: Double, initializer: HBox.() -> Unit)
         = HBox(spacing).apply(initializer)
 
@@ -44,6 +43,10 @@ fun vbox(spacing: Double, initializer: VBox.() -> Unit)
 
 fun borderpane(initializer: BorderPane.() -> Unit)
         = BorderPane().apply(initializer)
+
+
+fun scrollpane(initializer: ScrollPane.() -> Unit)
+        = ScrollPane().apply(initializer)
 
 
 fun label(initializer: Label.() -> Unit)
