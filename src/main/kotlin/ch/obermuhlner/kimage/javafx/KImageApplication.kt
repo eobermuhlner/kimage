@@ -3,6 +3,9 @@ package ch.obermuhlner.kimage.javafx
 import ch.obermuhlner.kimage.*
 import ch.obermuhlner.kimage.io.ImageReader
 import ch.obermuhlner.kotlin.javafx.*
+import com.vladsch.flexmark.html.HtmlRenderer
+import com.vladsch.flexmark.parser.Parser
+import com.vladsch.flexmark.util.data.MutableDataSet
 import javafx.application.Application
 import javafx.application.Platform
 import javafx.beans.property.ReadOnlyStringWrapper
@@ -18,6 +21,7 @@ import javafx.scene.Scene
 import javafx.scene.control.*
 import javafx.scene.image.ImageView
 import javafx.scene.layout.VBox
+import javafx.scene.web.WebView
 import javafx.stage.*
 import javafx.util.converter.IntegerStringConverter
 import org.kordamp.ikonli.javafx.FontIcon
@@ -34,6 +38,8 @@ class KImageApplication : Application() {
     private val outputImageView = ImageView()
     private val commandArgumentEditor = VBox(SPACING)
     private val logTextArea = TextArea()
+    private val docuTextArea = TextArea()
+    private val docuWebView = WebView()
     private val inputDirectoryProperty = SimpleStringProperty(Paths.get(System.getProperty("user.home", ".")).toString())
     private val useInputDirectoryAsOutputDirectoryProperty = SimpleBooleanProperty(true)
     private val outputDirectoryProperty = SimpleStringProperty(Paths.get(System.getProperty("user.home", ".")).toString())
@@ -101,8 +107,24 @@ class KImageApplication : Application() {
                     }
                     row {
                         cell(2, 1) {
-                            node(logTextArea) {
-                                isEditable = false
+                            tabpane {
+                                prefHeight = 400.0
+
+                                tabClosingPolicy = TabPane.TabClosingPolicy.UNAVAILABLE
+                                tabs += tab("Log") {
+                                    content = node(logTextArea) {
+                                        isEditable = false
+                                    }
+                                }
+                                tabs += tab("Documentation HTML") {
+                                    content = node(docuWebView) {
+                                    }
+                                }
+                                tabs += tab("Documentation Markdown") {
+                                    content = node(docuTextArea) {
+                                        isEditable = false
+                                    }
+                                }
                             }
                         }
                     }
@@ -121,7 +143,7 @@ class KImageApplication : Application() {
 
             children += hbox(SPACING) {
                 children += button(FontIcon()) {
-                    id = "file-icon"
+                    id = "files-icon"
                     tooltip = Tooltip("Add input image files to be processed.")
                     onAction = EventHandler {
                         val files = openImageFiles(File(inputDirectoryProperty.get()))
@@ -139,11 +161,6 @@ class KImageApplication : Application() {
                     onAction = EventHandler {
                         inputFiles.clear()
                     }
-                }
-                children += togglebutton(FontIcon()) {
-                    id = "arrow-forward-icon"
-                    tooltip = Tooltip("Use input directory as output directory.")
-                    selectedProperty().bindBidirectional(useInputDirectoryAsOutputDirectoryProperty)
                 }
             }
 
@@ -192,15 +209,25 @@ class KImageApplication : Application() {
             }
 
             children += hbox(SPACING) {
-                children += label("Directory:")
+                children += togglebutton(FontIcon()) {
+                    id = "arrow-forward-icon"
+                    tooltip = Tooltip("Use input directory as output directory.")
+                    selectedProperty().bindBidirectional(useInputDirectoryAsOutputDirectoryProperty)
+                }
                 children += textfield(outputDirectoryProperty) {
-                    textProperty().addListener { _, _, _ ->
-                        updateOutputDirectoryFiles(outputHideOldFilesProperty.get())
+                    disableProperty().bind(useInputDirectoryAsOutputDirectoryProperty)
+                    textProperty().addListener { _, _, value ->
+                        val valid = File(value).isDirectory
+                        pseudoClassStateChanged(INVALID, !valid)
+                        if (valid) {
+                            updateOutputDirectoryFiles(outputHideOldFilesProperty.get())
+                        }
                     }
                 }
                 children += button(FontIcon()) {
                     id = "folder-icon"
                     tooltip = Tooltip("Select the output directory for processed image files.")
+                    disableProperty().bind(useInputDirectoryAsOutputDirectoryProperty)
                     onAction = EventHandler {
                         val file = openDir(File(outputDirectoryProperty.get()))
                         file?.let {
@@ -264,9 +291,13 @@ class KImageApplication : Application() {
         if (selectedFile == null) {
             imageView.image = null
         } else {
-            val image = ImageReader.read(selectedFile)
-            val writableImage = JavaFXImageUtil.toWritableImage(image)
-            imageView.image = writableImage
+            try {
+                val image = ImageReader.read(selectedFile)
+                val writableImage = JavaFXImageUtil.toWritableImage(image)
+                imageView.image = writableImage
+            } catch (ex: Exception) {
+                // ignore
+            }
         }
     }
 
@@ -280,6 +311,15 @@ class KImageApplication : Application() {
             val script = KImageManager.script(command)
 
             if (script is ScriptV0_1) {
+                val docu = script.documentation(false)
+                docuTextArea.text = docu
+
+                val options = MutableDataSet()
+                val parser: Parser = Parser.builder(options).build()
+                val renderer = HtmlRenderer.builder(options).build()
+                val html = renderer.render(parser.parse(docu))
+                docuWebView.engine.loadContent(html)
+
                 children += label(script.title) {
                     styleClass += "header2"
                 }
@@ -456,6 +496,9 @@ class KImageApplication : Application() {
                                     command,
                                     outputDirectoryProperty.get()
                                 )
+                            } catch (ex: Exception) {
+                                println()
+                                ex.printStackTrace(System.out)
                             } finally {
                                 System.setOut(systemOut)
                                 Platform.runLater {

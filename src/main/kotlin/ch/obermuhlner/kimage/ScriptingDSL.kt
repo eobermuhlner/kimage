@@ -4,8 +4,9 @@ import ch.obermuhlner.kimage.image.Image
 import ch.obermuhlner.kimage.image.MatrixImage
 import ch.obermuhlner.kimage.io.ImageReader
 import ch.obermuhlner.kimage.io.ImageReader.read
-import ch.obermuhlner.kimage.io.ImageWriter
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.PrintStream
 import java.util.*
 
 @DslMarker
@@ -39,24 +40,40 @@ class ScriptV0_1 : Script(0.1) {
         scriptMulti = ScriptMulti(executable)
     }
 
-    fun help() {
+    fun documentation(commandline: Boolean = true): String {
+        val systemOut = System.out
+        val bufferedOutputStream = ByteArrayOutputStream()
+        System.setOut(PrintStream(bufferedOutputStream))
+
+        try {
+            printDocumentation(commandline)
+        } finally {
+            System.setOut(systemOut)
+        }
+
+        return bufferedOutputStream.toString()
+    }
+
+    fun printDocumentation(commandline: Boolean = true) {
         println("## Script: `$name`")
         println()
 
-        println("    kimage [OPTIONS] $name")
-        for (arg in scriptArguments.arguments) {
-            print("        ")
-            if (!arg.mandatory || arg.hasDefault) {
-                print("[")
+        if (commandline) {
+            println("    kimage [OPTIONS] $name")
+            for (arg in scriptArguments.arguments) {
+                print("        ")
+                if (!arg.mandatory || arg.hasDefault) {
+                    print("[")
+                }
+                print("--arg ${arg.name}=${arg.type.toUpperCase()}")
+                if (!arg.mandatory || arg.hasDefault) {
+                    print("]")
+                }
+                println()
             }
-            print("--arg ${arg.name}=${arg.type.toUpperCase()}")
-            if (!arg.mandatory || arg.hasDefault) {
-                print("]")
-            }
+            println("        [FILES]")
             println()
         }
-        println("        [FILES]")
-        println()
 
         if (title.isNotBlank()) {
             println("### ${title.trimIndent()}")

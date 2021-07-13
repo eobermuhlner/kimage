@@ -263,7 +263,7 @@ object KImageManager {
         if (helpMode) {
             when (script) {
                 is ScriptV0_1 -> {
-                    script.help()
+                    script.printDocumentation()
                 }
             }
         } else {
