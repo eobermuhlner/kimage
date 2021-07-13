@@ -43,13 +43,19 @@ class KImageApplication : Application() {
     private val inputZoomImage = WritableImage(ZOOM_WIDTH, ZOOM_HEIGHT)
     private val outputZoomImage = WritableImage(ZOOM_WIDTH, ZOOM_HEIGHT)
     private val deltaZoomImage = WritableImage(ZOOM_WIDTH, ZOOM_HEIGHT)
+    private val dummyImage = WritableImage(1, 1)
 
-    private val inputImageView = ImageView()
-    private val outputImageView = ImageView()
+    private val inputImageView = ImageView(dummyImage)
+    private val outputImageView = ImageView(dummyImage)
 
     private val inputZoomImageView = ImageView(inputZoomImage)
     private val outputZoomImageView = ImageView(outputZoomImage)
     private val deltaZoomImageView = ImageView(deltaZoomImage)
+
+    private val infoTabPane = TabPane()
+    private lateinit var infoTabLog: Tab
+    private lateinit var infoTabDocu: Tab
+    private lateinit var infoTabZoom: Tab
 
     private val commandArgumentEditor = VBox(SPACING)
     private val logTextArea = TextArea()
@@ -58,6 +64,8 @@ class KImageApplication : Application() {
 
     private val zoomCenterXProperty = SimpleIntegerProperty()
     private val zoomCenterYProperty = SimpleIntegerProperty()
+
+    private val zoomDeltaFactorProperty = SimpleDoubleProperty()
 
     private val inputDirectoryProperty = SimpleStringProperty(Paths.get(System.getProperty("user.home", ".")).toString())
     private val useInputDirectoryAsOutputDirectoryProperty = SimpleBooleanProperty(true)
@@ -102,6 +110,10 @@ class KImageApplication : Application() {
         setupZoomDragEvents(deltaZoomImageView)
         setupZoomDragEvents(outputZoomImageView)
 
+        zoomDeltaFactorProperty.addListener { _, _, _ ->
+            updateZoom()
+        }
+
         primaryStage.scene = scene
         primaryStage.show()
     }
@@ -140,16 +152,18 @@ class KImageApplication : Application() {
                     }
                     row {
                         cell(2, 1) {
-                            tabpane {
+                            node(infoTabPane) {
                                 prefHeight = 400.0
 
                                 tabClosingPolicy = TabPane.TabClosingPolicy.UNAVAILABLE
                                 tabs += tab("Log") {
+                                    infoTabLog = this
                                     content = node(logTextArea) {
                                         isEditable = false
                                     }
                                 }
                                 tabs += tab("Documentation HTML") {
+                                    infoTabDocu = this
                                     content = node(docuWebView) {
                                     }
                                 }
@@ -159,6 +173,7 @@ class KImageApplication : Application() {
                                     }
                                 }
                                 tabs += tab("Image Zoom") {
+                                    infoTabZoom = this
                                     content = createInputOutputDeltaViewer()
                                 }
                             }
@@ -197,6 +212,26 @@ class KImageApplication : Application() {
                 }
                 cell {
                     outputZoomImageView
+                }
+            }
+            row {
+                cell {
+                    label("")
+                }
+                cell {
+                    slider(1.0, 10.0, 5.0) {
+                        tooltip = Tooltip("Factor used to exaggerate the delta value.")
+                        isShowTickMarks = true
+                        isShowTickLabels = true
+                        majorTickUnit = 1.0
+                        minorTickCount = 10
+                        //styleClass.add(Spinner.STYLE_CLASS_SPLIT_ARROWS_HORIZONTAL)
+                        prefWidth = 80.0
+                        zoomDeltaFactorProperty.bind(valueProperty())
+                    }
+                }
+                cell {
+                    label("")
                 }
             }
         }
@@ -383,7 +418,8 @@ class KImageApplication : Application() {
 
     private fun updateImageView(imageView: ImageView, selectedFile: File?) {
         if (selectedFile == null) {
-            imageView.image = null
+            imageView.image = dummyImage
+            updateZoom()
         } else {
             try {
                 val image = ImageReader.read(selectedFile)
@@ -414,6 +450,8 @@ class KImageApplication : Application() {
                 val renderer = HtmlRenderer.builder(options).build()
                 val html = renderer.render(parser.parse(docu))
                 docuWebView.engine.loadContent(html)
+
+                infoTabPane.selectionModel.select(infoTabDocu)
 
                 val argumentStrings = mutableMapOf<String, String>()
 
@@ -607,6 +645,8 @@ class KImageApplication : Application() {
                         isDisable = true
                         updateOutputDirectoryFiles(outputHideOldFilesProperty.get())
 
+                        infoTabPane.selectionModel.select(infoTabLog)
+
                         val dialogContent = vbox(SPACING) {
                             padding = Insets(10.0)
                             children += node(ProgressBar()) {
@@ -699,6 +739,7 @@ class KImageApplication : Application() {
     private fun setZoom(x: Int, y: Int) {
         zoomCenterXProperty.set(x)
         zoomCenterYProperty.set(y)
+        infoTabPane.selectionModel.select(infoTabZoom)
         updateZoom(x, y)
     }
 
@@ -722,10 +763,6 @@ class KImageApplication : Application() {
             zoomDragY = event.y
             var zoomX = zoomCenterXProperty.get() + deltaX.toInt()
             var zoomY = zoomCenterYProperty.get() + deltaY.toInt()
-//            zoomX = max(zoomX, 0)
-//            zoomY = max(zoomY, 0)
-//            zoomX = min(zoomX, imageView.image.width.toInt() - 1)
-//            zoomY = min(zoomY, imageView.image.height.toInt() - 1)
             zoomCenterXProperty.set(zoomX)
             zoomCenterYProperty.set(zoomY)
             updateZoom(zoomX, zoomY)
@@ -749,6 +786,8 @@ class KImageApplication : Application() {
         val zoomWidthHalf = ZOOM_WIDTH / 2
         val zoomHeightHalf = ZOOM_HEIGHT / 2
 
+        val deltaFactor = zoomDeltaFactorProperty.get()
+
         for (y in 0 until ZOOM_HEIGHT) {
             for (x in 0 until ZOOM_WIDTH) {
                 val xInput = clamp(zoomX + x - zoomWidthHalf, 0, inputImageWidth)
@@ -761,29 +800,20 @@ class KImageApplication : Application() {
                 val rgbOutput = outputImage.pixelReader.getColor(xOutput, yOutput)
                 outputZoomImage.pixelWriter.setColor(x, y, rgbOutput)
 
-                val rgbDelta = calculateDeltaColor(rgbInput, rgbOutput)
+                val rgbDelta = calculateDeltaColor(rgbInput, rgbOutput, deltaFactor)
                 deltaZoomImage.pixelWriter.setColor(x, y, rgbDelta)
             }
         }
     }
 
-    private fun calculateDeltaColor(rgb1: Color, rgb2: Color): Color {
-        val factor = 1.0
-        val delta = (rgb1.brightness - rgb2.brightness) * factor
-        val exaggeratedDelta = exaggerate(delta)
+    private fun calculateDeltaColor(rgb1: Color, rgb2: Color, deltaFactor: Double): Color {
+        val delta = (rgb1.brightness - rgb2.brightness) * deltaFactor
+        val exaggeratedDelta = clamp(exaggerate(delta), 0.0, 1.0)
 
         return if (delta < 0) {
-            Color(
-                clamp(exaggeratedDelta, 0.0, 1.0),
-                clamp(exaggeratedDelta * 0.5, 0.0, 1.0),
-                clamp(exaggeratedDelta * 0.5, 0.0, 1.0),
-                1.0)
+            Color(exaggeratedDelta, 0.0, 0.0, 1.0)
         } else {
-            Color(
-                clamp(exaggeratedDelta * 0.5, 0.0, 1.0),
-                clamp(exaggeratedDelta * 0.5, 0.0, 1.0),
-                clamp(exaggeratedDelta, 0.0, 1.0),
-                1.0)
+            Color(0.0, 0.0, exaggeratedDelta, 1.0)
         }
     }
 
