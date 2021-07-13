@@ -116,6 +116,7 @@ class KImageApplication : Application() {
             children += hbox(SPACING) {
                 children += button(FontIcon()) {
                     id = "file-button"
+                    tooltip = Tooltip("Add input image files to be processed.")
                     onAction = EventHandler {
                         val files = openImageFiles(File(inputDirectoryProperty.get()))
                         files?.let {
@@ -128,6 +129,7 @@ class KImageApplication : Application() {
                 }
                 children += button(FontIcon()) {
                     id = "clear-button"
+                    tooltip = Tooltip("Clear the list of input image files.")
                     onAction = EventHandler {
                         inputFiles.clear()
                     }
@@ -186,6 +188,7 @@ class KImageApplication : Application() {
                 }
                 children += button(FontIcon()) {
                     id = "folder-button"
+                    tooltip = Tooltip("Select the output directory for processed image files.")
                     onAction = EventHandler {
                         val file = openDir(File(outputDirectoryProperty.get()))
                         file?.let {
@@ -195,6 +198,7 @@ class KImageApplication : Application() {
                 }
                 children += togglebutton(FontIcon()) {
                     id = "hide-button"
+                    tooltip = Tooltip("Hide already existing files and show only newly added output files.")
                     selectedProperty().bindBidirectional(outputHideOldFilesProperty)
                     outputHideOldFilesProperty.addListener { _, _, value ->
                         if (value == false) {
@@ -335,7 +339,13 @@ class KImageApplication : Application() {
                                                 }
                                             }
                                             children += button(FontIcon()) {
-                                                id = if (argument.isDirectory == true) "folder-button" else "file-button"
+                                                if (argument.isDirectory == true) {
+                                                    id =  "folder-button"
+                                                    tooltip = Tooltip("Select the directory for the ${argument.name}.")
+                                                } else {
+                                                    id =  "file-button"
+                                                    tooltip = Tooltip("Select the file for the ${argument.name}.")
+                                                }
                                                 onAction = EventHandler {
                                                     if (argument.isDirectory == true) {
                                                         val file = openDir(File(inputDirectoryProperty.get()))
@@ -386,12 +396,18 @@ class KImageApplication : Application() {
 
                 }
 
-                children += button("Run") {
+                children += button(FontIcon()) {
+                    id = "play-button"
+                    tooltip = Tooltip("Run the ${script.name} script.")
                     onAction = EventHandler {
                         isDisable = true
+                        updateOutputDirectoryFiles(outputHideOldFilesProperty.get())
+
+
                         Thread {
                             val systemOut = System.out
                             try {
+                                logTextArea.clear()
                                 System.setOut(PrintStream(LogOutputStream(logTextArea)))
 
                                 KImageManager.executeScript(
@@ -407,12 +423,11 @@ class KImageApplication : Application() {
                             } finally {
                                 System.setOut(systemOut)
                                 Platform.runLater {
+                                    updateOutputDirectoryFiles(false)
                                     this@button.isDisable = false
                                 }
                             }
                         }.start()
-
-                        updateOutputDirectoryFiles(false)
                     }
                 }
             }
@@ -435,13 +450,16 @@ class KImageApplication : Application() {
             return
         }
 
-        val files = dir.listFiles { f -> f.isFile }
+        val files = dir.listFiles { f -> f.isFile }.toMutableList()
         if (hideOldFiles) {
             hiddenOutputFiles.clear()
             hiddenOutputFiles.addAll(files)
+            files.clear()
         } else {
-            outputFiles.addAll(files)
+            files.removeIf { f -> hiddenOutputFiles.contains(f) }
         }
+
+        outputFiles.addAll(files)
     }
 
     fun openImageFiles(initialDirectory: File, title: String = "Open Images"): List<File>? {
