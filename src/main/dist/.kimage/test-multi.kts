@@ -54,6 +54,23 @@ kimage(0.1) {
             regex = "a+"
             default = "aaa"
         }
+        file("fileArg") {
+            description = "Example argument for a file."
+            isFile = true
+        }
+        file("dirArg") {
+            description = "Example argument for a directory."
+            isDirectory = true
+        }
+        file("dirWithDefaultArg") {
+            description = "Example argument for a directory with default."
+            isDirectory = true
+            default = File(".")
+        }
+        optionalFile("optionalFileArg") {
+            description = "Example argument for an optional file."
+            isFile = true
+        }
         list("listOfIntArg") {
             description = "Example argument for a list of integer values."
             min = 1
@@ -64,14 +81,6 @@ kimage(0.1) {
                 min = 0
                 max = 9
             }
-        }
-        file("fileArg") {
-            description = "Example argument for a file."
-            isFile = true
-        }
-        file("dirArg") {
-            description = "Example argument for a directory."
-            isDirectory = true
         }
         optionalList("optionalListOfIntArg") {
             description = "Example argument for an optional list of integer values."
@@ -116,6 +125,10 @@ kimage(0.1) {
         val stringArg: String by arguments
         val allowedStringArg: String by arguments
         val regexStringArg: String by arguments
+        val fileArg: File by arguments
+        val dirArg: File by arguments
+        val dirWithDefaultArg: File by arguments
+        val optionalFileArg: Optional<File> by arguments
 
         val listOfIntArg: List<Int> by arguments
         val optionalListOfIntArg: Optional<List<Int>> by arguments
@@ -143,12 +156,17 @@ kimage(0.1) {
         println("  stringArg = $stringArg")
         println("  allowedStringArg = $allowedStringArg")
         println("  regexStringArg = $regexStringArg")
+        println("  fileArg = $fileArg")
+        println("  dirArg = $dirArg")
+        println("  dirWithDefaultArg = $dirWithDefaultArg")
+        println("  optionalFileArg = $optionalFileArg")
         println("  listOfIntArg = $listOfIntArg")
         println("  optionalListOfIntArg = $optionalListOfIntArg")
         println("  recordArg = $recordArg")
         println("  recordInt = $recordInt")
         println("  recordString = $recordString")
         println("  recordDouble = $recordDouble")
+        println("  optionalRecordArg = $optionalRecordArg")
 
         println("Input Files:")
         for (file in inputFiles) {
