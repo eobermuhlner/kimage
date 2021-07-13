@@ -14,31 +14,49 @@
      -fx-text-fill: black;
 }
 
-#file-button .ikonli-font-icon {
-    -fx-icon-code: "far-file";
+#file-icon .ikonli-font-icon {
+    -fx-icon-code: "mdoal-insert_drive_file";
     -fx-icon-color: dimgray;
 }
 
-#folder-button .ikonli-font-icon {
-    -fx-icon-code: "far-folder-open";
+#folder-icon .ikonli-font-icon {
+    -fx-icon-code: "mdoal-folder";
     -fx-icon-color: dimgray;
 }
 
-#hide-button .ikonli-font-icon {
+#hide-icon .ikonli-font-icon {
     -fx-icon-code: "far-eye-slash";
     -fx-icon-color: dimgray;
 }
 
-#clear-button .ikonli-font-icon {
-    -fx-icon-code: "mdal-clear";
+#clear-icon .ikonli-font-icon {
+    -fx-icon-code: "mdoal-clear";
     -fx-icon-color: dimgray;
 }
 
-#play-button .ikonli-font-icon {
+#remove-icon .ikonli-font-icon {
+    -fx-icon-code: "mdmz-remove";
+    -fx-icon-color: dimgray;
+}
+
+#delete-forever-icon .ikonli-font-icon {
+    -fx-icon-code: "mdoal-delete_forever";
+    -fx-icon-color: dimgray;
+}
+
+#play-icon .ikonli-font-icon {
     -fx-icon-code: "mdomz-play_arrow";
     -fx-icon-size: 16px;
     -fx-icon-color: dimgray;
 }
+
+#arrow-forward-icon .ikonli-font-icon {
+    -fx-icon-code: "mdoal-arrow_forward";
+    -fx-icon-size: 16px;
+    -fx-icon-color: dimgray;
+}
+
+
 
 
 TextField:invalid {

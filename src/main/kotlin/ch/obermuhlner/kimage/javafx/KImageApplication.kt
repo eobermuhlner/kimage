@@ -13,19 +13,18 @@ import javafx.css.PseudoClass
 import javafx.event.EventHandler
 import javafx.geometry.Insets
 import javafx.scene.Node
+import javafx.scene.Parent
 import javafx.scene.Scene
 import javafx.scene.control.*
 import javafx.scene.image.ImageView
 import javafx.scene.layout.VBox
-import javafx.scene.text.Font
-import javafx.stage.DirectoryChooser
-import javafx.stage.FileChooser
-import javafx.stage.Stage
+import javafx.stage.*
 import javafx.util.converter.IntegerStringConverter
 import org.kordamp.ikonli.javafx.FontIcon
 import java.io.*
 import java.nio.file.Paths
 import java.text.DecimalFormat
+
 
 class KImageApplication : Application() {
 
@@ -35,8 +34,8 @@ class KImageApplication : Application() {
     private val outputImageView = ImageView()
     private val commandArgumentEditor = VBox(SPACING)
     private val logTextArea = TextArea()
-
     private val inputDirectoryProperty = SimpleStringProperty(Paths.get(System.getProperty("user.home", ".")).toString())
+    private val useInputDirectoryAsOutputDirectoryProperty = SimpleBooleanProperty(true)
     private val outputDirectoryProperty = SimpleStringProperty(Paths.get(System.getProperty("user.home", ".")).toString())
     private val outputHideOldFilesProperty = SimpleBooleanProperty()
 
@@ -55,11 +54,17 @@ class KImageApplication : Application() {
 
         scene.stylesheets.add(KImageApplication::class.java.getResource("/application.css").toExternalForm());
 
-        primaryStage.scene = scene
-        primaryStage.show()
+        inputDirectoryProperty.addListener { _, _, value ->
+            if (useInputDirectoryAsOutputDirectoryProperty.get()) {
+                outputDirectoryProperty.set(value)
+            }
+        }
 
         scriptNames.setAll(KImageManager.scriptNames)
         updateOutputDirectoryFiles(outputHideOldFilesProperty.get())
+
+        primaryStage.scene = scene
+        primaryStage.show()
     }
 
     private fun createMainEditor(): Node {
@@ -97,6 +102,7 @@ class KImageApplication : Application() {
                     row {
                         cell(2, 1) {
                             node(logTextArea) {
+                                isEditable = false
                             }
                         }
                     }
@@ -115,7 +121,7 @@ class KImageApplication : Application() {
 
             children += hbox(SPACING) {
                 children += button(FontIcon()) {
-                    id = "file-button"
+                    id = "file-icon"
                     tooltip = Tooltip("Add input image files to be processed.")
                     onAction = EventHandler {
                         val files = openImageFiles(File(inputDirectoryProperty.get()))
@@ -128,11 +134,16 @@ class KImageApplication : Application() {
                     }
                 }
                 children += button(FontIcon()) {
-                    id = "clear-button"
+                    id = "clear-icon"
                     tooltip = Tooltip("Clear the list of input image files.")
                     onAction = EventHandler {
                         inputFiles.clear()
                     }
+                }
+                children += togglebutton(FontIcon()) {
+                    id = "arrow-forward-icon"
+                    tooltip = Tooltip("Use input directory as output directory.")
+                    selectedProperty().bindBidirectional(useInputDirectoryAsOutputDirectoryProperty)
                 }
             }
 
@@ -143,7 +154,8 @@ class KImageApplication : Application() {
                 setRowFactory {
                     val tableRow = TableRow<File>()
                     tableRow.contextMenu = ContextMenu(
-                        menuitem("Remove") {
+                        menuitem("Remove", FontIcon()) {
+                            id = "remove-icon"
                             onAction = EventHandler {
                                 inputFiles.remove(tableRow.item)
                                 updateImageView(inputImageView, null)
@@ -187,7 +199,7 @@ class KImageApplication : Application() {
                     }
                 }
                 children += button(FontIcon()) {
-                    id = "folder-button"
+                    id = "folder-icon"
                     tooltip = Tooltip("Select the output directory for processed image files.")
                     onAction = EventHandler {
                         val file = openDir(File(outputDirectoryProperty.get()))
@@ -197,7 +209,7 @@ class KImageApplication : Application() {
                     }
                 }
                 children += togglebutton(FontIcon()) {
-                    id = "hide-button"
+                    id = "hide-icon"
                     tooltip = Tooltip("Hide already existing files and show only newly added output files.")
                     selectedProperty().bindBidirectional(outputHideOldFilesProperty)
                     outputHideOldFilesProperty.addListener { _, _, value ->
@@ -212,6 +224,21 @@ class KImageApplication : Application() {
             children += tableview(outputFiles) {
                 minWidth = FILE_TABLE_WIDTH.toDouble()
                 minHeight = FILE_TABLE_HEIGHT.toDouble()
+
+                setRowFactory {
+                    val tableRow = TableRow<File>()
+                    tableRow.contextMenu = ContextMenu(
+                        menuitem("Delete", FontIcon()) {
+                            id = "delete-forever-icon"
+                            onAction = EventHandler {
+                                outputFiles.remove(tableRow.item)
+                                updateImageView(outputImageView, null)
+                                tableRow.item.delete()
+                            }
+                        }
+                    )
+                    tableRow
+                }
 
                 column<String>("Name", { file -> ReadOnlyStringWrapper(file?.name) }) {
                     this.prefWidth = 200.0
@@ -340,10 +367,10 @@ class KImageApplication : Application() {
                                             }
                                             children += button(FontIcon()) {
                                                 if (argument.isDirectory == true) {
-                                                    id =  "folder-button"
+                                                    id =  "folder-icon"
                                                     tooltip = Tooltip("Select the directory for the ${argument.name}.")
                                                 } else {
-                                                    id =  "file-button"
+                                                    id =  "file-icon"
                                                     tooltip = Tooltip("Select the file for the ${argument.name}.")
                                                 }
                                                 onAction = EventHandler {
@@ -397,12 +424,21 @@ class KImageApplication : Application() {
                 }
 
                 children += button(FontIcon()) {
-                    id = "play-button"
+                    id = "play-icon"
                     tooltip = Tooltip("Run the ${script.name} script.")
                     onAction = EventHandler {
                         isDisable = true
                         updateOutputDirectoryFiles(outputHideOldFilesProperty.get())
 
+                        val dialogContent = vbox(SPACING) {
+                            padding = Insets(10.0)
+                            children += node(ProgressBar()) {
+                                prefWidth = 200.0
+                            }
+                            children += label(script.title)
+                        }
+                        val progressDialog = ProgressDialog(dialogContent, "Running ${script.name}")
+                        progressDialog.show()
 
                         Thread {
                             val systemOut = System.out
@@ -425,6 +461,7 @@ class KImageApplication : Application() {
                                 Platform.runLater {
                                     updateOutputDirectoryFiles(false)
                                     this@button.isDisable = false
+                                    progressDialog.close()
                                 }
                             }
                         }.start()
@@ -510,6 +547,26 @@ class KImageApplication : Application() {
         fun main(args: Array<String>) {
             launch(KImageApplication::class.java)
         }
+    }
+}
+
+class ProgressDialog(private val content: Parent, private val title: String? = null) {
+
+    private val dialogStage = Stage()
+
+    fun show() {
+        dialogStage.initStyle(StageStyle.UTILITY)
+        dialogStage.isResizable = false
+        dialogStage.title = title
+        dialogStage.initModality(Modality.APPLICATION_MODAL)
+
+        dialogStage.scene = Scene(content)
+        dialogStage.sizeToScene()
+        dialogStage.show()
+    }
+
+    fun close() {
+        dialogStage.close()
     }
 }
 

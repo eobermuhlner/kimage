@@ -215,6 +215,9 @@ class TableViewContext<S>(items: ObservableList<S>) : TableView<S>(items) {
 fun menuitem(text: String, initializer: MenuItem.() -> Unit)
         = MenuItem(text).apply(initializer)
 
+fun menuitem(text: String, graphic: Node, initializer: MenuItem.() -> Unit)
+        = MenuItem(text, graphic).apply(initializer)
+
 
 fun tabpane(initializer: TabPane.() -> Unit)
         = TabPane().apply(initializer)
