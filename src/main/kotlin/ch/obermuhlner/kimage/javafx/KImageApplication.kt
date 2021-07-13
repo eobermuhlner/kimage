@@ -96,12 +96,12 @@ class KImageApplication : Application() {
                             }
                         }
                         cell {
-                            vbox(SPACING) {
+                            scrollpane {
                                 padding = Insets(0.0, SPACING, 0.0, SPACING)
 
-                                minWidth = ARGUMENT_EDITOR_WIDTH.toDouble()
-                                minHeight = ARGUMENT_EDITOR_HEIGHT.toDouble()
-                                children += commandArgumentEditor
+                                prefWidth = ARGUMENT_EDITOR_WIDTH.toDouble()
+                                prefHeight = ARGUMENT_EDITOR_HEIGHT.toDouble()
+                                content = commandArgumentEditor
                             }
                         }
                     }
@@ -395,23 +395,32 @@ class KImageApplication : Application() {
                                         hbox {
                                             val fileProperty = SimpleStringProperty()
                                             fileProperty.addListener { _, _, value ->
-                                                argumentStrings[argument.name] = value
+                                                if (value.isNullOrEmpty()) {
+                                                    argumentStrings.remove(argument.name)
+                                                } else {
+                                                    argumentStrings[argument.name] = File(inputDirectoryProperty.get(), value).toString()
+                                                }
                                             }
                                             children += textfield(fileProperty) {
                                                 // TODO relative to input or output dir?
                                                 tooltip = Tooltip(argument.description)
                                                 text = argument.default?.toString()
-                                                textProperty().addListener { _, _, value ->
-                                                    pseudoClassStateChanged(INVALID, !argument.isValid(value, inputDirectoryProperty.get()))
+
+                                                fun validate(value: String?) {
+                                                    pseudoClassStateChanged(INVALID, !argument.isValid(value?:"", inputDirectoryProperty.get()))
                                                 }
+                                                textProperty().addListener { _, _, value ->
+                                                    validate(value)
+                                                }
+                                                validate(fileProperty.get())
                                             }
                                             children += button(FontIcon()) {
                                                 if (argument.isDirectory == true) {
                                                     id =  "folder-icon"
-                                                    tooltip = Tooltip("Select the directory for the ${argument.name}.")
+                                                    tooltip = Tooltip("Select the directory for ${argument.name}.")
                                                 } else {
                                                     id =  "file-icon"
-                                                    tooltip = Tooltip("Select the file for the ${argument.name}.")
+                                                    tooltip = Tooltip("Select the file for ${argument.name}.")
                                                 }
                                                 onAction = EventHandler {
                                                     if (argument.isDirectory == true) {
@@ -433,7 +442,11 @@ class KImageApplication : Application() {
                                         hbox {
                                             val fileProperty = SimpleStringProperty()
                                             fileProperty.addListener { _, _, value ->
-                                                argumentStrings[argument.name] = value
+                                                if (value.isNullOrEmpty()) {
+                                                    argumentStrings.remove(argument.name)
+                                                } else {
+                                                    argumentStrings[argument.name] = File(inputDirectoryProperty.get(), value).toString()
+                                                }
                                             }
                                             children += textfield(fileProperty) {
                                                 tooltip = Tooltip(argument.description)
@@ -444,7 +457,7 @@ class KImageApplication : Application() {
                                             }
                                             children += button(FontIcon()) {
                                                 id =  "file-icon"
-                                                tooltip = Tooltip("Select the image file for the ${argument.name}.")
+                                                tooltip = Tooltip("Select the image file for ${argument.name}.")
                                                 onAction = EventHandler {
                                                     val file = openFile(File(inputDirectoryProperty.get()))
                                                     file?.let {
@@ -609,7 +622,7 @@ class KImageApplication : Application() {
         val DOUBLE_FORMAT = DecimalFormat("##0.000")
         val PERCENT_FORMAT = DecimalFormat("##0.000%")
 
-        val INVALID = PseudoClass.getPseudoClass("invalid")
+        val INVALID: PseudoClass = PseudoClass.getPseudoClass("invalid")
 
         @JvmStatic
         fun main(args: Array<String>) {

@@ -542,7 +542,7 @@ open class ScriptFileArg(mandatory: Boolean = true) : ScriptArg("file", mandator
         get() = default != null
 
     fun toFileValue(stringValue: String?, parent: String? = null): File {
-        if (stringValue == null) {
+        if (stringValue.isNullOrEmpty()) {
             default?.let {
                 return if (it.isAbsolute) toFileValue(it.toString()) else toFileValue(it.toString(), parent)
             }
@@ -582,7 +582,7 @@ open class ScriptFileArg(mandatory: Boolean = true) : ScriptArg("file", mandator
         return file
     }
 
-    fun isValid(stringValue: String, parent: String? = null): Boolean {
+    open fun isValid(stringValue: String, parent: String? = null): Boolean {
         return try {
             toFileValue(stringValue, parent)
             true
@@ -594,8 +594,8 @@ open class ScriptFileArg(mandatory: Boolean = true) : ScriptArg("file", mandator
 
 @KotlinDSL
 class ScriptOptionalFileArg : ScriptFileArg(false) {
-    fun toOptionalFileValue(stringValue: String?): Optional<File> {
-        if (stringValue == null) {
+    fun toOptionalFileValue(stringValue: String?, parent: String? = null): Optional<File> {
+        if (stringValue.isNullOrEmpty()) {
             if (default == null) {
                 return Optional.empty()
             }
@@ -604,6 +604,15 @@ class ScriptOptionalFileArg : ScriptFileArg(false) {
             }
         }
         return Optional.of(toFileValue(stringValue))
+    }
+
+    override fun isValid(stringValue: String, parent: String?): Boolean {
+        return try {
+            toOptionalFileValue(stringValue, parent)
+            true
+        } catch (ex: Exception) {
+            false
+        }
     }
 }
 
@@ -615,18 +624,18 @@ open class ScriptImageArg(mandatory: Boolean = true) : ScriptArg("image", mandat
         get() = default != null
 
     fun toImageValue(stringValue: String?, parent: String? = null): Image {
-        if (stringValue == null) {
+        if (stringValue.isNullOrEmpty()) {
             default?.let {
                 return ImageReader.read(it)
             }
             throw ScriptArgumentException("Argument $name is mandatory")
         }
-        return ImageReader.read(File(stringValue, parent))
+        return ImageReader.read(File(parent, stringValue))
     }
 
     fun isValid(stringValue: String, parent: String? = null): Boolean {
         // toImageValue(stringValue, parent) // loading the image is too expensive for validation
-        val file = File(stringValue, parent)
+        val file = File(parent, stringValue)
         return file.isFile
     }
 }
