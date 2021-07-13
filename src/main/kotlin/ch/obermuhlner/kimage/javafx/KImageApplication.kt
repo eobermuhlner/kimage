@@ -1,6 +1,7 @@
 package ch.obermuhlner.kimage.javafx
 
 import ch.obermuhlner.kimage.*
+import ch.obermuhlner.kimage.math.clamp
 import ch.obermuhlner.kimage.io.ImageReader
 import ch.obermuhlner.kotlin.javafx.*
 import com.vladsch.flexmark.html.HtmlRenderer
@@ -18,7 +19,10 @@ import javafx.scene.Parent
 import javafx.scene.Scene
 import javafx.scene.control.*
 import javafx.scene.image.ImageView
+import javafx.scene.image.WritableImage
+import javafx.scene.input.MouseEvent
 import javafx.scene.layout.VBox
+import javafx.scene.paint.Color
 import javafx.scene.web.WebView
 import javafx.stage.*
 import javafx.util.converter.IntegerStringConverter
@@ -27,18 +31,34 @@ import java.io.*
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.text.DecimalFormat
+import kotlin.math.max
+import kotlin.math.min
+import ch.obermuhlner.kimage.math.clamp as clamp
 
 
 class KImageApplication : Application() {
 
     private lateinit var primaryStage: Stage
 
+    private val inputZoomImage = WritableImage(ZOOM_WIDTH, ZOOM_HEIGHT)
+    private val outputZoomImage = WritableImage(ZOOM_WIDTH, ZOOM_HEIGHT)
+    private val deltaZoomImage = WritableImage(ZOOM_WIDTH, ZOOM_HEIGHT)
+
     private val inputImageView = ImageView()
     private val outputImageView = ImageView()
+
+    private val inputZoomImageView = ImageView(inputZoomImage)
+    private val outputZoomImageView = ImageView(outputZoomImage)
+    private val deltaZoomImageView = ImageView(deltaZoomImage)
+
     private val commandArgumentEditor = VBox(SPACING)
     private val logTextArea = TextArea()
     private val docuTextArea = TextArea()
     private val docuWebView = WebView()
+
+    private val zoomCenterXProperty = SimpleIntegerProperty()
+    private val zoomCenterYProperty = SimpleIntegerProperty()
+
     private val inputDirectoryProperty = SimpleStringProperty(Paths.get(System.getProperty("user.home", ".")).toString())
     private val useInputDirectoryAsOutputDirectoryProperty = SimpleBooleanProperty(true)
     private val outputDirectoryProperty = SimpleStringProperty(Paths.get(System.getProperty("user.home", ".")).toString())
@@ -75,6 +95,12 @@ class KImageApplication : Application() {
             KImageManager.script(scriptNames[0]) // trigger compilation of first script
         }
         updateOutputDirectoryFiles(outputHideOldFilesProperty.get())
+
+        setupImageSelectionListener(inputImageView)
+        setupImageSelectionListener(outputImageView)
+        setupZoomDragEvents(inputZoomImageView)
+        setupZoomDragEvents(deltaZoomImageView)
+        setupZoomDragEvents(outputZoomImageView)
 
         primaryStage.scene = scene
         primaryStage.show()
@@ -132,6 +158,9 @@ class KImageApplication : Application() {
                                         isEditable = false
                                     }
                                 }
+                                tabs += tab("Image Zoom") {
+                                    content = createInputOutputDeltaViewer()
+                                }
                             }
                         }
                     }
@@ -139,6 +168,37 @@ class KImageApplication : Application() {
             }
 
             right = createOutputFilesEditor()
+        }
+    }
+
+    private fun createInputOutputDeltaViewer(): Node {
+        return gridpane {
+            padding = Insets(SPACING)
+            hgap = SPACING
+            vgap = SPACING
+
+            row {
+                cell {
+                    label("Input Zoom:")
+                }
+                cell {
+                    label("Delta Zoom:")
+                }
+                cell {
+                    label("Output Zoom:")
+                }
+            }
+            row {
+                cell {
+                    inputZoomImageView
+                }
+                cell {
+                    deltaZoomImageView
+                }
+                cell {
+                    outputZoomImageView
+                }
+            }
         }
     }
 
@@ -329,6 +389,7 @@ class KImageApplication : Application() {
                 val image = ImageReader.read(selectedFile)
                 val writableImage = JavaFXImageUtil.toWritableImage(image)
                 imageView.image = writableImage
+                updateZoom()
             } catch (ex: Exception) {
                 // ignore
             }
@@ -618,6 +679,116 @@ class KImageApplication : Application() {
         outputFiles.addAll(files)
     }
 
+    private fun setupImageSelectionListener(imageView: ImageView) {
+        setMouseDragEvents(imageView) { event: MouseEvent ->
+            val imageViewWidth = imageView.boundsInLocal.width
+            val imageViewHeight = imageView.boundsInLocal.height
+
+            var zoomX = (event.x * imageView.image.width / imageViewWidth).toInt()
+            var zoomY = (event.y * imageView.image.height / imageViewHeight).toInt()
+
+            zoomX = max(zoomX, 0)
+            zoomY = max(zoomY, 0)
+            zoomX = min(zoomX, imageView.image.width.toInt() - 1)
+            zoomY = min(zoomY, imageView.image.height.toInt() - 1)
+
+            setZoom(zoomX, zoomY)
+        }
+    }
+
+    private fun setZoom(x: Int, y: Int) {
+        zoomCenterXProperty.set(x)
+        zoomCenterYProperty.set(y)
+        updateZoom(x, y)
+    }
+
+    private fun setMouseDragEvents(node: Node, handler: EventHandler<in MouseEvent>) {
+        node.onMouseClicked = handler
+        node.onMouseDragged = handler
+        node.onMouseReleased = handler
+    }
+
+    private var zoomDragX: Double? = null
+    private var zoomDragY: Double? = null
+    private fun setupZoomDragEvents(imageView: ImageView) {
+        imageView.onMousePressed = EventHandler { event: MouseEvent ->
+            zoomDragX = event.x
+            zoomDragY = event.y
+        }
+        imageView.onMouseDragged = EventHandler { event: MouseEvent ->
+            val deltaX = zoomDragX!! - event.x
+            val deltaY = zoomDragY!! - event.y
+            zoomDragX = event.x
+            zoomDragY = event.y
+            var zoomX = zoomCenterXProperty.get() + deltaX.toInt()
+            var zoomY = zoomCenterYProperty.get() + deltaY.toInt()
+//            zoomX = max(zoomX, 0)
+//            zoomY = max(zoomY, 0)
+//            zoomX = min(zoomX, imageView.image.width.toInt() - 1)
+//            zoomY = min(zoomY, imageView.image.height.toInt() - 1)
+            zoomCenterXProperty.set(zoomX)
+            zoomCenterYProperty.set(zoomY)
+            updateZoom(zoomX, zoomY)
+        }
+        imageView.onMouseDragReleased = EventHandler {
+            zoomDragX = null
+            zoomDragY = null
+        }
+    }
+
+    private fun updateZoom(zoomX: Int = zoomCenterXProperty.get(), zoomY: Int = zoomCenterYProperty.get()) {
+        val inputImage = inputImageView.image
+        val outputImage = outputImageView.image
+
+        val inputImageWidth = inputImage.width.toInt() - 1
+        val inputImageHeight = inputImage.height.toInt() - 1
+
+        val outputImageWidth = outputImage.width.toInt() - 1
+        val outputImageHeight = outputImage.height.toInt() - 1
+
+        val zoomWidthHalf = ZOOM_WIDTH / 2
+        val zoomHeightHalf = ZOOM_HEIGHT / 2
+
+        for (y in 0 until ZOOM_HEIGHT) {
+            for (x in 0 until ZOOM_WIDTH) {
+                val xInput = clamp(zoomX + x - zoomWidthHalf, 0, inputImageWidth)
+                val yInput = clamp(zoomY + y - zoomHeightHalf, 0, inputImageHeight)
+                val rgbInput = inputImage.pixelReader.getColor(xInput, yInput)
+                inputZoomImage.pixelWriter.setColor(x, y, rgbInput)
+
+                val xOutput = clamp(zoomX + x - zoomWidthHalf, 0, outputImageWidth)
+                val yOutput = clamp(zoomY + y - zoomHeightHalf, 0, outputImageHeight)
+                val rgbOutput = outputImage.pixelReader.getColor(xOutput, yOutput)
+                outputZoomImage.pixelWriter.setColor(x, y, rgbOutput)
+
+                val rgbDelta = calculateDeltaColor(rgbInput, rgbOutput)
+                deltaZoomImage.pixelWriter.setColor(x, y, rgbDelta)
+            }
+        }
+    }
+
+    private fun calculateDeltaColor(rgb1: Color, rgb2: Color): Color {
+        val factor = 1.0
+        val delta = (rgb1.brightness - rgb2.brightness) * factor
+        val exaggeratedDelta = exaggerate(delta)
+
+        return if (delta < 0) {
+            Color(
+                clamp(exaggeratedDelta, 0.0, 1.0),
+                clamp(exaggeratedDelta * 0.5, 0.0, 1.0),
+                clamp(exaggeratedDelta * 0.5, 0.0, 1.0),
+                1.0)
+        } else {
+            Color(
+                clamp(exaggeratedDelta * 0.5, 0.0, 1.0),
+                clamp(exaggeratedDelta * 0.5, 0.0, 1.0),
+                clamp(exaggeratedDelta, 0.0, 1.0),
+                1.0)
+        }
+    }
+
+    private fun exaggerate(x: Double): Double = -1/(x+0.5)+2
+
     fun openImageFiles(initialDirectory: File, title: String = "Open Images"): List<File>? {
         val fileChooser = FileChooser()
         fileChooser.initialDirectory = initialDirectory
@@ -647,8 +818,8 @@ class KImageApplication : Application() {
         private const val IMAGE_WIDTH = 400
         private const val IMAGE_HEIGHT = 400
 
-        private const val ZOOM_WIDTH = 200
-        private const val ZOOM_HEIGHT = 200
+        private const val ZOOM_WIDTH = 300
+        private const val ZOOM_HEIGHT = 300
 
         private const val FILE_TABLE_WIDTH = 400
         private const val FILE_TABLE_HEIGHT = 200
