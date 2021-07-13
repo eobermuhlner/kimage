@@ -429,6 +429,31 @@ class KImageApplication : Application() {
                                             }
                                         }
                                     }
+                                    is ScriptImageArg -> {
+                                        hbox {
+                                            val fileProperty = SimpleStringProperty()
+                                            fileProperty.addListener { _, _, value ->
+                                                argumentStrings[argument.name] = value
+                                            }
+                                            children += textfield(fileProperty) {
+                                                tooltip = Tooltip(argument.description)
+                                                text = argument.default?.toString()
+                                                textProperty().addListener { _, _, value ->
+                                                    pseudoClassStateChanged(INVALID, !argument.isValid(value, inputDirectoryProperty.get()))
+                                                }
+                                            }
+                                            children += button(FontIcon()) {
+                                                id =  "file-icon"
+                                                tooltip = Tooltip("Select the image file for the ${argument.name}.")
+                                                onAction = EventHandler {
+                                                    val file = openFile(File(inputDirectoryProperty.get()))
+                                                    file?.let {
+                                                        fileProperty.set(it.toRelativeString(File(inputDirectoryProperty.get())))
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
                                     else -> {
                                         textfield {
                                             tooltip = Tooltip(argument.description)

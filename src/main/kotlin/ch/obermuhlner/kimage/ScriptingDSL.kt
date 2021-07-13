@@ -586,7 +586,7 @@ open class ScriptFileArg(mandatory: Boolean = true) : ScriptArg("file", mandator
         return try {
             toFileValue(stringValue, parent)
             true
-        } catch (ex: ScriptArgumentException) {
+        } catch (ex: Exception) {
             false
         }
     }
@@ -614,14 +614,20 @@ open class ScriptImageArg(mandatory: Boolean = true) : ScriptArg("image", mandat
     override val hasDefault: Boolean
         get() = default != null
 
-    fun toImageValue(stringValue: String?): Image {
+    fun toImageValue(stringValue: String?, parent: String? = null): Image {
         if (stringValue == null) {
             default?.let {
                 return ImageReader.read(it)
             }
             throw ScriptArgumentException("Argument $name is mandatory")
         }
-        return ImageReader.read(File(stringValue))
+        return ImageReader.read(File(stringValue, parent))
+    }
+
+    fun isValid(stringValue: String, parent: String? = null): Boolean {
+        // toImageValue(stringValue, parent) // loading the image is too expensive for validation
+        val file = File(stringValue, parent)
+        return file.isFile
     }
 }
 
