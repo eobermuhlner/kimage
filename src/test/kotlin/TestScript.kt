@@ -34,10 +34,10 @@ object TestScript {
         //runScript(scriptCalibrate(), mapOf("biasDir" to "images/align"))
         //runScript(scriptCalibrate(), mapOf("biasDir" to "images/align"))
 
-        runScript(scriptRemoveVignette(), mapOf(), "images/vignette/flat_large.tif")
-        runScript(scriptRemoveVignette(), mapOf(), "images/vignette/IMG_6800.TIF")
+//        runScript(scriptRemoveVignette(), mapOf(), "images/vignette/flat_large.tif")
+//        runScript(scriptRemoveVignette(), mapOf(), "images/vignette/IMG_6800.TIF")
 
-        //runScript(scriptTestMulti(), mapOf())
+        runScript(scriptTestMulti(), mapOf())
     }
 
     private fun scriptRemoveBackgroundMedian(): Script =
@@ -1049,7 +1049,6 @@ object TestScript {
             }
         }
 
-
     fun scriptRemoveVignette(): Script =
         kimage(0.1) {
             name = "remove-vignette"
@@ -1365,31 +1364,6 @@ object TestScript {
             }
         }
 
-    // based on http://rosettacode.org/wiki/Polynomial_regression#Kotlin
-    fun polyRegression(x: FloatArray, y: FloatArray): ((Float) -> Float) {
-        val xm = x.average()
-        val ym = y.average()
-        val x2m = x.map { it * it }.average()
-        val x3m = x.map { it * it * it }.average()
-        val x4m = x.map { it * it * it * it }.average()
-        val xym = x.zip(y).map { it.first * it.second }.average()
-        val x2ym = x.zip(y).map { it.first * it.first * it.second }.average()
-
-        val sxx = x2m - xm * xm
-        val sxy = xym - xm * ym
-        val sxx2 = x3m - xm * x2m
-        val sx2x2 = x4m - x2m * x2m
-        val sx2y = x2ym - x2m * ym
-
-        val b = (sxy * sx2x2 - sx2y * sxx2) / (sxx * sx2x2 - sxx2 * sxx2)
-        val c = (sx2y * sxx - sxy * sxx2) / (sxx * sx2x2 - sxx2 * sxx2)
-        val a = ym - b * xm - c * x2m
-
-        fun abc(xx: Float) = a + b * xx + c * xx * xx
-
-        return ::abc
-    }
-
     fun scriptTestMulti(): Script =
         kimage(0.1) {
             name = "test-multi"
@@ -1433,11 +1407,28 @@ object TestScript {
                     regex = "a+"
                     default = "aaa"
                 }
+                file("fileArg") {
+                    description = "Example argument for a file."
+                    isFile = true
+                }
+                file("dirArg") {
+                    description = "Example argument for a directory."
+                    isDirectory = true
+                }
+                file("dirWithDefaultArg") {
+                    description = "Example argument for a directory with default."
+                    isDirectory = true
+                    default = File(".")
+                }
+                optionalFile("optionalFileArg") {
+                    description = "Example argument for an optional file."
+                    isFile = true
+                }
                 list("listOfIntArg") {
                     description = "Example argument for a list of integer values."
                     min = 1
-
                     default = listOf(1, 2, 3)
+
                     int {
                         description = "A single integer value"
                         min = 0
@@ -1487,12 +1478,20 @@ object TestScript {
                 val stringArg: String by arguments
                 val allowedStringArg: String by arguments
                 val regexStringArg: String by arguments
+                val fileArg: File by arguments
+                val dirArg: File by arguments
+                val dirWithDefaultArg: File by arguments
+                val optionalFileArg: Optional<File> by arguments
+
                 val listOfIntArg: List<Int> by arguments
                 val optionalListOfIntArg: Optional<List<Int>> by arguments
+
                 val recordArg: Map<String, Any> by arguments
                 val recordInt: Int by recordArg
                 val recordString: String by recordArg
                 val recordDouble: Double by recordArg
+
+                val optionalRecordArg: Optional<Map<String, Any>> by arguments
 
                 println("Raw Arguments:")
                 for (rawArgument in rawArguments) {
@@ -1510,12 +1509,17 @@ object TestScript {
                 println("  stringArg = $stringArg")
                 println("  allowedStringArg = $allowedStringArg")
                 println("  regexStringArg = $regexStringArg")
+                println("  fileArg = $fileArg")
+                println("  dirArg = $dirArg")
+                println("  dirWithDefaultArg = $dirWithDefaultArg")
+                println("  optionalFileArg = $optionalFileArg")
                 println("  listOfIntArg = $listOfIntArg")
                 println("  optionalListOfIntArg = $optionalListOfIntArg")
                 println("  recordArg = $recordArg")
                 println("  recordInt = $recordInt")
                 println("  recordString = $recordString")
                 println("  recordDouble = $recordDouble")
+                println("  optionalRecordArg = $optionalRecordArg")
 
                 println("Input Files:")
                 for (file in inputFiles) {
@@ -1523,6 +1527,31 @@ object TestScript {
                 }
             }
         }
+
+    // based on http://rosettacode.org/wiki/Polynomial_regression#Kotlin
+    fun polyRegression(x: FloatArray, y: FloatArray): ((Float) -> Float) {
+        val xm = x.average()
+        val ym = y.average()
+        val x2m = x.map { it * it }.average()
+        val x3m = x.map { it * it * it }.average()
+        val x4m = x.map { it * it * it * it }.average()
+        val xym = x.zip(y).map { it.first * it.second }.average()
+        val x2ym = x.zip(y).map { it.first * it.first * it.second }.average()
+
+        val sxx = x2m - xm * xm
+        val sxy = xym - xm * ym
+        val sxx2 = x3m - xm * x2m
+        val sx2x2 = x4m - x2m * x2m
+        val sx2y = x2ym - x2m * ym
+
+        val b = (sxy * sx2x2 - sx2y * sxx2) / (sxx * sx2x2 - sxx2 * sxx2)
+        val c = (sx2y * sxx - sxy * sxx2) / (sxx * sx2x2 - sxx2 * sxx2)
+        val a = ym - b * xm - c * x2m
+
+        fun abc(xx: Float) = a + b * xx + c * xx * xx
+
+        return ::abc
+    }
 
     fun runScript(script: Script, vararg filepaths: String) {
         runScript(script, mapOf(), *filepaths)
@@ -1533,8 +1562,8 @@ object TestScript {
     }
 
     fun runScript(script: Script, arguments: Map<String, String>, files: List<File>) {
-        ScriptExecutor.executeScript(script, arguments, files, true, true, true , "output", "");
-        ScriptExecutor.executeScript(script, arguments, files, false, true, true, "output", "");
+        KImageManager.executeScript(script, arguments, files, true, true, true , "output", "")
+        KImageManager.executeScript(script, arguments, files, false, true, true , "output", "")
     }
 
     private fun runSingleModeScript(filepath: String) {
