@@ -73,9 +73,9 @@ class KImageApplication : Application() {
 
     private val zoomDeltaFactorProperty = SimpleDoubleProperty()
 
-    private val inputDirectoryProperty = SimpleStringProperty(Paths.get(System.getProperty("user.home", ".")).toString())
+    private val inputDirectoryProperty = SimpleStringProperty(Paths.get(".").toString())
     private val useInputDirectoryAsOutputDirectoryProperty = SimpleBooleanProperty(true)
-    private val outputDirectoryProperty = SimpleStringProperty(Paths.get(System.getProperty("user.home", ".")).toString())
+    private val outputDirectoryProperty = SimpleStringProperty(Paths.get(".").toString())
     private val outputHideOldFilesProperty = SimpleBooleanProperty()
 
     private val inputFiles = FXCollections.observableArrayList<File>()
@@ -116,6 +116,12 @@ class KImageApplication : Application() {
         setupZoomDragEvents(deltaZoomImageView)
         setupZoomDragEvents(outputZoomImageView)
 
+        zoomCenterXProperty.addListener { _, _, _ ->
+            updateZoom()
+        }
+        zoomCenterYProperty.addListener { _, _, _ ->
+            updateZoom()
+        }
         zoomDeltaFactorProperty.addListener { _, _, _ ->
             updateZoom()
         }
@@ -185,7 +191,7 @@ class KImageApplication : Application() {
                                 }
                                 tabs += tab("Image Zoom") {
                                     infoTabZoom = this
-                                    content = createInputOutputDeltaViewer()
+                                    content = createZoomViewer()
                                 }
                             }
                         }
@@ -197,7 +203,7 @@ class KImageApplication : Application() {
         }
     }
 
-    private fun createInputOutputDeltaViewer(): Node {
+    private fun createZoomViewer(): Node {
         return gridpane {
             padding = Insets(SPACING)
             hgap = SPACING
@@ -230,15 +236,26 @@ class KImageApplication : Application() {
                     label("")
                 }
                 cell {
-                    slider(1.0, 10.0, 5.0) {
-                        tooltip = Tooltip("Factor used to exaggerate the delta value.")
-                        isShowTickMarks = true
-                        isShowTickLabels = true
-                        majorTickUnit = 1.0
-                        minorTickCount = 10
-                        //styleClass.add(Spinner.STYLE_CLASS_SPLIT_ARROWS_HORIZONTAL)
-                        prefWidth = 80.0
-                        zoomDeltaFactorProperty.bind(valueProperty())
+                    vbox(SPACING) {
+                        children += slider(1.0, 10.0, 5.0) {
+                            tooltip = Tooltip("Factor used to exaggerate the delta value.")
+                            isShowTickMarks = true
+                            isShowTickLabels = true
+                            majorTickUnit = 1.0
+                            minorTickCount = 10
+                            prefWidth = 80.0
+                            zoomDeltaFactorProperty.bind(valueProperty())
+                        }
+                        children += hbox(SPACING) {
+                            children += label("X:")
+                            children += textfield(zoomCenterXProperty) {
+                                prefWidth = 80.0
+                            }
+                            children += label("Y:")
+                            children += textfield(zoomCenterYProperty) {
+                                prefWidth = 80.0
+                            }
+                        }
                     }
                 }
                 cell {
@@ -393,6 +410,15 @@ class KImageApplication : Application() {
                         }
                     }
                     tableRow.contextMenu = ContextMenu(
+                        menuitem("Replace input", FontIcon()) {
+                            id = "bold-arrow-left-icon"
+                            onAction = EventHandler {
+                                inputFiles.clear()
+                                selectionModel.selectedItems.toList().forEach {
+                                    inputFiles.add(it)
+                                }
+                            }
+                        },
                         menuitem("Delete file forever", FontIcon()) {
                             id = "delete-forever-icon"
                             onAction = EventHandler {
@@ -744,10 +770,10 @@ class KImageApplication : Application() {
     }
 
     private fun filter(change: TextFormatter.Change, regex: Regex, func: (TextFormatter.Change) -> Boolean = { true }): TextFormatter.Change? {
-        if (change.controlNewText.matches(regex)) {
-            return change
+        return if (change.controlNewText.matches(regex)) {
+            change
         } else {
-            return null
+            null
         }
     }
 
@@ -900,8 +926,8 @@ class KImageApplication : Application() {
         private const val IMAGE_WIDTH = 400
         private const val IMAGE_HEIGHT = 400
 
-        private const val ZOOM_WIDTH = 300
-        private const val ZOOM_HEIGHT = 300
+        private const val ZOOM_WIDTH = 200
+        private const val ZOOM_HEIGHT = 200
 
         private const val FILE_TABLE_WIDTH = 400
         private const val FILE_TABLE_HEIGHT = 200
