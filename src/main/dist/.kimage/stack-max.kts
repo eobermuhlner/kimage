@@ -17,8 +17,6 @@ kimage(0.1) {
     }
 
     multi {
-        println("Stack multiple images using max")
-
         var stacked: Image? = null
         for (inputFile in inputFiles) {
             println("Loading image: $inputFile")
