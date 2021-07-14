@@ -247,7 +247,9 @@ object KImageManager {
         val engine = manager.getEngineByExtension(extension)
             ?: throw IllegalArgumentException("Script language not supported: $extension")
 
-        return createScript(command, engine, addImportsToScript(code, extension))
+        val script = createScript(command, engine, addImportsToScript(code, extension))
+        scriptCache[command] = script
+        return script
     }
 
     fun executeScript(
