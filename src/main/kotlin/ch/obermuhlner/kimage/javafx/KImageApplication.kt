@@ -585,7 +585,7 @@ class KImageApplication : Application() {
                                                             text = argument.default?.toString()
 
                                                             fun validate(value: String?) {
-                                                                pseudoClassStateChanged(INVALID, !argument.isValid(value?:"", inputDirectoryProperty.get()))
+                                                                pseudoClassStateChanged(INVALID, !argument.isValid(value?:""))
                                                             }
                                                             textProperty().addListener { _, _, value ->
                                                                 validate(value)
@@ -630,7 +630,7 @@ class KImageApplication : Application() {
                                                             tooltip = Tooltip(argument.description)
                                                             text = argument.default?.toString()
                                                             textProperty().addListener { _, _, value ->
-                                                                pseudoClassStateChanged(INVALID, !argument.isValid(value, inputDirectoryProperty.get()))
+                                                                pseudoClassStateChanged(INVALID, !argument.isValid(value))
                                                             }
                                                         }
                                                         children += button(FontIcon()) {
