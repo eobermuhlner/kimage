@@ -54,9 +54,18 @@ The "Log" tab shows the output of the script.
 
 ---
 
-The output files of the script are written into the directory shown in the "Output Files" are on the right side.
+The output files of the script are written into the directory shown in the "Output Files" on the right side.
 
-![](docu/images/output_files.png)
+![](docu/images/screenshot_output_files.png)
+
+The directory is either automatically the same as the input directory or you pick your own directory.
+
+![](docu/images/screenshot_output_files_toolbar.png)
+
+- Use input directory as output directory
+- Select the output directory for processed image files
+- Go to parent directory
+- Hide already existing files and show only newly added output files
 
 Click on a file name to see a preview of the image.
 
