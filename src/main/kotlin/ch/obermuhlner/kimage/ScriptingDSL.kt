@@ -358,6 +358,7 @@ enum class Hint {
 sealed class ScriptArg(val type: String, val mandatory: Boolean) {
     var name: String = ""
     var description = ""
+    var hint: Hint? = null
 
     abstract val hasDefault: Boolean
 
@@ -378,7 +379,6 @@ open class ScriptIntArg(mandatory: Boolean = true) : ScriptArg("int", mandatory)
     var min: Int? = null
     var max: Int? = null
     var default: Int? = null
-    var hint: Hint? = null
 
     override val hasDefault: Boolean
         get() = default != null
