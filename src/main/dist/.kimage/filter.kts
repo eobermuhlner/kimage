@@ -14,7 +14,7 @@ kimage(0.1) {
                 """
     arguments {
         string("filter") {
-            allowed = listOf("blur", "median", "average", "unsharpMask", "edgeDetectionStrong", "edgeDetectionCross", "edgeDetectionDiagonal")
+            allowed = listOf("blur", "median", "average", "sharpen", "unsharpMask", "edgeDetectionStrong", "edgeDetectionCross", "edgeDetectionDiagonal")
         }
         int("radius") {
             min = 0
