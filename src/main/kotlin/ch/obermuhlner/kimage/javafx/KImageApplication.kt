@@ -756,10 +756,13 @@ class KImageApplication : Application() {
     private fun runWithProgressDialog(title: String, message: String, function: () -> Unit) {
         var progressDialog: ProgressDialog? = null
         var finished = false
+        var exception: Throwable? = null
 
         Thread {
             try {
                 function()
+            } catch (ex: Throwable) {
+                exception = ex
             } finally {
                 synchronized(this) {
                     finished = true
@@ -787,6 +790,10 @@ class KImageApplication : Application() {
                 progressDialog = ProgressDialog(dialogContent, title)
                 progressDialog?.show()
             }
+        }
+
+        exception?.let {
+            throw it
         }
     }
 
