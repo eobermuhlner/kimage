@@ -28,6 +28,40 @@ On the right side you verify the output files.
 
 ---
 
+In the "Input Files" area you can add new images by pressing the "Add Input Files" button:
+
+![](docu/images/screenshot_add_input_files.png)
+
+Click on a file name to see a preview of the image.
+
+---
+
+![](docu/images/screenshot_align.png)
+
+Select a script in the list of available scripts and the argument editor and the documentation of the script are shown.
+
+![](docu/images/screenshot_zoom.png)
+
+After editing the arguments you run the script by pressing the Run button.
+
+![](docu/images/screenshot_run_button.png)
+
+![](docu/images/screenshot_running_dialog.png)
+
+The "Log" tab shows the output of the script.
+
+![](docu/images/screenshot_log.png)
+
+---
+
+The output files of the script are written into the directory shown in the "Output Files" are on the right side.
+
+![](docu/images/output_files.png)
+
+Click on a file name to see a preview of the image.
+
+---
+
 Clicking inside one of the image views will show the "Image Zoom" tab where the clicked location will be shown.
 
 ![](docu/images/screenshot_zoom.png)
@@ -39,6 +73,8 @@ The differences are color coded:
 - Red  = the pixel on the right side is brighter
 
 The slider controls how much the differences are exaggerated.
+
+
 
 # Example Usage - Command Line
 
