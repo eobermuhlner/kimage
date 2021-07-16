@@ -516,22 +516,106 @@ The curve shape used to modify the contrast.
 #### Argument: `custom1X`
 
 - Type: double
-- Default value: 0.2
+- Default value: 0.3
 
 #### Argument: `custom1Y`
 
 - Type: double
-- Default value: 0.1
+- Default value: 0.01
 
 #### Argument: `custom2X`
 
 - Type: double
-- Default value: 0.8
+- Default value: 0.7
 
 #### Argument: `custom2Y`
 
 - Type: double
-- Default value: 0.9
+- Default value: 0.99
+
+---
+
+## Script: `convert`
+
+    kimage [OPTIONS] convert
+        [--arg replaceExtension=BOOLEAN]
+        --arg extension=STRING
+        [FILES]
+
+### Convert an image
+
+Convert an image into another format.
+
+#### Argument: `replaceExtension`
+
+- Type: boolean
+
+Controls whether the old extension should be replaced with the new extension.
+
+- true :  Input file `example.png` would be saved as `example.tif`.
+- false : Input file `example.png` would be saved as `example.png.tif`.
+
+#### Argument: `extension`
+
+- Type: string
+- Mandatory: yes
+- Allowed values:
+  - `bmp`
+  - `gif`
+  - `jpeg`
+  - `jpg`
+  - `png`
+  - `tif`
+  - `tiff`
+  - `wbmp`
+
+The extension to save the converted image file.
+
+---
+
+## Script: `crop`
+
+    kimage [OPTIONS] crop
+        [--arg x=INT]
+        [--arg y=INT]
+        [--arg x2=INT]
+        [--arg y2=INT]
+        [--arg width=INT]
+        [--arg height=INT]
+        [--arg radius=INT]
+        [FILES]
+
+### Crop an image
+
+Crop an image according the specified arguments.
+
+#### Argument: `x`
+
+- Type: int
+
+#### Argument: `y`
+
+- Type: int
+
+#### Argument: `x2`
+
+- Type: int
+
+#### Argument: `y2`
+
+- Type: int
+
+#### Argument: `width`
+
+- Type: int
+
+#### Argument: `height`
+
+- Type: int
+
+#### Argument: `radius`
+
+- Type: int
 
 ---
 
@@ -574,6 +658,39 @@ Controls how much the differences are exaggerated.
 - Default value: `Luminance`
 
 The channel used to calculate the difference between two images.
+
+---
+
+## Script: `filter`
+
+    kimage [OPTIONS] filter
+        --arg filter=STRING
+        [--arg radius=INT]
+        [FILES]
+
+### Filter an image
+
+Filter an image according the specified arguments.
+
+#### Argument: `filter`
+
+- Type: string
+- Mandatory: yes
+- Allowed values:
+  - `blur`
+  - `median`
+  - `average`
+  - `sharpen`
+  - `unsharpMask`
+  - `edgeDetectionStrong`
+  - `edgeDetectionCross`
+  - `edgeDetectionDiagonal`
+
+#### Argument: `radius`
+
+- Type: int
+- Minimum value: 0
+- Default value: 3
 
 ---
 
@@ -798,6 +915,52 @@ The kappa factor is used in sigma-clipping of sample values to determine the vig
 
 ---
 
+## Script: `resize`
+
+    kimage [OPTIONS] resize
+        [--arg factor=DOUBLE]
+        [--arg factorX=DOUBLE]
+        [--arg factorY=DOUBLE]
+        [--arg width=INT]
+        [--arg height=INT]
+        [--arg method=STRING]
+        [FILES]
+
+### Resize an image
+
+Resize an image according the specified arguments.
+
+#### Argument: `factor`
+
+- Type: double
+
+#### Argument: `factorX`
+
+- Type: double
+
+#### Argument: `factorY`
+
+- Type: double
+
+#### Argument: `width`
+
+- Type: int
+
+#### Argument: `height`
+
+- Type: int
+
+#### Argument: `method`
+
+- Type: string
+- Allowed values:
+  - `nearest`
+  - `bilinear`
+  - `bicubic`
+- Default value: `bicubic`
+
+---
+
 ## Script: `stack`
 
     kimage [OPTIONS] stack
@@ -895,6 +1058,10 @@ This implementation is faster and uses less memory than using the generic script
         [--arg stringArg=STRING]
         [--arg allowedStringArg=STRING]
         [--arg regexStringArg=STRING]
+        --arg fileArg=FILE
+        --arg dirArg=FILE
+        [--arg dirWithDefaultArg=FILE]
+        [--arg optionalFileArg=FILE]
         [--arg listOfIntArg=LIST]
         [--arg optionalListOfIntArg=LIST]
         [--arg recordArg=RECORD]
@@ -962,6 +1129,37 @@ Example argument for a string value with some allowed strings.
 - Default value: `aaa`
 
 Example argument for a string value with regular expression.
+
+#### Argument: `fileArg`
+
+- Type: file
+- Mandatory: yes
+- Must be file: true
+
+Example argument for a file.
+
+#### Argument: `dirArg`
+
+- Type: file
+- Mandatory: yes
+- Must be directory: true
+
+Example argument for a directory.
+
+#### Argument: `dirWithDefaultArg`
+
+- Type: file
+- Must be directory: true
+- Default path: `.`
+
+Example argument for a directory with default.
+
+#### Argument: `optionalFileArg`
+
+- Type: file
+- Must be file: true
+
+Example argument for an optional file.
 
 #### Argument: `listOfIntArg`
 
