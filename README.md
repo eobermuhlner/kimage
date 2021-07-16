@@ -30,7 +30,7 @@ On the right side you verify the output files.
 
 Clicking inside one of the image views will show the "Image Zoom" tab where the clicked location will be shown.
 
-![](docu/images/screenshot_align.png)
+![](docu/images/screenshot_zoom.png)
 
 The center of the "Image Zoom" tab shows the difference between the input and output zoom images.
 
