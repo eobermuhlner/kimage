@@ -33,16 +33,20 @@ kimage(0.1) {
             default = "s-curve"
         }
         double("custom1X") {
-            default = 0.2
+            hint = Hint.ColorCurveX
+            default = 0.3
         }
         double("custom1Y") {
-            default = 0.1
+            hint = Hint.ColorCurveY
+            default = 0.01
         }
         double("custom2X") {
-            default = 0.8
+            hint = Hint.ColorCurveX
+            default = 0.7
         }
         double("custom2Y") {
-            default = 0.9
+            hint = Hint.ColorCurveY
+            default = 0.99
         }
     }
 
@@ -96,7 +100,7 @@ kimage(0.1) {
 
 
         val curves = if (curve == "all") {
-            listOf("linear", "s-curve", "s-curve-bright", "s-curve-dark", "s-curve-strong", "s-curve-super-strong", "bright+", "dark+", "bright-", "dark-", "custom1", "custom2")
+            listOf("linear", "s-curve", "s-curve-bright", "s-curve-dark", "s-curve-strong", "s-curve-super-strong", "s-curve-extreme", "bright+", "dark+", "bright-", "dark-", "custom1", "custom2")
         } else {
             listOf(curve)
         }
@@ -137,6 +141,12 @@ kimage(0.1) {
                     Pair(
                         listOf(0.0, 0.2, 0.8, 1.0),
                         listOf(0.0, 0.05, 0.95, 1.0)
+                    )
+                }
+                "s-curve-extreme" -> {
+                    Pair(
+                        listOf(0.0, 0.2, 0.8, 1.0),
+                        listOf(0.0, 0.01, 0.99, 1.0)
                     )
                 }
                 "bright+" -> {

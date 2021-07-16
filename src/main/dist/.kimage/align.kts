@@ -44,6 +44,7 @@ kimage(0.1) {
                         The X coordinate of the center to check for alignment.
                         The default value is calculated from the base image.
                         """
+            hint = Hint.ImageX
             min = 0
         }
         optionalInt("centerY") {
@@ -51,6 +52,7 @@ kimage(0.1) {
                         The Y coordinate of the center to check for alignment.
                         The default value is calculated from the base image.
                         """
+            hint = Hint.ImageY
             min = 0
         }
         double("errorThreshold") {

@@ -25,12 +25,14 @@ kimage(0.1) {
                         The X coordinate of the center of the vignette effect.
                         The default value is the center of the image.
                         """
+            hint = Hint.ImageX
         }
         optionalInt("centerY") {
             description = """
                         The Y coordinate of the center of the vignette effect.
                         The default value is the center of the image.
                         """
+            hint = Hint.ImageY
         }
         string("mode") {
             description = """

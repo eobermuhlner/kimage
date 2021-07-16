@@ -345,6 +345,15 @@ interface ScriptUnnamedTypes {
 class ScriptArguments(override val arguments: MutableList<ScriptArg> = mutableListOf()) : ScriptNamedTypes {
 }
 
+enum class Hint {
+    ImageX,
+    ImageY,
+    ImageWidth,
+    ImageHeight,
+    ColorCurveX,
+    ColorCurveY
+}
+
 @KotlinDSL
 sealed class ScriptArg(val type: String, val mandatory: Boolean) {
     var name: String = ""
@@ -369,6 +378,7 @@ open class ScriptIntArg(mandatory: Boolean = true) : ScriptArg("int", mandatory)
     var min: Int? = null
     var max: Int? = null
     var default: Int? = null
+    var hint: Hint? = null
 
     override val hasDefault: Boolean
         get() = default != null

@@ -527,13 +527,34 @@ class KImageApplication : Application() {
                                                     }
                                                 }
                                                 is ScriptIntArg -> {
-                                                    textfield {
-                                                        tooltip = Tooltip(argument.description)
-                                                        textFormatter = TextFormatter(IntegerStringConverter(), argument.default) { change ->
-                                                            filter(change, Regex("-?[0-9]*"))
+                                                    hbox {
+                                                        val intArgProperty = SimpleIntegerProperty()
+                                                        intArgProperty.addListener { _, _, value ->
+                                                            argumentStrings[argument.name] = value.toString()
                                                         }
-                                                        textProperty().addListener { _, _, value ->
-                                                            argumentStrings[argument.name] = value
+                                                        children += textfield {
+                                                            tooltip = Tooltip(argument.description)
+                                                            textFormatter = TextFormatter(IntegerStringConverter(), argument.default) { change ->
+                                                                filter(change, Regex("-?[0-9]*"))
+                                                            }
+                                                            textProperty().bindBidirectional(intArgProperty, INTEGER_FORMAT)
+                                                        }
+                                                        when (argument.hint) {
+                                                            Hint.ImageX -> {
+                                                                children += button("Take X") {
+                                                                    onAction = EventHandler {
+                                                                        intArgProperty.set(zoomCenterXProperty.get())
+                                                                    }
+                                                                }
+                                                            }
+                                                            Hint.ImageY -> {
+                                                                children += button("Take Y") {
+                                                                    onAction = EventHandler {
+                                                                        intArgProperty.set(zoomCenterYProperty.get())
+                                                                    }
+                                                                }
+                                                            }
+                                                            else -> {}
                                                         }
                                                     }
                                                 }
@@ -770,7 +791,7 @@ class KImageApplication : Application() {
     }
 
     private fun filter(change: TextFormatter.Change, regex: Regex, func: (TextFormatter.Change) -> Boolean = { true }): TextFormatter.Change? {
-        return if (change.controlNewText.matches(regex)) {
+        return if (change.controlNewText.matches(regex) && func(change)) {
             change
         } else {
             null
