@@ -6,6 +6,7 @@ import ch.obermuhlner.kimage.image.*
 import ch.obermuhlner.kimage.io.*
 import ch.obermuhlner.kimage.math.*
 import ch.obermuhlner.kimage.matrix.*
+import org.apache.commons.math3.fitting.*
 
 import java.io.*
 import java.nio.file.*
@@ -47,51 +48,25 @@ kimage(0.1) {
         }
     }
     single {
-        // based on http://rosettacode.org/wiki/Polynomial_regression#Kotlin
-        fun polyRegression(x: DoubleArray, y: DoubleArray): DoubleArray {
-            val xm = x.average()
-            val ym = y.average()
-            val x2m = x.map { it * it }.average()
-            val x3m = x.map { it * it * it }.average()
-            val x4m = x.map { it * it * it * it }.average()
-            val xym = x.zip(y).map { it.first * it.second }.average()
-            val x2ym = x.zip(y).map { it.first * it.first * it.second }.average()
-
-            val sxx = x2m - xm * xm
-            val sxy = xym - xm * ym
-            val sxx2 = x3m - xm * x2m
-            val sx2x2 = x4m - x2m * x2m
-            val sx2y = x2ym - x2m * ym
-
-            val b = (sxy * sx2x2 - sx2y * sxx2) / (sxx * sx2x2 - sxx2 * sxx2)
-            val c = (sx2y * sxx - sxy * sxx2) / (sxx * sx2x2 - sxx2 * sxx2)
-            val a = ym - b * xm - c * x2m
-
-            val result = DoubleArray(3)
-            result[0] = a
-            result[1] = b
-            result[2] = c
-            return result
+        fun polynomialFunction(x: Double, coefficients: DoubleArray): Double {
+            var xPower = 1.0
+            var sum = 0.0
+            for (coefficient in coefficients) {
+                sum += coefficient * xPower
+                xPower = xPower * x
+            }
+            return sum
+        }
+        fun gaussFunction(x: Double, amplitude: Double = 1.0, mean: Double = 0.0, sigma: Double = 1.0): Double {
+            val dx = x - mean
+            return amplitude * exp(dx*dx/-2.0/(sigma*sigma))
         }
 
-        fun polynomialFunction(x: Double, powers: DoubleArray) = powers[0] + powers[1] * x + powers[2] * x * x
 
         val kappa: Double by arguments
         var centerX: Optional<Int> by arguments
         var centerY: Optional<Int> by arguments
         val mode: String by arguments
-
-        if (!centerX.isPresent) {
-            centerX = Optional.of(inputImage.width / 2)
-        }
-        if (!centerY.isPresent) {
-            centerY = Optional.of(inputImage.height / 2)
-        }
-
-        println("Arguments (calculated from input):")
-        println("  centerX = ${centerX.get()}")
-        println("  centerY = ${centerY.get()}")
-        println()
 
         val channels = when (mode) {
             "gray" -> listOf(Channel.Gray)
@@ -112,10 +87,6 @@ kimage(0.1) {
 
             val matrix = inputImage[channel]
 
-            val calculatedMaxDistance = centerX.get() + centerY.get() // TODO calculate better
-            val distanceValues = Array<MutableList<Float>>(calculatedMaxDistance) { mutableListOf() }
-            val clippedDistanceValues = Array<MutableList<Float>>(calculatedMaxDistance) { mutableListOf() }
-
             val totalMedian = matrix.fastMedian()
             val totalStddev = matrix.stddev()
             val low = totalMedian - totalStddev * kappa
@@ -126,6 +97,74 @@ kimage(0.1) {
                 println("Standard deviation: $totalStddev")
                 println("Sigma clipping range: $low .. $high")
             }
+
+            if (!centerX.isPresent) {
+                val csvWriter = if (verboseMode) {
+                    val file = inputFile.prefixName("find_center_x_${channel}_").suffixExtension(".csv")
+                    println("Saving $file")
+                    val csvWriter = PrintWriter(FileWriter(file))
+                    csvWriter.println("  Y, Amplitude, Mean, Sigma")
+                    csvWriter
+                } else {
+                    null
+                }
+                val centerMeans = DoubleArray(inputImage.height)
+                for (y in 0 until inputImage.height) {
+                    val points = WeightedObservedPoints()
+                    for (x in 0 until inputImage.width) {
+                        val value = matrix.getPixel(x, y).toDouble()
+                        if (value in low..high) {
+                            points.add(x.toDouble(), value)
+                        }
+                    }
+                    val gaussFit = GaussianCurveFitter.create().fit(points.toList())
+                    csvWriter?.let {
+                        it.println("  $y, ${gaussFit[0]}, ${gaussFit[1]}, ${gaussFit[2]}")
+                    }
+                    centerMeans[y] = gaussFit[1]
+                }
+                centerX = Optional.of((centerMeans.sigmaClip().median() + 0.5).toInt())
+                println("Calculated centerX = ${centerX.get()}")
+                csvWriter?.let {
+                    it.close()
+                }
+            }
+
+            if (!centerY.isPresent) {
+                val csvWriter = if (verboseMode) {
+                    val file = inputFile.prefixName("find_center_y_${channel}_").suffixExtension(".csv")
+                    println("Saving $file")
+                    val csvWriter = PrintWriter(FileWriter(file))
+                    csvWriter.println("  X, Amplitude, Mean, Sigma")
+                    csvWriter
+                } else {
+                    null
+                }
+                val centerMeans = DoubleArray(inputImage.width)
+                for (x in 0 until inputImage.width) {
+                    val points = WeightedObservedPoints()
+                    for (y in 0 until inputImage.height) {
+                        val value = matrix.getPixel(x, y).toDouble()
+                        if (value in low..high) {
+                            points.add(y.toDouble(), value)
+                        }
+                    }
+                    val gaussFit = GaussianCurveFitter.create().fit(points.toList())
+                    csvWriter?.let {
+                        it.println("  $x, ${gaussFit[0]}, ${gaussFit[1]}, ${gaussFit[2]}")
+                    }
+                    centerMeans[x] = gaussFit[1]
+                }
+                centerY = Optional.of((centerMeans.sigmaClip().median() + 0.5).toInt())
+                println("Calculated centerY = ${centerY.get()}")
+                csvWriter?.let {
+                    it.close()
+                }
+            }
+
+            val calculatedMaxDistance = centerX.get() + centerY.get() // TODO calculate better
+            val distanceValues = Array<MutableList<Float>>(calculatedMaxDistance) { mutableListOf() }
+            val clippedDistanceValues = Array<MutableList<Float>>(calculatedMaxDistance) { mutableListOf() }
 
             var maxDistance = 0
             var clippedMaxDistance = 0
@@ -158,32 +197,55 @@ kimage(0.1) {
             }
             println("Samples for regression analysis: ${xValues.size}")
 
-            val polynomialPowers = polyRegression(xValues.toDoubleArray(), yValues.toDoubleArray())
-            println("Polynomial function: y = ${polynomialPowers[0]} + ${polynomialPowers[1]}x + ${polynomialPowers[2]}x^2")
+            // using apache
+            val points = WeightedObservedPoints()
+            for (i in xValues.indices) {
+                points.add(xValues[i], yValues[i])
+            }
+            val polynomialFit2 = PolynomialCurveFitter.create(2).fit(points.toList())
+            println("Apache polynomialFit2: ${polynomialFit2.contentToString()}")
+            val gaussFit = GaussianCurveFitter.create().fit(points.toList())
+            println("Apache gaussFit: ${gaussFit.contentToString()}")
 
             var error = 0.0
             for (i in xValues.indices) {
                 val y1 = yValues[i]
-                val y2 = polynomialFunction(xValues[i], polynomialPowers)
+                val y2 = polynomialFunction(xValues[i], polynomialFit2)
                 val delta = y1 - y2
                 error += delta * delta
             }
             error /= xValues.size
             println("Standard Error: $error")
+            println()
+
+            if (debugMode) {
+                val file = inputFile.prefixName("vignette_curve_fit_${channel}_").suffixExtension(".csv")
+                println("Saving $file")
+                val csvWriter = PrintWriter(FileWriter(file))
+                csvWriter.println("  Index, Count, Average, Median, Polynomial2, Gauss")
+                for (i in 0 until maxDistance) {
+                    val count = distanceValues[i].size
+                    val average = distanceValues[i].toFloatArray().average().finiteOrElse()
+                    val median = distanceValues[i].toFloatArray().medianInplace().finiteOrElse()
+                    val polynomial2 = polynomialFunction(i.toDouble(), polynomialFit2)
+                    val gauss = gaussFunction(i.toDouble(), gaussFit[0], gaussFit[1], gaussFit[2])
+                    csvWriter.println("  $i, $count, $average, $median, $polynomial2, $gauss")
+                }
+                csvWriter.close()
+                println()
+            }
 
             val flatMatrix = CalculatedMatrix(inputImage.width, inputImage.height) { row, column ->
                 val dx = (centerX.get() - column).toDouble()
                 val dy = (centerY.get() - row).toDouble()
                 val distance = sqrt(dx*dx + dy*dy)
-                polynomialFunction(distance, polynomialPowers).toDouble()
+                polynomialFunction(distance, polynomialFit2)
             }
 
             val flatMax = flatMatrix.max()
             val normalizedFlatMatrix = flatMatrix.copy().onEach { v -> v / flatMax }
 
             channelMatrices.add(normalizedFlatMatrix)
-
-            println()
         }
 
         var flatImage = MatrixImage(inputImage.width, inputImage.height,

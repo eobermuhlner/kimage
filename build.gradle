@@ -38,6 +38,8 @@ dependencies {
     implementation 'org.kordamp.ikonli:ikonli-javafx:12.2.0'
     implementation 'org.kordamp.ikonli:ikonli-materialdesign2-pack:12.2.0'
 
+    implementation 'org.apache.commons:commons-math3:3.6.1'
+
     testImplementation group: 'junit', name: 'junit', version: '4.12'
 }
 

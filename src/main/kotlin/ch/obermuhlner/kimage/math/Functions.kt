@@ -4,6 +4,10 @@ import kotlin.NoSuchElementException
 import kotlin.math.abs
 import kotlin.math.sqrt
 
+fun Float.finiteOrElse(default: Float = 0f) = if (this.isFinite()) this else default
+
+fun Double.finiteOrElse(default: Double = 0.0) = if (this.isFinite()) this else default
+
 fun clamp(x: Double, min: Double, max: Double): Double {
     return when {
         x < min -> min

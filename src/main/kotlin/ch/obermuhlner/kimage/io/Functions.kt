@@ -7,6 +7,9 @@ fun File.prefixName(prefix: String): File {
 }
 
 fun File.suffixName(suffix: String): File {
-    return File(this.parent, this.nameWithoutExtension + suffix + this.extension)
+    return File(this.parent, this.nameWithoutExtension + suffix + "." + this.extension)
 }
 
+fun File.suffixExtension(suffix: String): File {
+    return File(this.parent, this.name + suffix)
+}
