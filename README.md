@@ -10,8 +10,37 @@ Image processing using Kotlin scripts.
   
 - `kimage` is a collection of image processing scripts (mostly for astrophotography purposes)
 
+# Example Usage - User Interface
 
-# Example Usage
+The user interface can be started with
+
+```
+kimage --ui
+```
+
+![](docu/images/screenshot_align.png)
+
+On the left side you define the input files to be processed.
+
+In the center you select the script to execute and edit the script arguments.
+
+On the right side you verify the output files.
+
+---
+
+Clicking inside one of the image views will show the "Image Zoom" tab where the clicked location will be shown.
+
+![](docu/images/screenshot_align.png)
+
+The center of the "Image Zoom" tab shows the difference between the input and output zoom images.
+
+The differences are color coded:
+- Blue = the pixel on the left side is brighter
+- Red  = the pixel on the right side is brighter
+
+The slider controls how much the differences are exaggerated.
+
+# Example Usage - Command Line
 
 ## List available scripts
 
@@ -24,16 +53,21 @@ kimage
 
 ```
 Scripts:
+Scripts:
   align
   calibrate
   color-stretch
   convert
+  crop
   delta
+  filter
   hdr
   histogram
   info
   remove-background-gradient
   remove-background-median
+  remove-vignette
+  resize
   stack
   stack-average
   stack-max
