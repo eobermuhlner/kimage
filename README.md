@@ -36,11 +36,9 @@ Click on a file name to see a preview of the image.
 
 ---
 
-![](docu/images/screenshot_align.png)
-
 Select a script in the list of available scripts and the argument editor and the documentation of the script are shown.
 
-![](docu/images/screenshot_zoom.png)
+![](docu/images/screenshot_script.png)
 
 After editing the arguments you run the script by pressing the Run button.
 
