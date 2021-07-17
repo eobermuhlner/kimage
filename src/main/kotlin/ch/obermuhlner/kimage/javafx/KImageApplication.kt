@@ -521,8 +521,8 @@ class KImageApplication : Application() {
                                                         argument.default?.let {
                                                             isSelected = it
                                                         }
-                                                        textProperty().addListener { _, _, value ->
-                                                            argumentStrings[argument.name] = value
+                                                        selectedProperty().addListener { _, _, value ->
+                                                            argumentStrings[argument.name] = value.toString()
                                                         }
                                                     }
                                                 }

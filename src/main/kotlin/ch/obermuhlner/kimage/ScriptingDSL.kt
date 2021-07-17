@@ -835,7 +835,7 @@ class ScriptArgumentException(message: String): RuntimeException(message)
 sealed class AbstractScript {
     var scriptArguments: ScriptArguments = ScriptArguments()
     val rawArguments: MutableMap<String, String> = mutableMapOf()
-    var arguments: MutableMap<String, Any> = mutableMapOf()
+    val arguments: MutableMap<String, Any> = mutableMapOf()
     var verboseMode: Boolean = false
     var debugMode: Boolean = false
 
@@ -857,15 +857,19 @@ class ScriptSingle(val executable: ScriptSingle.() -> Any?) : AbstractScript() {
     var inputFile: File = File(".")
     var inputImage: Image = MatrixImage(0, 0)
 
-    fun executeSingleScript(inputFiles: List<File>, inputFile: File, inputImage: Image, scriptArguments: ScriptArguments, arguments: Map<String, String>, verboseMode: Boolean, debugMode: Boolean, outputHandler: (File, Any?) -> Unit) {
+    fun executeSingleScript(inputFiles: List<File>, inputFile: File, inputImage: Image, scriptArguments: ScriptArguments, rawArguments: Map<String, String>, verboseMode: Boolean, debugMode: Boolean, outputHandler: (File, Any?) -> Unit) {
         this.inputFiles = inputFiles
         this.inputFile = inputFile
         this.inputImage = inputImage
         this.scriptArguments = scriptArguments
-        this.rawArguments.putAll(arguments)
-        this.arguments = processArguments(scriptArguments.arguments, arguments)
         this.verboseMode = verboseMode
         this.debugMode = debugMode
+
+        this.rawArguments.clear()
+        this.rawArguments.putAll(rawArguments)
+
+        this.arguments.clear()
+        this.arguments.putAll(processArguments(scriptArguments.arguments, rawArguments))
 
         printExecution()
 
@@ -878,13 +882,17 @@ class ScriptSingle(val executable: ScriptSingle.() -> Any?) : AbstractScript() {
 class ScriptMulti(val executable: ScriptMulti.() -> Any?) : AbstractScript() {
     var inputFiles: List<File> = listOf()
 
-    fun executeMultiScript(inputFiles: List<File>, scriptArguments: ScriptArguments, arguments: Map<String, String>, verboseMode: Boolean, debugMode: Boolean, outputHandler: (File, Any?) -> Unit) {
+    fun executeMultiScript(inputFiles: List<File>, scriptArguments: ScriptArguments, rawArguments: Map<String, String>, verboseMode: Boolean, debugMode: Boolean, outputHandler: (File, Any?) -> Unit) {
         this.inputFiles = inputFiles
         this.scriptArguments = scriptArguments
-        this.rawArguments.putAll(arguments)
-        this.arguments = processArguments(scriptArguments.arguments, arguments)
         this.verboseMode = verboseMode
         this.debugMode = debugMode
+
+        this.rawArguments.clear()
+        this.rawArguments.putAll(rawArguments)
+
+        this.arguments.clear()
+        this.arguments.putAll(processArguments(scriptArguments.arguments, rawArguments))
 
         printExecution()
 
