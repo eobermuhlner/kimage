@@ -14,163 +14,64 @@ import kotlin.math.*
 
 kimage(0.1) {
     name = "test-multi"
-    title = "Test script to show how to handle multiple images in a kimage script"
+    title = "Test script to show how to process multiple images in a kimage script"
     description = """
                 Example script as starting point for developers.
                 """
     arguments {
-        int("intArg") {
-            description = "Example argument for an int value."
-            min = 0
-            max = 100
-            default = 0
-        }
-        optionalInt("optionalIntArg") {
-            description = "Example argument for an optional int value."
-            min = 0
-            max = 100
-        }
-        double("doubleArg") {
-            description = "Example argument for a double value."
-            min = 0.0
-            max = 100.0
-            default = 50.0
-        }
-        boolean("booleanArg") {
-            description = "Example argument for a boolean value."
+        boolean("center") {
+            description = "Center images to fit the first image."
             default = false
-        }
-        string("stringArg") {
-            description = "Example argument for a string value."
-            default = "undefined"
-        }
-        string("allowedStringArg") {
-            description = "Example argument for a string value with some allowed strings."
-            allowed = listOf("red", "green", "blue")
-            default = "red"
-        }
-        string("regexStringArg") {
-            description = "Example argument for a string value with regular expression."
-            regex = "a+"
-            default = "aaa"
-        }
-        file("fileArg") {
-            description = "Example argument for a file."
-            isFile = true
-        }
-        file("dirArg") {
-            description = "Example argument for a directory."
-            isDirectory = true
-        }
-        file("dirWithDefaultArg") {
-            description = "Example argument for a directory with default."
-            isDirectory = true
-            default = File(".")
-        }
-        optionalFile("optionalFileArg") {
-            description = "Example argument for an optional file."
-            isFile = true
-        }
-        list("listOfIntArg") {
-            description = "Example argument for a list of integer values."
-            min = 1
-            default = listOf(1, 2, 3)
-
-            int {
-                description = "A single integer value"
-                min = 0
-                max = 9
-            }
-        }
-        optionalList("optionalListOfIntArg") {
-            description = "Example argument for an optional list of integer values."
-            min = 1
-
-            int {
-                description = "A single integer value"
-                min = 0
-                max = 9
-            }
-        }
-        record("recordArg") {
-            description = "Example argument for a record containing different values."
-
-            int("recordInt") {
-                default = 2
-            }
-            string("recordString") {
-                default = "hello"
-            }
-            double("recordDouble") {
-                default = 3.14
-            }
-        }
-        optionalRecord("optionalRecordArg") {
-            description = "Example argument for an optional record containing different values."
-
-            int("optionalRecordInt") {
-            }
-            string("optionalRecordString") {
-            }
-            double("optionalRecordDouble") {
-            }
         }
     }
 
+    // 'multi' means that all input files are processed together in a single run
     multi {
-        val intArg: Int by arguments
-        val optionalIntArg: Optional<Int> by arguments
-        val doubleArg: Double by arguments
-        val booleanArg: Boolean by arguments
-        val stringArg: String by arguments
-        val allowedStringArg: String by arguments
-        val regexStringArg: String by arguments
-        val fileArg: File by arguments
-        val dirArg: File by arguments
-        val dirWithDefaultArg: File by arguments
-        val optionalFileArg: Optional<File> by arguments
+        // The processed arguments are available in a Map 'arguments'
+        val center: Boolean by arguments // Use the kotlin delegate by feature to map the arguments into typed variables
 
-        val listOfIntArg: List<Int> by arguments
-        val optionalListOfIntArg: Optional<List<Int>> by arguments
+        // Variables 'verboseMode' and 'debugMode' are automatically available
+        if (verboseMode) {
+            println("arguments  = $arguments")
 
-        val recordArg: Map<String, Any> by arguments
-        val recordInt: Int by recordArg
-        val recordString: String by recordArg
-        val recordDouble: Double by recordArg
-
-        val optionalRecordArg: Optional<Map<String, Any>> by arguments
-
-        println("Raw Arguments:")
-        for (rawArgument in rawArguments) {
-            val key: String = rawArgument.key
-            val value: String = rawArgument.value
-            println("  Argument: ${key} = ${value}")
+            // The raw unprocessed arguments (no default values filled) are available in the rare case you need them
+            println("rawArguments  = $rawArguments")
         }
-        println()
 
-        println("Processed Arguments:")
-        println("  intArg = $intArg")
-        println("  optionalIntArg = $optionalIntArg")
-        println("  doubleArg = $doubleArg")
-        println("  booleanArg = $booleanArg")
-        println("  stringArg = $stringArg")
-        println("  allowedStringArg = $allowedStringArg")
-        println("  regexStringArg = $regexStringArg")
-        println("  fileArg = $fileArg")
-        println("  dirArg = $dirArg")
-        println("  dirWithDefaultArg = $dirWithDefaultArg")
-        println("  optionalFileArg = $optionalFileArg")
-        println("  listOfIntArg = $listOfIntArg")
-        println("  optionalListOfIntArg = $optionalListOfIntArg")
-        println("  recordArg = $recordArg")
-        println("  recordInt = $recordInt")
-        println("  recordString = $recordString")
-        println("  recordDouble = $recordDouble")
-        println("  optionalRecordArg = $optionalRecordArg")
+        // The input files can now be processed
+        println("inputFiles  = $inputFiles")
 
-        println("Input Files:")
-        for (file in inputFiles) {
-            println("  File: $file exists=${file.exists()}")
+        // Note: In 'multi' mode there are no 'inputFile' or 'inputImage' variables
+        //       You need to load the images yourself and process them.
+        //       Preloading all the input images would be more convenient but might lead to out-of-memory problems
+
+        // The following processing code is a documented version of the 'stack-average' script:
+
+        var stacked: Image? = null // The result image is initally null
+
+        for (inputFile in inputFiles) {
+            println("Loading image: $inputFile")
+            val image = ImageReader.read(inputFile) // Load an input image (one by one - only the stacked image is kept in memory)
+            stacked = if (stacked == null) {
+                image // If the input image is the first image assign it to 'stacked'
+            } else {
+                // Ensure input image has the same size as 'stacked'
+                val croppedImage = if (center) {
+                    val halfWidth = stacked.width/2
+                    val halfHeight = stacked.height/2
+                    image.crop(image.width/2 - halfWidth, image.height/2 - halfHeight, stacked.width, stacked.height)
+                } else {
+                    image.crop(0, 0, stacked.width, stacked.height)
+                }
+                stacked + croppedImage // Assign the pixel-wise sum of 'stacked' and 'croppedImage' to 'stacked'
+            }
+        }
+
+        // The last value in the script is the output
+        if (stacked == null) {
+            null // If no image was processed return null
+        } else {
+            stacked / inputFiles.size.toDouble() // Pixel-wise divide the stacked image by the number of input files -> average pixels
         }
     }
 }

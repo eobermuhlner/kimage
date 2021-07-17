@@ -14,71 +14,44 @@ import kotlin.math.*
 
 kimage(0.1) {
     name = "test-single"
-    title = "Test script to show how to handle single images in a kimage script"
+    title = "Test script to show how to process single images in a kimage script"
     description = """
                 Example script as starting point for developers.
                 """
     arguments {
-        int("intArg") {
-            description = "Example argument for an int value."
-            min = 0
-            max = 100
-            default = 0
-        }
-        optionalInt("optionalIntArg") {
-            description = "Example argument for an optional int value."
-            min = 0
-            max = 100
-        }
-        double("doubleArg") {
-            description = "Example argument for a double value."
-            min = 0.0
-            max = 100.0
-            default = 50.0
-        }
-        boolean("booleanArg") {
-            description = "Example argument for a boolean value."
+        boolean("saveOutput") {
+            description = "Save input image as output image."
             default = false
-        }
-        string("stringArg") {
-            description = "Example argument for a string value."
-            default = "undefined"
-        }
-        string("allowedStringArg") {
-            description = "Example argument for a string value with some allowed strings."
-            allowed = listOf("red", "green", "blue")
-            default = "red"
-        }
-        string("regexStringArg") {
-            description = "Example argument for a string value with regular expression."
-            regex = "a+"
-            default = "aaa"
         }
     }
 
+    // 'single' means that every input image is processed one by one
     single {
-        val intArg: Int by arguments
-        val optionalIntArg: Optional<Int> by arguments
-        val doubleArg: Double by arguments
-        val booleanArg: Boolean by arguments
-        val stringArg: String by arguments
-        val allowedStringArg: String by arguments
-        val regexStringArg: String by arguments
+        // The processed arguments are available in a Map 'arguments'
+        val saveOutput: Boolean by arguments // Use the kotlin delegate by feature to map the arguments into typed variables
 
-        println("Test single image script")
-        println()
+        // Variables 'verboseMode' and 'debugMode' are automatically available
+        if (verboseMode) {
+            println("arguments  = $arguments")
 
-        println("Raw Arguments:")
-        for (rawArgument in rawArguments) {
-            val key: String = rawArgument.key
-            val value: String = rawArgument.value
-            println("  Argument: ${key} = ${value}")
+            // The raw unprocessed arguments (no default values filled) are available in the rare case you need them
+            println("rawArguments  = $rawArguments")
         }
-        println()
 
-        println("inputFile  = $inputFile")
+        // The input image is already preloaded:
         println("inputImage  = $inputImage")
 
-        inputImage // will be copied into output
+        // The input file of the preloaded image:
+        println("inputFile  = $inputFile")
+
+        // If multiple input files are given they can be accessed even in 'single' mode
+        println("inputFiles  = $inputFiles")
+
+        // The last value in the script is the output
+        if (saveOutput) {
+            inputImage // Image return value will automatically be saved into output file
+        } else {
+            null // null return value will be ignored
+        }
     }
 }
