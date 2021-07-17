@@ -809,6 +809,7 @@ class KImageApplication : Application() {
                 function()
             } catch (ex: Throwable) {
                 exception = ex
+                ex.printStackTrace()
             } finally {
                 synchronized(this) {
                     finished = true
@@ -836,10 +837,6 @@ class KImageApplication : Application() {
                 progressDialog = ProgressDialog(dialogContent, title)
                 progressDialog?.show()
             }
-        }
-
-        exception?.let {
-            throw it
         }
     }
 
