@@ -388,7 +388,7 @@ open class ScriptIntArg(mandatory: Boolean = true) : ScriptArg("int", mandatory)
     }
 
     fun toIntValue(stringValue: String?): Int {
-        if (stringValue == null) {
+        if (stringValue.isNullOrEmpty()) {
             default?.let {
                 return toIntValue(it.toString());
             }
@@ -420,7 +420,7 @@ class ScriptOptionalIntArg : ScriptIntArg(false) {
     }
 
     fun toOptionalIntValue(stringValue: String?): Optional<Int> {
-        if (stringValue == null) {
+        if (stringValue.isNullOrEmpty()) {
             if (default == null) {
                 return Optional.empty()
             }
@@ -446,7 +446,7 @@ open class ScriptDoubleArg(mandatory: Boolean = true) : ScriptArg("double", mand
     }
 
     fun toDoubleValue(stringValue: String?): Double {
-        if (stringValue == null) {
+        if (stringValue.isNullOrEmpty()) {
             default?.let {
                 return toDoubleValue(it.toString())
             }
@@ -478,7 +478,7 @@ class ScriptOptionalDoubleArg : ScriptDoubleArg(false) {
     }
 
     fun toOptionalDoubleValue(stringValue: String?): Optional<Double> {
-        if (stringValue == null) {
+        if (stringValue.isNullOrEmpty()) {
             if (default == null) {
                 return Optional.empty()
             }
@@ -502,7 +502,7 @@ open class ScriptBooleanArg(mandatory: Boolean = true) : ScriptArg("boolean", ma
     }
 
     fun toBooleanValue(stringValue: String?): Boolean {
-        if (stringValue == null) {
+        if (stringValue.isNullOrEmpty()) {
             default?.let {
                 return toBooleanValue(it.toString())
             }
@@ -519,7 +519,7 @@ class ScriptOptionalBooleanArg : ScriptBooleanArg(false) {
     }
 
     fun toOptionalBooleanValue(stringValue: String?): Optional<Boolean> {
-        if (stringValue == null) {
+        if (stringValue.isNullOrEmpty()) {
             if (default == null) {
                 return Optional.empty()
             }
@@ -545,7 +545,7 @@ open class ScriptStringArg(mandatory: Boolean = true) : ScriptArg("string", mand
     }
 
     fun toStringValue(stringValue: String?): String {
-        if (stringValue == null) {
+        if (stringValue.isNullOrEmpty()) {
             default?.let {
                 return toStringValue(it);
             }
@@ -572,7 +572,7 @@ class ScriptOptionalStringArg : ScriptStringArg(false) {
     }
 
     fun toOptionalStringValue(stringValue: String?): Optional<String> {
-        if (stringValue == null) {
+        if (stringValue.isNullOrEmpty()) {
             if (default == null) {
                 return Optional.empty()
             }
@@ -691,7 +691,7 @@ class ScriptOptionalImageArg() : ScriptImageArg(false) {
     }
 
     fun toOptionalImageValue(stringValue: String?): Optional<Image> {
-        if (stringValue == null) {
+        if (stringValue.isNullOrEmpty()) {
             if (default == null) {
                 return Optional.empty()
             }
@@ -723,7 +723,7 @@ open class ScriptListArg(override val arguments: MutableList<ScriptArg> = mutabl
         if (arguments.size > 1) {
             throw ScriptArgumentException("Argument $name is a list, but only one element type is allowed")
         }
-        if (stringValue == null) {
+        if (stringValue.isNullOrEmpty()) {
             default?.let {
                 return toListValue(it.joinToString(","))
             }
@@ -759,7 +759,7 @@ class ScriptOptionalListArg(arguments: MutableList<ScriptArg> = mutableListOf())
     }
 
     fun toOptionalListValue(stringValue: String?): Optional<List<Any>> {
-        if (stringValue == null) {
+        if (stringValue.isNullOrEmpty()) {
             if (default == null) {
                 return Optional.empty()
             }
@@ -788,7 +788,7 @@ open class ScriptRecordArg(override val arguments: MutableList<ScriptArg> = muta
     }
 
     fun toRecordValue(stringValue: String?): Map<String, Any> {
-        if (stringValue == null) {
+        if (stringValue.isNullOrEmpty()) {
             val valueMap = mutableMapOf<String, Any>()
 
             for (argument in arguments) {
@@ -819,7 +819,7 @@ class ScriptOptionalRecordArg(arguments: MutableList<ScriptArg> = mutableListOf(
     }
 
     fun toOptionalRecordValue(stringValue: String?): Optional<Map<String, Any>> {
-        if (stringValue == null) {
+        if (stringValue.isNullOrEmpty()) {
             return try {
                 Optional.of(toRecordValue(null))
             } catch (ex: ScriptArgumentException) {

@@ -528,7 +528,7 @@ class KImageApplication : Application() {
                                                 }
                                                 is ScriptIntArg -> {
                                                     hbox {
-                                                        val intArgProperty = SimpleIntegerProperty()
+                                                        val intArgProperty = SimpleStringProperty()
                                                         intArgProperty.addListener { _, _, value ->
                                                             argumentStrings[argument.name] = value.toString()
                                                         }
@@ -537,20 +537,20 @@ class KImageApplication : Application() {
                                                             textFormatter = TextFormatter(IntegerStringConverter(), argument.default) { change ->
                                                                 filter(change, Regex("-?[0-9]*"))
                                                             }
-                                                            textProperty().bindBidirectional(intArgProperty, INTEGER_FORMAT)
+                                                            textProperty().bindBidirectional(intArgProperty)
                                                         }
                                                         when (argument.hint) {
                                                             Hint.ImageX -> {
                                                                 children += button("Take X") {
                                                                     onAction = EventHandler {
-                                                                        intArgProperty.set(zoomCenterXProperty.get())
+                                                                        intArgProperty.set(zoomCenterXProperty.get().toString())
                                                                     }
                                                                 }
                                                             }
                                                             Hint.ImageY -> {
                                                                 children += button("Take Y") {
                                                                     onAction = EventHandler {
-                                                                        intArgProperty.set(zoomCenterYProperty.get())
+                                                                        intArgProperty.set(zoomCenterYProperty.get().toString())
                                                                     }
                                                                 }
                                                             }
