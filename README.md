@@ -5,9 +5,11 @@ Image processing using Kotlin scripts.
 `kimage` is several things at once:
 
 - `kimage` is an image processing library written in Kotlin
-  
-- `kimage` is a script execution engine for image processing scripts
-  
+
+- `kimage` is a command-line script execution engine for image processing scripts
+
+- `kimage` is a UI application to process images
+
 - `kimage` is a collection of image processing scripts (mostly for astrophotography purposes)
 
 # Example Usage - User Interface
@@ -95,7 +97,6 @@ kimage
 ```
 
 ```
-Scripts:
 Scripts:
   align
   calibrate
@@ -189,11 +190,14 @@ To align the images against the base image (the first one in the list) we use th
 The output will tell us by how many pixels each image was aligned and what the error distance to the base image is (smaller is better).
 If an aligned image is above the error threshold it will be saved with a prefix `badaligned` instead.
 
+This is an example of the log output for one of the images:
 ```
 Loading image: orion2.png
 Alignment: Alignment(x=-8, y=-4, error=2.450572331451992E-4)
 Error 4.567307562910387E-4 <= 0.001 : saving aligned_orion2.png
 ```
+
+Clicking through the output files (prefixed with `aligned_`) will show that the images are now aligned and the stars no longer jump around.
 
 ![](images/align/aligned_orion2.png)
 
@@ -315,8 +319,6 @@ kimage(0.1) {
                 """
 
   single {
-    println("Spooky cool effect")
-
     val background = inputImage.medianFilter(10).gaussianBlurFilter(10)
     inputImage - background
   }
@@ -340,6 +342,7 @@ Spooky cool effect.
 ---
 ```
 
+Let's run our script with an image.
 ```shell
 kimage spooky lena512.png
 ```

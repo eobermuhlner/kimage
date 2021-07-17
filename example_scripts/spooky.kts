@@ -13,8 +13,6 @@ kimage(0.1) {
                 """
 
     single {
-        println("Spooky cool effect")
-
         val background = inputImage.medianFilter(10).gaussianBlurFilter(10)
         inputImage - background
     }
