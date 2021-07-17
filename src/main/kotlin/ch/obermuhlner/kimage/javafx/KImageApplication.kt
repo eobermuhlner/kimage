@@ -21,6 +21,7 @@ import javafx.scene.control.*
 import javafx.scene.image.ImageView
 import javafx.scene.image.WritableImage
 import javafx.scene.input.MouseEvent
+import javafx.scene.layout.Pane
 import javafx.scene.layout.VBox
 import javafx.scene.paint.Color
 import javafx.scene.text.Font
@@ -528,8 +529,8 @@ class KImageApplication : Application() {
                                                 }
                                                 is ScriptIntArg -> {
                                                     hbox {
-                                                        val intArgProperty = SimpleStringProperty()
-                                                        intArgProperty.addListener { _, _, value ->
+                                                        val argProperty = SimpleStringProperty()
+                                                        argProperty.addListener { _, _, value ->
                                                             argumentStrings[argument.name] = value.toString()
                                                         }
                                                         children += textfield {
@@ -537,33 +538,30 @@ class KImageApplication : Application() {
                                                             textFormatter = TextFormatter(IntegerStringConverter(), argument.default) { change ->
                                                                 filter(change, Regex("-?[0-9]*"))
                                                             }
-                                                            textProperty().bindBidirectional(intArgProperty)
+                                                            textProperty().bindBidirectional(argProperty)
+                                                            setupValidation(this, textProperty(), argument, argProperty)
                                                         }
-                                                        when (argument.hint) {
-                                                            Hint.ImageX -> {
-                                                                children += button("Take X") {
-                                                                    onAction = EventHandler {
-                                                                        intArgProperty.set(zoomCenterXProperty.get().toString())
-                                                                    }
-                                                                }
-                                                            }
-                                                            Hint.ImageY -> {
-                                                                children += button("Take Y") {
-                                                                    onAction = EventHandler {
-                                                                        intArgProperty.set(zoomCenterYProperty.get().toString())
-                                                                    }
-                                                                }
-                                                            }
-                                                            else -> {}
+                                                        setupHints(argument, argProperty)
+                                                        argument.default?.let {
+                                                            argProperty.set(it.toString())
                                                         }
                                                     }
                                                 }
                                                 is ScriptDoubleArg -> {
-                                                    textfield {
-                                                        tooltip = Tooltip(argument.description)
-                                                        textFormatter = textFormatter(argument.default, argument.min, argument.max)
-                                                        textProperty().addListener { _, _, value ->
-                                                            argumentStrings[argument.name] = value
+                                                    hbox {
+                                                        val argProperty = SimpleStringProperty()
+                                                        argProperty.addListener { _, _, value ->
+                                                            argumentStrings[argument.name] = value.toString()
+                                                        }
+                                                        children += textfield {
+                                                            tooltip = Tooltip(argument.description)
+                                                            textFormatter = textFormatter(argument.default, argument.min, argument.max)
+                                                            textProperty().bindBidirectional(argProperty)
+                                                            setupValidation(this, textProperty(), argument, argProperty)
+                                                        }
+                                                        setupHints(argument, argProperty)
+                                                        argument.default?.let {
+                                                            argProperty.set(it.toString())
                                                         }
                                                     }
                                                 }
@@ -577,41 +575,43 @@ class KImageApplication : Application() {
                                                             }
                                                         }
                                                     } else {
-                                                        textfield {
-                                                            tooltip = Tooltip(argument.description)
-                                                            textProperty().addListener { _, _, value ->
-                                                                argumentStrings[argument.name] = value
+                                                        hbox {
+                                                            val argProperty = SimpleStringProperty()
+                                                            argProperty.addListener { _, _, value ->
+                                                                argumentStrings[argument.name] = value.toString()
                                                             }
-                                                            argument.regex?.let {
-                                                                textFormatter = TextFormatter(TextFormatter.IDENTITY_STRING_CONVERTER, argument.default) { change ->
-                                                                    filter(change, Regex(it))
+                                                            children += textfield {
+                                                                tooltip = Tooltip(argument.description)
+                                                                argument.regex?.let {
+                                                                    textFormatter = TextFormatter(TextFormatter.IDENTITY_STRING_CONVERTER, argument.default) { change ->
+                                                                        filter(change, Regex(it))
+                                                                    }
                                                                 }
+                                                                textProperty().bindBidirectional(argProperty)
+                                                                setupValidation(this, textProperty(), argument, argProperty)
+                                                            }
+                                                            setupHints(argument, argProperty)
+                                                            argument.default?.let {
+                                                                argProperty.set(it.toString())
                                                             }
                                                         }
                                                     }
                                                 }
                                                 is ScriptFileArg -> {
                                                     hbox {
-                                                        val fileProperty = SimpleStringProperty()
-                                                        fileProperty.addListener { _, _, value ->
+                                                        val argProperty = SimpleStringProperty()
+                                                        argProperty.addListener { _, _, value ->
                                                             if (value.isNullOrEmpty()) {
                                                                 argumentStrings.remove(argument.name)
                                                             } else {
                                                                 argumentStrings[argument.name] = File(inputDirectoryProperty.get(), value).toString()
                                                             }
                                                         }
-                                                        children += textfield(fileProperty) {
+                                                        children += textfield(argProperty) {
                                                             // TODO relative to input or output dir?
                                                             tooltip = Tooltip(argument.description)
                                                             text = argument.default?.toString()
-
-                                                            fun validate(value: String?) {
-                                                                pseudoClassStateChanged(INVALID, !argument.isValid(value?:""))
-                                                            }
-                                                            textProperty().addListener { _, _, value ->
-                                                                validate(value)
-                                                            }
-                                                            validate(fileProperty.get())
+                                                            setupValidation(this, textProperty(), argument, argProperty)
                                                         }
                                                         children += button(FontIcon()) {
                                                             if (argument.isDirectory == true) {
@@ -625,34 +625,36 @@ class KImageApplication : Application() {
                                                                 if (argument.isDirectory == true) {
                                                                     val file = openDir(File(inputDirectoryProperty.get()))
                                                                     file?.let {
-                                                                        fileProperty.set(it.toRelativeString(File(inputDirectoryProperty.get())))
+                                                                        argProperty.set(it.toRelativeString(File(inputDirectoryProperty.get())))
                                                                     }
                                                                 } else {
                                                                     val file = openFile(File(inputDirectoryProperty.get()))
                                                                     file?.let {
-                                                                        fileProperty.set(it.toRelativeString(File(inputDirectoryProperty.get())))
+                                                                        argProperty.set(it.toRelativeString(File(inputDirectoryProperty.get())))
                                                                     }
                                                                 }
+                                                            }
+                                                            setupHints(argument, argProperty)
+                                                            argument.default?.let {
+                                                                argProperty.set(it.toString())
                                                             }
                                                         }
                                                     }
                                                 }
                                                 is ScriptImageArg -> {
                                                     hbox {
-                                                        val fileProperty = SimpleStringProperty()
-                                                        fileProperty.addListener { _, _, value ->
+                                                        val argProperty = SimpleStringProperty()
+                                                        argProperty.addListener { _, _, value ->
                                                             if (value.isNullOrEmpty()) {
                                                                 argumentStrings.remove(argument.name)
                                                             } else {
                                                                 argumentStrings[argument.name] = File(inputDirectoryProperty.get(), value).toString()
                                                             }
                                                         }
-                                                        children += textfield(fileProperty) {
+                                                        children += textfield(argProperty) {
                                                             tooltip = Tooltip(argument.description)
                                                             text = argument.default?.toString()
-                                                            textProperty().addListener { _, _, value ->
-                                                                pseudoClassStateChanged(INVALID, !argument.isValid(value))
-                                                            }
+                                                            setupValidation(this, textProperty(), argument, argProperty)
                                                         }
                                                         children += button(FontIcon()) {
                                                             id =  "file-icon"
@@ -660,18 +662,26 @@ class KImageApplication : Application() {
                                                             onAction = EventHandler {
                                                                 val file = openFile(File(inputDirectoryProperty.get()))
                                                                 file?.let {
-                                                                    fileProperty.set(it.toRelativeString(File(inputDirectoryProperty.get())))
+                                                                    argProperty.set(it.toRelativeString(File(inputDirectoryProperty.get())))
                                                                 }
                                                             }
+                                                        }
+                                                        setupHints(argument, argProperty)
+                                                        argument.default?.let {
+                                                            argProperty.set(it.toString())
                                                         }
                                                     }
                                                 }
                                                 else -> {
-                                                    textfield {
-                                                        tooltip = Tooltip(argument.description)
-                                                        textProperty().addListener { _, _, value ->
-                                                            argumentStrings[argument.name] = value
+                                                    hbox {
+                                                        val argProperty = SimpleStringProperty()
+                                                        argProperty.addListener { _, _, value ->
+                                                            argumentStrings[argument.name] = value.toString()
                                                         }
+                                                        children += textfield {
+                                                            tooltip = Tooltip(argument.description)
+                                                        }
+                                                        setupHints(argument, argProperty)
                                                     }
                                                 }
                                             }
@@ -743,6 +753,37 @@ class KImageApplication : Application() {
                 }
             }
         }
+    }
+
+    private fun Pane.setupHints(
+        argument: ScriptArg,
+        argProperty: SimpleStringProperty
+    ) {
+        when (argument.hint) {
+            Hint.ImageX -> {
+                children += button("Take X") {
+                    onAction = EventHandler {
+                        argProperty.set(zoomCenterXProperty.get().toString())
+                    }
+                }
+            }
+            Hint.ImageY -> {
+                children += button("Take Y") {
+                    onAction = EventHandler {
+                        argProperty.set(zoomCenterYProperty.get().toString())
+                    }
+                }
+            }
+            else -> {
+            }
+        }
+    }
+
+    private fun <T> setupValidation(node: Node, property: Property<T>, argument: ScriptArg, argProperty: StringProperty) {
+        property.addListener { _, _, value ->
+            node.pseudoClassStateChanged(INVALID, !argument.isValid(value?.toString()?:""))
+        }
+        node.pseudoClassStateChanged(INVALID, !argument.isValid(argProperty.get()?:""))
     }
 
     private fun markdownToHtml(markdown: String): String {

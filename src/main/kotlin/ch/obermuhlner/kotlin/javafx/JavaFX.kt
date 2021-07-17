@@ -171,9 +171,8 @@ fun textFormatter(defaultValue: Double?, min: Double? = null, max: Double? = nul
                 } else {
                     true
                 }
-            } else {
-                defaultValue != null
             }
+            true
         }
     }
 }

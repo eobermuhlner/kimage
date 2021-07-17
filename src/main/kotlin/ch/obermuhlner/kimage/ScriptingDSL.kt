@@ -65,7 +65,7 @@ class ScriptV0_1 : Script(0.1) {
                 if (!arg.mandatory || arg.hasDefault) {
                     print("[")
                 }
-                print("--arg ${arg.name}=${arg.type.toUpperCase()}")
+                print("--arg ${arg.name}=${arg.type.uppercase()}")
                 if (!arg.mandatory || arg.hasDefault) {
                     print("]")
                 }
@@ -268,6 +268,9 @@ interface ScriptNamedTypes {
 
     fun string(name: String, initializer: ScriptStringArg.() -> Unit) =
         arguments.add(ScriptStringArg().apply { this.name = name }.apply(initializer))
+
+    fun optionalString(name: String, initializer: ScriptOptionalStringArg.() -> Unit) =
+        arguments.add(ScriptOptionalStringArg().apply { this.name = name }.apply(initializer))
 
     fun file(name: String, initializer: ScriptFileArg.() -> Unit) =
         arguments.add(ScriptFileArg().apply { this.name = name }.apply(initializer))
@@ -618,15 +621,15 @@ open class ScriptFileArg(mandatory: Boolean = true) : ScriptArg("file", mandator
             if (!file.exists()) {
                 throw ScriptArgumentException("Argument $name must exist: $file")
             }
-        }
-        isFile?.let {
-            if (!file.isFile) {
-                throw ScriptArgumentException("Argument $name must be a file: $file")
+            isFile?.let {
+                if (!file.isFile) {
+                    throw ScriptArgumentException("Argument $name must be a file: $file")
+                }
             }
-        }
-        isDirectory?.let {
-            if (!file.isDirectory) {
-                throw ScriptArgumentException("Argument $name must be a directory: $file")
+            isDirectory?.let {
+                if (!file.isDirectory) {
+                    throw ScriptArgumentException("Argument $name must be a directory: $file")
+                }
             }
         }
         canRead?.let {
@@ -649,7 +652,7 @@ class ScriptOptionalFileArg : ScriptFileArg(false) {
         return toOptionalFileValue(stringValue)
     }
 
-    fun toOptionalFileValue(stringValue: String?, parent: String? = null): Optional<File> {
+    fun toOptionalFileValue(stringValue: String?): Optional<File> {
         if (stringValue.isNullOrEmpty()) {
             if (default == null) {
                 return Optional.empty()
