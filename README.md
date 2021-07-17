@@ -353,6 +353,9 @@ Output file: .\spooky_lena512.png
 
 ![](images/spooky_lena512.png)
 
+If you are interested in writing your own scripts - have a look at the 
+[`test-single`](src/main/dist/.kimage/test-single.kts) and [`test-multi`](src/main/dist/.kimage/test-multi.kts) scripts distributed with `kimage`.
+
 
 # Scripts
 
