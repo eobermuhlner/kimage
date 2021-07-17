@@ -518,7 +518,7 @@ class KImageApplication : Application() {
                                             when (argument) {
                                                 is ScriptBooleanArg -> {
                                                     checkbox {
-                                                        tooltip = Tooltip(argument.description)
+                                                        tooltip = Tooltip(argument.tooltip())
                                                         argument.default?.let {
                                                             isSelected = it
                                                         }
@@ -534,7 +534,7 @@ class KImageApplication : Application() {
                                                             argumentStrings[argument.name] = value.toString()
                                                         }
                                                         children += textfield {
-                                                            tooltip = Tooltip(argument.description)
+                                                            tooltip = Tooltip(argument.tooltip())
                                                             textFormatter = TextFormatter(IntegerStringConverter(), argument.default) { change ->
                                                                 filter(change, Regex("-?[0-9]*"))
                                                             }
@@ -554,7 +554,7 @@ class KImageApplication : Application() {
                                                             argumentStrings[argument.name] = value.toString()
                                                         }
                                                         children += textfield {
-                                                            tooltip = Tooltip(argument.description)
+                                                            tooltip = Tooltip(argument.tooltip())
                                                             textFormatter = textFormatter(argument.default, argument.min, argument.max)
                                                             textProperty().bindBidirectional(argProperty)
                                                             setupValidation(this, textProperty(), argument, argProperty)
@@ -567,8 +567,13 @@ class KImageApplication : Application() {
                                                 }
                                                 is ScriptStringArg -> {
                                                     if (argument.allowed.isNotEmpty()) {
-                                                        combobox(argument.allowed) {
-                                                            tooltip = Tooltip(argument.description)
+                                                        val allowed2 = mutableListOf<String>()
+                                                        if (argument is ScriptOptionalStringArg) {
+                                                            allowed2.add("")
+                                                        }
+                                                        allowed2.addAll(argument.allowed)
+                                                        combobox(allowed2) {
+                                                            tooltip = Tooltip(argument.tooltip())
                                                             value = argument.default
                                                             selectionModel.selectedItemProperty().addListener { _, _, value ->
                                                                 argumentStrings[argument.name] = value
@@ -581,7 +586,7 @@ class KImageApplication : Application() {
                                                                 argumentStrings[argument.name] = value.toString()
                                                             }
                                                             children += textfield {
-                                                                tooltip = Tooltip(argument.description)
+                                                                tooltip = Tooltip(argument.tooltip())
                                                                 argument.regex?.let {
                                                                     textFormatter = TextFormatter(TextFormatter.IDENTITY_STRING_CONVERTER, argument.default) { change ->
                                                                         filter(change, Regex(it))
@@ -609,7 +614,7 @@ class KImageApplication : Application() {
                                                         }
                                                         children += textfield(argProperty) {
                                                             // TODO relative to input or output dir?
-                                                            tooltip = Tooltip(argument.description)
+                                                            tooltip = Tooltip(argument.tooltip())
                                                             text = argument.default?.toString()
                                                             setupValidation(this, textProperty(), argument, argProperty)
                                                         }
@@ -652,7 +657,7 @@ class KImageApplication : Application() {
                                                             }
                                                         }
                                                         children += textfield(argProperty) {
-                                                            tooltip = Tooltip(argument.description)
+                                                            tooltip = Tooltip(argument.tooltip())
                                                             text = argument.default?.toString()
                                                             setupValidation(this, textProperty(), argument, argProperty)
                                                         }
@@ -679,7 +684,7 @@ class KImageApplication : Application() {
                                                             argumentStrings[argument.name] = value.toString()
                                                         }
                                                         children += textfield {
-                                                            tooltip = Tooltip(argument.description)
+                                                            tooltip = Tooltip(argument.tooltip())
                                                         }
                                                         setupHints(argument, argProperty)
                                                     }

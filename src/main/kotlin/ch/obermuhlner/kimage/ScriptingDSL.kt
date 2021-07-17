@@ -275,11 +275,11 @@ interface ScriptNamedTypes {
     fun file(name: String, initializer: ScriptFileArg.() -> Unit) =
         arguments.add(ScriptFileArg().apply { this.name = name }.apply(initializer))
 
-    fun image(name: String, initializer: ScriptImageArg.() -> Unit) =
-        arguments.add(ScriptImageArg().apply { this.name = name }.apply(initializer))
-
     fun optionalFile(name: String, initializer: ScriptOptionalFileArg.() -> Unit) =
         arguments.add(ScriptOptionalFileArg().apply { this.name = name }.apply(initializer))
+
+    fun image(name: String, initializer: ScriptImageArg.() -> Unit) =
+        arguments.add(ScriptImageArg().apply { this.name = name }.apply(initializer))
 
     fun optionalImage(name: String, initializer: ScriptOptionalImageArg.() -> Unit) =
         arguments.add(ScriptOptionalImageArg().apply { this.name = name }.apply(initializer))
@@ -375,6 +375,8 @@ sealed class ScriptArg(val type: String, val mandatory: Boolean) {
             false
         }
     }
+
+    fun tooltip(): String = if (description.isNullOrBlank()) name else description
 }
 
 @KotlinDSL

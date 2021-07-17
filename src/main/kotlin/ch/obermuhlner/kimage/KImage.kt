@@ -203,13 +203,13 @@ object KImageManager {
                 val currentScriptDir = File(current, ".kimage")
                 if (currentScriptDir.exists() && currentScriptDir.isDirectory) {
                     currentScriptDir.listFiles { file ->
-                        file.isFile && (file.extension == "kts" || file.extension == "kimage")
+                        file.isFile && (file.extension == "kts" || file.extension == "kimage" || file.name.endsWith(".kimage.kts"))
                     }.forEach {
                         addScriptFile(scriptFilesMap, it)
                     }
                 }
                 current.listFiles { file ->
-                    file.isFile && (file.extension == "kimage" || file.name.endsWith(".kimage.kts"))
+                    file.isFile && (file.extension == "kts" || file.extension == "kimage" || file.name.endsWith(".kimage.kts"))
                 }.forEach {
                     addScriptFile(scriptFilesMap, it)
                 }
