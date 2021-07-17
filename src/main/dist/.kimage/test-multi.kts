@@ -27,7 +27,7 @@ kimage(0.1) {
 
     // 'multi' means that all input files are processed together in a single run
     multi {
-        // The processed arguments are available in a Map 'arguments'
+        // The processed arguments are available in a Map<String, Any> 'arguments'
         val center: Boolean by arguments // Use the kotlin delegate by feature to map the arguments into typed variables
 
         // Variables 'verboseMode' and 'debugMode' are automatically available
@@ -57,13 +57,15 @@ kimage(0.1) {
             } else {
                 // Ensure input image has the same size as 'stacked'
                 val croppedImage = if (center) {
+                    // Use the 'center' variable being true to decide to center the images first
                     val halfWidth = stacked.width/2
                     val halfHeight = stacked.height/2
                     image.crop(image.width/2 - halfWidth, image.height/2 - halfHeight, stacked.width, stacked.height)
                 } else {
+                    // Use the 'center' variable being false to decide to stack the images top/left
                     image.crop(0, 0, stacked.width, stacked.height)
                 }
-                stacked + croppedImage // Assign the pixel-wise sum of 'stacked' and 'croppedImage' to 'stacked'
+                stacked + croppedImage // Calculate pixel-wise sum of 'stacked' + 'croppedImage' and assigned it to 'stacked'
             }
         }
 

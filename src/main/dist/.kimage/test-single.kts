@@ -27,7 +27,7 @@ kimage(0.1) {
 
     // 'single' means that every input image is processed one by one
     single {
-        // The processed arguments are available in a Map 'arguments'
+        // The processed arguments are available in a Map<String, Any> 'arguments'
         val saveOutput: Boolean by arguments // Use the kotlin delegate by feature to map the arguments into typed variables
 
         // Variables 'verboseMode' and 'debugMode' are automatically available
