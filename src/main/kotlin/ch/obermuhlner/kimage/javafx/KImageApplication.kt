@@ -683,8 +683,10 @@ class KImageApplication : Application() {
                                                         argProperty.addListener { _, _, value ->
                                                             argumentStrings[argument.name] = value.toString()
                                                         }
-                                                        children += textfield {
+                                                        children += textfield(argProperty) {
                                                             tooltip = Tooltip(argument.tooltip())
+                                                            textProperty().bindBidirectional(argProperty)
+                                                            setupValidation(this, textProperty(), argument, argProperty)
                                                         }
                                                         setupHints(argument, argProperty)
                                                     }
