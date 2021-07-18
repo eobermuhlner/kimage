@@ -132,75 +132,98 @@ class KImageApplication : Application() {
     }
 
     private fun createMainEditor(): Node {
-        return borderpane {
-            left = createInputFilesEditor()
+        return gridpane {
+            padding = Insets(SPACING)
+            hgap = SPACING
+            vgap = SPACING
 
-            center = borderpane {
-                padding = Insets(0.0, SPACING, 0.0, SPACING)
-
-                top = label("Processing:") {
-                    styleClass += "header1"
+            row {
+                cell {
+                    createInputFilesEditor()
                 }
-
-                center = gridpane {
-                    row {
-                        cell {
-                            listview(scriptNames) {
-                                selectionModel.selectedItemProperty().addListener { _, _, selected ->
-                                    selected?.let {
-                                        showCommandEditor(it)
-                                    }
+                cell {
+                    gridpane {
+                        row {
+                            cell(2, 1) {
+                                label("Processing:") {
+                                    styleClass += "header1"
                                 }
                             }
                         }
-                        cell {
-                            vbox(SPACING) {
-                                padding = Insets(0.0, SPACING, 0.0, SPACING)
+                        row {
+                            cell {
+                                listview(scriptNames) {
+                                    selectionModel.selectedItemProperty().addListener { _, _, selected ->
+                                        selected?.let {
+                                            showCommandEditor(it)
+                                        }
+                                    }
+                                }
+                            }
+                            cell {
+                                vbox(SPACING) {
+                                    padding = Insets(0.0, SPACING, 0.0, SPACING)
 
-                                prefWidth = ARGUMENT_EDITOR_WIDTH.toDouble()
-                                prefHeight = ARGUMENT_EDITOR_HEIGHT.toDouble()
-                                children += commandArgumentEditor
+                                    prefWidth = ARGUMENT_EDITOR_WIDTH.toDouble()
+                                    prefHeight = ARGUMENT_EDITOR_HEIGHT.toDouble()
+                                    children += commandArgumentEditor
+                                }
                             }
                         }
                     }
-                    row {
-                        cell(2, 1) {
-                            node(infoTabPane) {
-                                prefHeight = 400.0
+                }
+                cell {
+                    createOutputFilesEditor()
+                }
+            }
+            row {
+                cell {
+                    node(inputImageView) {
+                        isPreserveRatio = true
+                        fitWidth = IMAGE_WIDTH.toDouble()
+                        fitHeight = IMAGE_HEIGHT.toDouble()
+                    }
+                }
+                cell {
+                    node(infoTabPane) {
+                        prefHeight = 400.0
 
-                                tabClosingPolicy = TabPane.TabClosingPolicy.UNAVAILABLE
-                                tabs += tab("Log") {
-                                    infoTabLog = this
-                                    content = node(logTextArea) {
-                                        isEditable = false
-                                    }
-                                }
-                                tabs += tab("Documentation HTML") {
-                                    infoTabDocu = this
-                                    content = node(docuWebView) {
-                                    }
-                                }
-                                tabs += tab("Documentation Markdown") {
-                                    content = node(docuTextArea) {
-                                        isEditable = false
-                                    }
-                                }
-                                tabs += tab("Code") {
-                                    content = node(codeTextArea) {
-                                        isEditable = false
-                                    }
-                                }
-                                tabs += tab("Image Zoom") {
-                                    infoTabZoom = this
-                                    content = createZoomViewer()
-                                }
+                        tabClosingPolicy = TabPane.TabClosingPolicy.UNAVAILABLE
+                        tabs += tab("Log") {
+                            infoTabLog = this
+                            content = node(logTextArea) {
+                                isEditable = false
                             }
                         }
+                        tabs += tab("Documentation HTML") {
+                            infoTabDocu = this
+                            content = node(docuWebView) {
+                            }
+                        }
+                        tabs += tab("Documentation Markdown") {
+                            content = node(docuTextArea) {
+                                isEditable = false
+                            }
+                        }
+                        tabs += tab("Code") {
+                            content = node(codeTextArea) {
+                                isEditable = false
+                            }
+                        }
+                        tabs += tab("Image Zoom") {
+                            infoTabZoom = this
+                            content = createZoomViewer()
+                        }
+                    }
+                }
+                cell {
+                    node(outputImageView) {
+                        isPreserveRatio = true
+                        fitWidth = IMAGE_WIDTH.toDouble()
+                        fitHeight = IMAGE_HEIGHT.toDouble()
                     }
                 }
             }
-
-            right = createOutputFilesEditor()
         }
     }
 
@@ -332,12 +355,6 @@ class KImageApplication : Application() {
                     updateImageView(inputImageView, selected)
                 }
             }
-
-            children += node(inputImageView) {
-                isPreserveRatio = true
-                fitWidth = IMAGE_WIDTH.toDouble()
-                fitHeight = IMAGE_HEIGHT.toDouble()
-            }
         }
     }
 
@@ -444,12 +461,6 @@ class KImageApplication : Application() {
                 selectionModel.selectedItemProperty().addListener { _, _, selected ->
                     updateImageView(outputImageView, selected)
                 }
-            }
-
-            children += node(outputImageView) {
-                isPreserveRatio = true
-                fitWidth = IMAGE_WIDTH.toDouble()
-                fitHeight = IMAGE_HEIGHT.toDouble()
             }
         }
     }
