@@ -509,191 +509,7 @@ class KImageApplication : Application() {
                                 vgap = SPACING
 
                                 for (argument in script.scriptArguments.arguments) {
-                                    row {
-                                        cell {
-                                            label(argument.name) {
-                                            }
-                                        }
-                                        cell {
-                                            when (argument) {
-                                                is ScriptBooleanArg -> {
-                                                    checkbox {
-                                                        tooltip = Tooltip(argument.tooltip())
-                                                        argument.default?.let {
-                                                            isSelected = it
-                                                        }
-                                                        selectedProperty().addListener { _, _, value ->
-                                                            argumentStrings[argument.name] = value.toString()
-                                                        }
-                                                    }
-                                                }
-                                                is ScriptIntArg -> {
-                                                    hbox {
-                                                        val argProperty = SimpleStringProperty()
-                                                        argProperty.addListener { _, _, value ->
-                                                            argumentStrings[argument.name] = value.toString()
-                                                        }
-                                                        children += textfield {
-                                                            tooltip = Tooltip(argument.tooltip())
-                                                            textFormatter = TextFormatter(IntegerStringConverter(), argument.default) { change ->
-                                                                filter(change, Regex("-?[0-9]*"))
-                                                            }
-                                                            textProperty().bindBidirectional(argProperty)
-                                                            setupValidation(this, textProperty(), argument, argProperty)
-                                                        }
-                                                        setupHints(argument, argProperty)
-                                                        argument.default?.let {
-                                                            argProperty.set(it.toString())
-                                                        }
-                                                    }
-                                                }
-                                                is ScriptDoubleArg -> {
-                                                    hbox {
-                                                        val argProperty = SimpleStringProperty()
-                                                        argProperty.addListener { _, _, value ->
-                                                            argumentStrings[argument.name] = value.toString()
-                                                        }
-                                                        children += textfield {
-                                                            tooltip = Tooltip(argument.tooltip())
-                                                            textFormatter = textFormatter(argument.default, argument.min, argument.max)
-                                                            textProperty().bindBidirectional(argProperty)
-                                                            setupValidation(this, textProperty(), argument, argProperty)
-                                                        }
-                                                        setupHints(argument, argProperty)
-                                                        argument.default?.let {
-                                                            argProperty.set(it.toString())
-                                                        }
-                                                    }
-                                                }
-                                                is ScriptStringArg -> {
-                                                    if (argument.allowed.isNotEmpty()) {
-                                                        val allowed2 = mutableListOf<String>()
-                                                        if (argument is ScriptOptionalStringArg) {
-                                                            allowed2.add("")
-                                                        }
-                                                        allowed2.addAll(argument.allowed)
-                                                        combobox(allowed2) {
-                                                            tooltip = Tooltip(argument.tooltip())
-                                                            value = argument.default
-                                                            selectionModel.selectedItemProperty().addListener { _, _, value ->
-                                                                argumentStrings[argument.name] = value
-                                                            }
-                                                        }
-                                                    } else {
-                                                        hbox {
-                                                            val argProperty = SimpleStringProperty()
-                                                            argProperty.addListener { _, _, value ->
-                                                                argumentStrings[argument.name] = value.toString()
-                                                            }
-                                                            children += textfield {
-                                                                tooltip = Tooltip(argument.tooltip())
-                                                                argument.regex?.let {
-                                                                    textFormatter = TextFormatter(TextFormatter.IDENTITY_STRING_CONVERTER, argument.default) { change ->
-                                                                        filter(change, Regex(it))
-                                                                    }
-                                                                }
-                                                                textProperty().bindBidirectional(argProperty)
-                                                                setupValidation(this, textProperty(), argument, argProperty)
-                                                            }
-                                                            setupHints(argument, argProperty)
-                                                            argument.default?.let {
-                                                                argProperty.set(it.toString())
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                                is ScriptFileArg -> {
-                                                    hbox {
-                                                        val argProperty = SimpleStringProperty()
-                                                        argProperty.addListener { _, _, value ->
-                                                            if (value.isNullOrEmpty()) {
-                                                                argumentStrings.remove(argument.name)
-                                                            } else {
-                                                                argumentStrings[argument.name] = File(inputDirectoryProperty.get(), value).toString()
-                                                            }
-                                                        }
-                                                        children += textfield(argProperty) {
-                                                            // TODO relative to input or output dir?
-                                                            tooltip = Tooltip(argument.tooltip())
-                                                            text = argument.default?.toString()
-                                                            setupValidation(this, textProperty(), argument, argProperty)
-                                                        }
-                                                        children += button(FontIcon()) {
-                                                            if (argument.isDirectory == true) {
-                                                                id =  "folder-icon"
-                                                                tooltip = Tooltip("Select the directory for ${argument.name}.")
-                                                            } else {
-                                                                id =  "file-icon"
-                                                                tooltip = Tooltip("Select the file for ${argument.name}.")
-                                                            }
-                                                            onAction = EventHandler {
-                                                                if (argument.isDirectory == true) {
-                                                                    val file = openDir(File(inputDirectoryProperty.get()))
-                                                                    file?.let {
-                                                                        argProperty.set(it.toRelativeString(File(inputDirectoryProperty.get())))
-                                                                    }
-                                                                } else {
-                                                                    val file = openFile(File(inputDirectoryProperty.get()))
-                                                                    file?.let {
-                                                                        argProperty.set(it.toRelativeString(File(inputDirectoryProperty.get())))
-                                                                    }
-                                                                }
-                                                            }
-                                                            setupHints(argument, argProperty)
-                                                            argument.default?.let {
-                                                                argProperty.set(it.toString())
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                                is ScriptImageArg -> {
-                                                    hbox {
-                                                        val argProperty = SimpleStringProperty()
-                                                        argProperty.addListener { _, _, value ->
-                                                            if (value.isNullOrEmpty()) {
-                                                                argumentStrings.remove(argument.name)
-                                                            } else {
-                                                                argumentStrings[argument.name] = File(inputDirectoryProperty.get(), value).toString()
-                                                            }
-                                                        }
-                                                        children += textfield(argProperty) {
-                                                            tooltip = Tooltip(argument.tooltip())
-                                                            text = argument.default?.toString()
-                                                            setupValidation(this, textProperty(), argument, argProperty)
-                                                        }
-                                                        children += button(FontIcon()) {
-                                                            id =  "file-icon"
-                                                            tooltip = Tooltip("Select the image file for ${argument.name}.")
-                                                            onAction = EventHandler {
-                                                                val file = openFile(File(inputDirectoryProperty.get()))
-                                                                file?.let {
-                                                                    argProperty.set(it.toRelativeString(File(inputDirectoryProperty.get())))
-                                                                }
-                                                            }
-                                                        }
-                                                        setupHints(argument, argProperty)
-                                                        argument.default?.let {
-                                                            argProperty.set(it.toString())
-                                                        }
-                                                    }
-                                                }
-                                                else -> {
-                                                    hbox {
-                                                        val argProperty = SimpleStringProperty()
-                                                        argProperty.addListener { _, _, value ->
-                                                            argumentStrings[argument.name] = value.toString()
-                                                        }
-                                                        children += textfield(argProperty) {
-                                                            tooltip = Tooltip(argument.tooltip())
-                                                            textProperty().bindBidirectional(argProperty)
-                                                            setupValidation(this, textProperty(), argument, argProperty)
-                                                        }
-                                                        setupHints(argument, argProperty)
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
+                                    setupArgumentEditor(argument, argumentStrings)
                                 }
 
                                 row {
@@ -755,6 +571,201 @@ class KImageApplication : Application() {
                                     }
                                 }
                             }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun GridPaneContext.setupArgumentEditor(
+        argument: ScriptArg,
+        argumentStrings: MutableMap<String, String>
+    ) {
+        row {
+            cell {
+                label(argument.name) {
+                }
+            }
+            cell {
+                when (argument) {
+                    is ScriptBooleanArg -> {
+                        checkbox {
+                            tooltip = Tooltip(argument.description)
+                            argument.default?.let {
+                                isSelected = it
+                            }
+                            selectedProperty().addListener { _, _, value ->
+                                argumentStrings[argument.name] = value.toString()
+                            }
+                        }
+                    }
+                    is ScriptIntArg -> {
+                        hbox {
+                            val argProperty = SimpleStringProperty()
+                            argProperty.addListener { _, _, value ->
+                                argumentStrings[argument.name] = value.toString()
+                            }
+                            children += textfield {
+                                tooltip = Tooltip(argument.description)
+                                textFormatter = TextFormatter(IntegerStringConverter(), argument.default) { change ->
+                                    filter(change, Regex("-?[0-9]*"))
+                                }
+                                textProperty().bindBidirectional(argProperty)
+                                setupValidation(this, textProperty(), argument, argProperty)
+                            }
+                            setupHints(argument, argProperty)
+                            argument.default?.let {
+                                argProperty.set(it.toString())
+                            }
+                        }
+                    }
+                    is ScriptDoubleArg -> {
+                        hbox {
+                            val argProperty = SimpleStringProperty()
+                            argProperty.addListener { _, _, value ->
+                                argumentStrings[argument.name] = value.toString()
+                            }
+                            children += textfield {
+                                tooltip = Tooltip(argument.description)
+                                textFormatter = textFormatter(argument.default, argument.min, argument.max)
+                                textProperty().bindBidirectional(argProperty)
+                                setupValidation(this, textProperty(), argument, argProperty)
+                            }
+                            setupHints(argument, argProperty)
+                            argument.default?.let {
+                                argProperty.set(it.toString())
+                            }
+                        }
+                    }
+                    is ScriptStringArg -> {
+                        if (argument.allowed.isNotEmpty()) {
+                            val allowed2 = mutableListOf<String>()
+                            if (argument is ScriptOptionalStringArg) {
+                                allowed2.add("")
+                            }
+                            allowed2.addAll(argument.allowed)
+                            combobox(allowed2) {
+                                tooltip = Tooltip(argument.description)
+                                value = argument.default
+                                selectionModel.selectedItemProperty().addListener { _, _, value ->
+                                    argumentStrings[argument.name] = value
+                                }
+                            }
+                        } else {
+                            hbox {
+                                val argProperty = SimpleStringProperty()
+                                argProperty.addListener { _, _, value ->
+                                    argumentStrings[argument.name] = value.toString()
+                                }
+                                children += textfield {
+                                    tooltip = Tooltip(argument.description)
+                                    argument.regex?.let {
+                                        textFormatter = TextFormatter(
+                                            TextFormatter.IDENTITY_STRING_CONVERTER,
+                                            argument.default
+                                        ) { change ->
+                                            filter(change, Regex(it))
+                                        }
+                                    }
+                                    textProperty().bindBidirectional(argProperty)
+                                    setupValidation(this, textProperty(), argument, argProperty)
+                                }
+                                setupHints(argument, argProperty)
+                                argument.default?.let {
+                                    argProperty.set(it.toString())
+                                }
+                            }
+                        }
+                    }
+                    is ScriptFileArg -> {
+                        hbox {
+                            val argProperty = SimpleStringProperty()
+                            argProperty.addListener { _, _, value ->
+                                if (value.isNullOrEmpty()) {
+                                    argumentStrings.remove(argument.name)
+                                } else {
+                                    argumentStrings[argument.name] = File(inputDirectoryProperty.get(), value).toString()
+                                }
+                            }
+                            children += textfield(argProperty) {
+                                // TODO relative to input or output dir?
+                                tooltip = Tooltip(argument.description)
+                                text = argument.default?.toString()
+                                setupValidation(this, textProperty(), argument, argProperty)
+                            }
+                            children += button(FontIcon()) {
+                                if (argument.isDirectory == true) {
+                                    id = "folder-icon"
+                                    tooltip = Tooltip("Select the directory for ${argument.name}.")
+                                } else {
+                                    id = "file-icon"
+                                    tooltip = Tooltip("Select the file for ${argument.name}.")
+                                }
+                                onAction = EventHandler {
+                                    if (argument.isDirectory == true) {
+                                        val file = openDir(File(inputDirectoryProperty.get()))
+                                        file?.let {
+                                            argProperty.set(it.toRelativeString(File(inputDirectoryProperty.get())))
+                                        }
+                                    } else {
+                                        val file = openFile(File(inputDirectoryProperty.get()))
+                                        file?.let {
+                                            argProperty.set(it.toRelativeString(File(inputDirectoryProperty.get())))
+                                        }
+                                    }
+                                }
+                                setupHints(argument, argProperty)
+                                argument.default?.let {
+                                    argProperty.set(it.toString())
+                                }
+                            }
+                        }
+                    }
+                    is ScriptImageArg -> {
+                        hbox {
+                            val argProperty = SimpleStringProperty()
+                            argProperty.addListener { _, _, value ->
+                                if (value.isNullOrEmpty()) {
+                                    argumentStrings.remove(argument.name)
+                                } else {
+                                    argumentStrings[argument.name] =
+                                        File(inputDirectoryProperty.get(), value).toString()
+                                }
+                            }
+                            children += textfield(argProperty) {
+                                tooltip = Tooltip(argument.description)
+                                text = argument.default?.toString()
+                                setupValidation(this, textProperty(), argument, argProperty)
+                            }
+                            children += button(FontIcon()) {
+                                id = "file-icon"
+                                tooltip = Tooltip("Select the image file for ${argument.name}.")
+                                onAction = EventHandler {
+                                    val file = openFile(File(inputDirectoryProperty.get()))
+                                    file?.let {
+                                        argProperty.set(it.toRelativeString(File(inputDirectoryProperty.get())))
+                                    }
+                                }
+                            }
+                            setupHints(argument, argProperty)
+                            argument.default?.let {
+                                argProperty.set(it.toString())
+                            }
+                        }
+                    }
+                    else -> {
+                        hbox {
+                            val argProperty = SimpleStringProperty()
+                            argProperty.addListener { _, _, value ->
+                                argumentStrings[argument.name] = value.toString()
+                            }
+                            children += textfield(argProperty) {
+                                tooltip = Tooltip(argument.description)
+                                textProperty().bindBidirectional(argProperty)
+                                setupValidation(this, textProperty(), argument, argProperty)
+                            }
+                            setupHints(argument, argProperty)
                         }
                     }
                 }
