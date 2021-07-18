@@ -34,13 +34,20 @@ kimage(0.1) {
                         """
             hint = Hint.ImageY
         }
-        string("mode") {
+        string("channel") {
             description = """
                         Controls which channels are used to calculate the vignette effect.
-                        The `rgb` mode calculates the effect on the three color channels separately.
+                        The `rgb` channel calculates the effect on the three color channels separately.
                         """
             allowed = listOf("rgb", "gray", "luminance", "red", "green", "blue")
             default = "rgb"
+        }
+        string("model") {
+            description = """
+                        The mathematical model use to calculate the vignette effect.
+                        """
+            allowed = listOf("gauss", "polynomial", "auto")
+            default = "auto"
         }
         double("kappa") {
             description = """
@@ -68,16 +75,17 @@ kimage(0.1) {
         val kappa: Double by arguments
         var centerX: Optional<Int> by arguments
         var centerY: Optional<Int> by arguments
-        val mode: String by arguments
+        val channel: String by arguments
+        val model: String by arguments
 
-        val channels = when (mode) {
+        val channels = when (channel) {
             "gray" -> listOf(Channel.Gray)
             "luminance" -> listOf(Channel.Luminance)
             "red" -> listOf(Channel.Red)
             "green" -> listOf(Channel.Green)
             "blue" -> listOf(Channel.Blue)
             "rgb" -> listOf(Channel.Red, Channel.Green, Channel.Blue)
-            else -> throw IllegalArgumentException("Unknown channel mode: $mode")
+            else -> throw IllegalArgumentException("Unknown channel: $channel")
         }
         val channelMatrices = mutableListOf<Matrix>()
 
@@ -114,7 +122,7 @@ kimage(0.1) {
                 for (y in 0 until inputImage.height) {
                     val points = WeightedObservedPoints()
                     for (x in 0 until inputImage.width) {
-                        val value = matrix.getPixel(x, y).toDouble()
+                        val value = matrix.getPixel(x, y)
                         if (value in low..high) {
                             points.add(x.toDouble(), value)
                         }
@@ -146,7 +154,7 @@ kimage(0.1) {
                 for (x in 0 until inputImage.width) {
                     val points = WeightedObservedPoints()
                     for (y in 0 until inputImage.height) {
-                        val value = matrix.getPixel(x, y).toDouble()
+                        val value = matrix.getPixel(x, y)
                         if (value in low..high) {
                             points.add(y.toDouble(), value)
                         }
@@ -204,20 +212,26 @@ kimage(0.1) {
             for (i in xValues.indices) {
                 points.add(xValues[i], yValues[i])
             }
-            val polynomialFit2 = PolynomialCurveFitter.create(2).fit(points.toList())
-            println("Apache polynomialFit2: ${polynomialFit2.contentToString()}")
             val gaussFit = GaussianCurveFitter.create().fit(points.toList())
-            println("Apache gaussFit: ${gaussFit.contentToString()}")
+            println("Gauss: ${gaussFit.contentToString()}")
+            val polynomialFit2 = PolynomialCurveFitter.create(2).fit(points.toList())
+            println("Polynomial: ${polynomialFit2.contentToString()}")
 
-            var error = 0.0
+            var errorGauss = 0.0
+            var errorPolynomial = 0.0
             for (i in xValues.indices) {
                 val y1 = yValues[i]
-                val y2 = polynomialFunction(xValues[i], polynomialFit2)
-                val delta = y1 - y2
-                error += delta * delta
+                val yGauss = gaussFunction(xValues[i], gaussFit[0], gaussFit[1], gaussFit[2])
+                val deltaGauss = y1 - yGauss
+                errorGauss += deltaGauss * deltaGauss
+                val yPolynomial = polynomialFunction(xValues[i], polynomialFit2)
+                val deltaPolynomial = y1 - yPolynomial
+                errorPolynomial += deltaPolynomial * deltaPolynomial
             }
-            error /= xValues.size
-            println("Standard Error: $error")
+            errorGauss /= xValues.size
+            errorPolynomial /= xValues.size
+            println("Standard Error (Gauss):      $errorGauss")
+            println("Standard Error (Polynomial): $errorPolynomial")
             println()
 
             if (debugMode) {
@@ -241,7 +255,17 @@ kimage(0.1) {
                 val dx = (centerX.get() - column).toDouble()
                 val dy = (centerY.get() - row).toDouble()
                 val distance = sqrt(dx*dx + dy*dy)
-                polynomialFunction(distance, polynomialFit2)
+                when (model) {
+                    "gauss" -> gaussFunction(distance, gaussFit[0], gaussFit[1], gaussFit[2])
+                    "polynomial" -> polynomialFunction(distance, polynomialFit2)
+                    "auto" -> if (errorGauss < errorPolynomial) {
+                        gaussFunction(distance, gaussFit[0], gaussFit[1], gaussFit[2])
+                    } else {
+                        polynomialFunction(distance, polynomialFit2)
+                    }
+                    else -> throw IllegalArgumentException("Unknown model: $model")
+                }
+
             }
 
             val flatMax = flatMatrix.max()
