@@ -30,7 +30,7 @@ kimage(0.1) {
             allowed = listOf("red", "green", "blue")
             default = "red"
         }
-        optionalString("optionalStringArg") {
+        optionalString("optionalAllowedStringArg") {
             allowed = listOf("red", "green", "blue")
         }
         string("regexStringArg") {

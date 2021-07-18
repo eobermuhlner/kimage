@@ -249,52 +249,59 @@ interface ScriptNamedTypes {
     val arguments: MutableList<ScriptArg>
 
     fun int(name: String, initializer: ScriptIntArg.() -> Unit) =
-        arguments.add(ScriptIntArg().apply { this.name = name }.apply(initializer))
+        arguments.addIfNotContains(ScriptIntArg().apply { this.name = name }.apply(initializer))
 
     fun optionalInt(name: String, initializer: ScriptOptionalIntArg.() -> Unit) =
-        arguments.add(ScriptOptionalIntArg().apply { this.name = name }.apply(initializer))
+        arguments.addIfNotContains(ScriptOptionalIntArg().apply { this.name = name }.apply(initializer))
 
     fun double(name: String, initializer: ScriptDoubleArg.() -> Unit) =
-        arguments.add(ScriptDoubleArg().apply { this.name = name }.apply(initializer))
+        arguments.addIfNotContains(ScriptDoubleArg().apply { this.name = name }.apply(initializer))
 
     fun optionalDouble(name: String, initializer: ScriptOptionalDoubleArg.() -> Unit) =
-        arguments.add(ScriptOptionalDoubleArg().apply { this.name = name }.apply(initializer))
+        arguments.addIfNotContains(ScriptOptionalDoubleArg().apply { this.name = name }.apply(initializer))
 
     fun boolean(name:String, initializer: ScriptBooleanArg.() -> Unit) =
-        arguments.add(ScriptBooleanArg().apply { this.name = name }.apply(initializer))
+        arguments.addIfNotContains(ScriptBooleanArg().apply { this.name = name }.apply(initializer))
 
     fun optionalBoolean(name:String, initializer: ScriptOptionalBooleanArg.() -> Unit) =
-        arguments.add(ScriptOptionalBooleanArg().apply { this.name = name }.apply(initializer))
+        arguments.addIfNotContains(ScriptOptionalBooleanArg().apply { this.name = name }.apply(initializer))
 
     fun string(name: String, initializer: ScriptStringArg.() -> Unit) =
-        arguments.add(ScriptStringArg().apply { this.name = name }.apply(initializer))
+        arguments.addIfNotContains(ScriptStringArg().apply { this.name = name }.apply(initializer))
 
     fun optionalString(name: String, initializer: ScriptOptionalStringArg.() -> Unit) =
-        arguments.add(ScriptOptionalStringArg().apply { this.name = name }.apply(initializer))
+        arguments.addIfNotContains(ScriptOptionalStringArg().apply { this.name = name }.apply(initializer))
 
     fun file(name: String, initializer: ScriptFileArg.() -> Unit) =
-        arguments.add(ScriptFileArg().apply { this.name = name }.apply(initializer))
+        arguments.addIfNotContains(ScriptFileArg().apply { this.name = name }.apply(initializer))
 
     fun optionalFile(name: String, initializer: ScriptOptionalFileArg.() -> Unit) =
-        arguments.add(ScriptOptionalFileArg().apply { this.name = name }.apply(initializer))
+        arguments.addIfNotContains(ScriptOptionalFileArg().apply { this.name = name }.apply(initializer))
 
     fun image(name: String, initializer: ScriptImageArg.() -> Unit) =
-        arguments.add(ScriptImageArg().apply { this.name = name }.apply(initializer))
+        arguments.addIfNotContains(ScriptImageArg().apply { this.name = name }.apply(initializer))
 
     fun optionalImage(name: String, initializer: ScriptOptionalImageArg.() -> Unit) =
-        arguments.add(ScriptOptionalImageArg().apply { this.name = name }.apply(initializer))
+        arguments.addIfNotContains(ScriptOptionalImageArg().apply { this.name = name }.apply(initializer))
 
     fun list(name: String, initializer: ScriptListArg.() -> Unit) =
-        arguments.add(ScriptListArg().apply { this.name = name }.apply(initializer))
+        arguments.addIfNotContains(ScriptListArg().apply { this.name = name }.apply(initializer))
 
     fun optionalList(name: String, initializer: ScriptOptionalListArg.() -> Unit) =
-        arguments.add(ScriptOptionalListArg().apply { this.name = name }.apply(initializer))
+        arguments.addIfNotContains(ScriptOptionalListArg().apply { this.name = name }.apply(initializer))
 
     fun record(name: String, initializer: ScriptRecordArg.() -> Unit) =
-        arguments.add(ScriptRecordArg().apply { this.name = name }.apply(initializer))
+        arguments.addIfNotContains(ScriptRecordArg().apply { this.name = name }.apply(initializer))
 
     fun optionalRecord(name: String, initializer: ScriptOptionalRecordArg.() -> Unit) =
-        arguments.add(ScriptOptionalRecordArg().apply { this.name = name }.apply(initializer))
+        arguments.addIfNotContains(ScriptOptionalRecordArg().apply { this.name = name }.apply(initializer))
+}
+
+private fun MutableList<ScriptArg>.addIfNotContains(element: ScriptArg): Boolean {
+    if (filter { arg -> arg.name == element.name }.any()) {
+        throw IllegalArgumentException("Argument already exists: ${element.name}")
+    }
+    return add(element)
 }
 
 @KotlinDSL
