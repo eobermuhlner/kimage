@@ -29,6 +29,7 @@ import javafx.scene.web.WebView
 import javafx.stage.*
 import javafx.util.converter.IntegerStringConverter
 import org.kordamp.ikonli.javafx.FontIcon
+import java.awt.Desktop
 import java.io.*
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -402,6 +403,29 @@ class KImageApplication : Application() {
                         }
                     }
                 }
+                children += button(FontIcon()) {
+                    id = "new-folder"
+                    tooltip = Tooltip("Create a new directory.")
+                    onAction = EventHandler {
+                        val dialog = TextInputDialog()
+                        dialog.title = "Create directory"
+                        val optionalDirectoryName = dialog.showAndWait()
+                        if (optionalDirectoryName.isPresent) {
+                            val file = File(outputDirectoryProperty.get(), optionalDirectoryName.get())
+                            if (!file.exists()) {
+                                file.mkdir()
+                                updateOutputDirectoryFiles(outputHideOldFilesProperty.get())
+                            }
+                        }
+                    }
+                }
+                children += button(FontIcon()) {
+                    id = "refresh"
+                    tooltip = Tooltip("Refresh.")
+                    onAction = EventHandler {
+                        updateOutputDirectoryFiles(outputHideOldFilesProperty.get())
+                    }
+                }
                 children += togglebutton(FontIcon()) {
                     id = "hide-icon"
                     tooltip = Tooltip("Hide already existing files and show only newly added output files.")
@@ -427,7 +451,33 @@ class KImageApplication : Application() {
                             tooltip = if (item == null) null else Tooltip(item.toString())
                         }
                     }
+                    tableRow.onMouseClicked = EventHandler {
+                        if (it.clickCount == 2) {
+                            if (tableRow.item.isDirectory && !useInputDirectoryAsOutputDirectoryProperty.get()) {
+                                outputDirectoryProperty.set(tableRow.item.path)
+                            } else if (tableRow.item.isFile) {
+                                Desktop.getDesktop().open(tableRow.item)
+                            }
+                        }
+                    }
                     tableRow.contextMenu = ContextMenu(
+                        menuitem("Open file", FontIcon()) {
+                            id = "bold-arrow-left-icon"
+                            onAction = EventHandler {
+                            }
+                        },
+                        menuitem("Open Directory in Explorer", FontIcon()) {
+                            id = "open-external"
+                            onAction = EventHandler {
+                                val file = selectionModel.selectedItem
+                                if (file.isDirectory) {
+                                    Desktop.getDesktop().open(file)
+                                } else {
+                                    Desktop.getDesktop().open(file.parentFile)
+                                }
+
+                            }
+                        },
                         menuitem("Replace input", FontIcon()) {
                             id = "bold-arrow-left-icon"
                             onAction = EventHandler {
@@ -451,10 +501,19 @@ class KImageApplication : Application() {
                     tableRow
                 }
 
-                column<String>("Name", { file -> ReadOnlyStringWrapper(file?.name) }) {
+                column<Node>("", { file ->
+                    ReadOnlyObjectWrapper<Node>(if (file.isDirectory) FontIcon("mdi2f-folder-outline") else label(""))
+                }) {
+                    this.prefWidth = 50.0
+                }
+                column<String>("Name", { file ->
+                    ReadOnlyStringWrapper(file.name)
+                }) {
                     this.prefWidth = 200.0
                 }
-                column<Number>("Size", { file -> ReadOnlyLongWrapper(Files.size(file.toPath())) }) {
+                column<String>("Size", { file ->
+                    ReadOnlyStringWrapper(if (file.isDirectory) "" else Files.size(file.toPath()).toString())
+                }) {
                     this.prefWidth = 100.0
                 }
 
@@ -880,7 +939,7 @@ class KImageApplication : Application() {
             return
         }
 
-        val files = dir.listFiles { f -> f.isFile }.toMutableList()
+        val files = dir.listFiles().toMutableList()
         if (hideOldFiles) {
             hiddenOutputFiles.clear()
             hiddenOutputFiles.addAll(files)

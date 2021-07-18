@@ -32,6 +32,24 @@
     -fx-icon-color: dimgray;
 }
 
+#open-external .ikonli-font-icon {
+    -fx-icon-code: "mdi2o-open-in-new";
+    -fx-icon-size: 16px;
+    -fx-icon-color: dimgray;
+}
+
+#refresh .ikonli-font-icon {
+    -fx-icon-code: "mdi2r-refresh";
+    -fx-icon-size: 16px;
+    -fx-icon-color: dimgray;
+}
+
+#new-folder .ikonli-font-icon {
+    -fx-icon-code: "mdi2f-folder-plus-outline";
+    -fx-icon-size: 16px;
+    -fx-icon-color: dimgray;
+}
+
 #hide-icon .ikonli-font-icon {
     -fx-icon-code: "mdi2e-eye-off-outline";
     -fx-icon-size: 16px;
