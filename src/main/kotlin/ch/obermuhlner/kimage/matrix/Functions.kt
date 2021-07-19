@@ -66,6 +66,30 @@ fun max(m1: Matrix, m2: Matrix): Matrix {
     return m
 }
 
+fun Matrix.rotateLeft(): Matrix {
+    val m = create(columns, rows)
+
+    for (row in 0 until rows) {
+        for (column in 0 until columns) {
+            m[rows - row - 1, column] = this[column, row]
+        }
+    }
+
+    return m
+}
+
+fun Matrix.rotateRight(): Matrix {
+    val m = create(columns, rows)
+
+    for (row in 0 until rows) {
+        for (column in 0 until columns) {
+            m[row, columns - column - 1] = this[column, row]
+        }
+    }
+
+    return m
+}
+
 fun Matrix.stretchClassic(min: Double, max: Double, func: (value: Double) -> Double = { it }): Matrix {
     val denom = func(max - min)
     return this.copy().onEach { value ->

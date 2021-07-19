@@ -146,6 +146,24 @@ fun Image.onEach(func: (value: Double) -> Double): Image {
     }
 }
 
+fun Image.rotateLeft(): Image {
+    return MatrixImage(
+        this.height,
+        this.width,
+        this.channels) { channel, _, _ ->
+        this[channel].rotateLeft()
+    }
+}
+
+fun Image.rotateRight(): Image {
+    return MatrixImage(
+        this.height,
+        this.width,
+        this.channels) { channel, _, _ ->
+        this[channel].rotateRight()
+    }
+}
+
 fun Image.stretchClassic(min: Double, max: Double, func: (value: Double) -> Double = { it }): Image {
     return MatrixImage(
         this.width,
