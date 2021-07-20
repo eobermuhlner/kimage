@@ -60,7 +60,7 @@ class KImageApplication : Application() {
 
     private var currentInputImage: Image? = null
 
-    val argumentStrings = mutableMapOf<String, String>()
+    private val argumentStrings = mutableMapOf<String, String>()
 
     private var previewScript: ScriptV0_1? = null
     private var previewCommand: String? = null
@@ -103,9 +103,9 @@ class KImageApplication : Application() {
     init {
         tempInputDirectory.deleteOnExit()
         tempOutputDirectory.deleteOnExit()
-        println("tempInputDirectory = $tempInputDirectory")
-        println("tempOutputDirectory = $tempOutputDirectory")
     }
+
+    val rememberedObjects = mutableListOf<Any>()
 
     override fun start(primaryStage: Stage) {
         this.primaryStage = primaryStage
@@ -678,14 +678,6 @@ class KImageApplication : Application() {
                                 }
                             }
                         }
-                        children += button("Run Preview") {
-                            tooltip = Tooltip("Preview the ${script.name} script.")
-                            onAction = EventHandler {
-                                currentInputImage?.let {
-                                    previewImage(it, script, argumentStrings, command)
-                                }
-                            }
-                        }
                     }
                 }
             }
@@ -695,7 +687,6 @@ class KImageApplication : Application() {
     private fun previewImage(
         image: Image,
         script: ScriptV0_1,
-        argumentStrings: MutableMap<String, String>,
         command: String
     ) {
         val croppedInputFiles = if (script.isSingle()) {
@@ -721,7 +712,7 @@ class KImageApplication : Application() {
                     tempOutputDirectory.path
                 ) { _, output ->
                     if (output is Image) {
-                        outputZoomImageView.image =JavaFXImageUtil.toWritableImage(output)
+                        outputZoomImageView.image = JavaFXImageUtil.toWritableImage(output)
                         updateZoom()
                     }
                 }
@@ -768,7 +759,7 @@ class KImageApplication : Application() {
                     }
                     is ScriptIntArg -> {
                         hbox {
-                            val argProperty = SimpleStringProperty()
+                            val argProperty = remember(SimpleStringProperty())
                             argProperty.addListener { _, _, value ->
                                 argumentStrings[argument.name] = value.toString()
                             }
@@ -788,7 +779,7 @@ class KImageApplication : Application() {
                     }
                     is ScriptDoubleArg -> {
                         hbox {
-                            val argProperty = SimpleStringProperty()
+                            val argProperty = remember(SimpleStringProperty())
                             argProperty.addListener { _, _, value ->
                                 argumentStrings[argument.name] = value.toString()
                             }
@@ -820,7 +811,7 @@ class KImageApplication : Application() {
                             }
                         } else {
                             hbox {
-                                val argProperty = SimpleStringProperty()
+                                val argProperty = remember(SimpleStringProperty())
                                 argProperty.addListener { _, _, value ->
                                     argumentStrings[argument.name] = value.toString()
                                 }
@@ -839,19 +830,20 @@ class KImageApplication : Application() {
                                 }
                                 setupHints(argument, argProperty)
                                 argument.default?.let {
-                                    argProperty.set(it.toString())
+                                    argProperty.set(it)
                                 }
                             }
                         }
                     }
                     is ScriptFileArg -> {
                         hbox {
-                            val argProperty = SimpleStringProperty()
+                            val argProperty = remember(SimpleStringProperty())
                             argProperty.addListener { _, _, value ->
                                 if (value.isNullOrEmpty()) {
                                     argumentStrings.remove(argument.name)
                                 } else {
-                                    argumentStrings[argument.name] = File(inputDirectoryProperty.get(), value).toString()
+                                    argumentStrings[argument.name] =
+                                        File(inputDirectoryProperty.get(), value).toString()
                                 }
                             }
                             children += textfield(argProperty) {
@@ -890,7 +882,7 @@ class KImageApplication : Application() {
                     }
                     is ScriptImageArg -> {
                         hbox {
-                            val argProperty = SimpleStringProperty()
+                            val argProperty = remember(SimpleStringProperty())
                             argProperty.addListener { _, _, value ->
                                 if (value.isNullOrEmpty()) {
                                     argumentStrings.remove(argument.name)
@@ -922,7 +914,7 @@ class KImageApplication : Application() {
                     }
                     else -> {
                         hbox {
-                            val argProperty = SimpleStringProperty()
+                            val argProperty = remember(SimpleStringProperty())
                             argProperty.addListener { _, _, value ->
                                 argumentStrings[argument.name] = value.toString()
                             }
@@ -937,6 +929,12 @@ class KImageApplication : Application() {
                 }
             }
         }
+    }
+
+    private fun <T> remember(obj: T): T {
+        // prevent instances from being garbage collected
+        rememberedObjects.add(obj!!)
+        return obj
     }
 
     private fun Pane.setupHints(
@@ -1143,7 +1141,7 @@ class KImageApplication : Application() {
             val command = previewCommand
             val image = currentInputImage
             if (image != null && script != null && command != null) {
-                previewImage(image, script, argumentStrings, command)
+                previewImage(image, script, command)
             }
         }
     }
