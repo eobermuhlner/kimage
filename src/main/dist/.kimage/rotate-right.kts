@@ -8,7 +8,7 @@ import kotlin.math.*
 
 kimage(0.1) {
     name = "rotate-right"
-    title = "Rotate image 90 degrees right."
+    title = "Rotate image 90 degrees right"
     description = """
                 Rotate image 90 degrees right.
                 """
