@@ -17,7 +17,7 @@ kimage(0.1) {
             allowed = listOf("blur", "median", "average", "sharpen", "unsharpMask", "edgeDetectionStrong", "edgeDetectionCross", "edgeDetectionDiagonal")
         }
         int("radius") {
-            min = 0
+            min = 1
             default = 3
         }
     }
@@ -27,9 +27,9 @@ kimage(0.1) {
         val radius: Int by arguments
 
         when (filter) {
-            "blur" -> inputImage.gaussianBlurFilter(3)
-            "median" -> inputImage.medianFilter(3)
-            "average" -> inputImage.averageFilter(3)
+            "blur" -> inputImage.gaussianBlurFilter(radius)
+            "median" -> inputImage.medianFilter(radius)
+            "average" -> inputImage.averageFilter(radius)
             "sharpen" -> inputImage.sharpenFilter()
             "unsharpMask" -> inputImage.unsharpMaskFilter()
             "edgeDetectionStrong" -> inputImage.edgeDetectionStrongFilter()
