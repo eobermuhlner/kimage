@@ -602,7 +602,7 @@ class KImageApplication : Application() {
                                 vgap = SPACING
 
                                 for (argument in script.scriptArguments.arguments) {
-                                    setupArgumentEditor(argument, argumentStrings)
+                                    setupArgumentEditor(argument)
                                 }
 
                                 row {
@@ -746,8 +746,7 @@ class KImageApplication : Application() {
     }
 
     private fun GridPaneContext.setupArgumentEditor(
-        argument: ScriptArg,
-        argumentStrings: MutableMap<String, String>
+        argument: ScriptArg
     ) {
         row {
             cell {
