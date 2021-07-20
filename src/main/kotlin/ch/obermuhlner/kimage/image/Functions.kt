@@ -242,7 +242,7 @@ fun Image.interpolate(fixPoints: List<Pair<Int, Int>>, power: Double = estimateP
         width,
         height,
         this.channels) { channel, _, _ ->
-        this[channel].interpolate(fixPointsRowColumn,  { medianAround(this[channel], it.first, it.second, medianRadius) }, power = power)
+        this[channel].interpolate(fixPointsRowColumn,  { this[channel].medianAround(it.first, it.second, medianRadius) }, power = power)
     }
 }
 

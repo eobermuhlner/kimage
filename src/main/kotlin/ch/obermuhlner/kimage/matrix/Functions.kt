@@ -230,8 +230,8 @@ fun valueAt(matrix: Matrix, row: Int, column: Int): Double {
     return matrix[row, column]
 }
 
-fun medianAround(matrix: Matrix, row: Int, column: Int, radius: Int = 10): Double {
-    return matrix.croppedMatrix(row - radius, column - radius, radius+radius+1, radius+radius+1).median()
+fun Matrix.medianAround(row: Int, column: Int, radius: Int = 10): Double {
+    return croppedMatrix(row - radius, column - radius, radius+radius+1, radius+radius+1).median()
 }
 
 private fun interpolate(row: Int, column: Int, fixPoints: List<Pair<Int, Int>>, fixValues: List<Double>, power: Double = estimatePowerForInterpolation(fixPoints.size)): Double {
