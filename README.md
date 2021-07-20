@@ -296,6 +296,20 @@ kimage color-stretch --arg brightness=3 --arg curve=s-curve-strong 'remove-backg
 
 ---
 
+The image is still very noisy.
+
+Since we do not have more images to stack we can only use a median filter to reduce the noise.
+
+```shell
+kimage filter --arg filter=median --arg radius=2 'color-stretch(3.0,s-curve-super-strong)_remove-background-gradi
+ent_stack(sigma-clip-median)_aligned_orion1.png'
+```
+
+![](images/align/filter_color-stretch(3.0,s-curve-super-strong)_remove-background-gradient_stack(sigma-clip-median)_aligned_orion1.png)
+
+
+---
+
 
 ## Writing Scripts
 
