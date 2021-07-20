@@ -28,6 +28,8 @@ class ScriptV0_1 : Script(0.1) {
     private var scriptSingle: ScriptSingle? = null
     private var scriptMulti: ScriptMulti? = null
 
+    fun isSingle(): Boolean = scriptSingle != null
+
     fun arguments(initializer: ScriptArguments.() -> Unit) {
         scriptArguments = ScriptArguments().apply(initializer)
     }

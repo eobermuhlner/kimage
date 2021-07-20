@@ -1,8 +1,11 @@
 package ch.obermuhlner.kimage.javafx
 
 import ch.obermuhlner.kimage.*
+import ch.obermuhlner.kimage.image.Image
+import ch.obermuhlner.kimage.image.crop
 import ch.obermuhlner.kimage.math.clamp
 import ch.obermuhlner.kimage.io.ImageReader
+import ch.obermuhlner.kimage.io.ImageWriter
 import ch.obermuhlner.kotlin.javafx.*
 import com.vladsch.flexmark.html.HtmlRenderer
 import com.vladsch.flexmark.parser.Parser
@@ -55,6 +58,13 @@ class KImageApplication : Application() {
     private val outputZoomImageView = ImageView(outputZoomImage)
     private val deltaZoomImageView = ImageView(deltaZoomImage)
 
+    private var currentInputImage: Image? = null
+
+    val argumentStrings = mutableMapOf<String, String>()
+
+    private var previewScript: ScriptV0_1? = null
+    private var previewCommand: String? = null
+
     private val infoTabPane = TabPane()
     private lateinit var infoTabLog: Tab
     private lateinit var infoTabDocu: Tab
@@ -80,10 +90,22 @@ class KImageApplication : Application() {
     private val outputDirectoryProperty = SimpleStringProperty(Paths.get(".").toString())
     private val outputHideOldFilesProperty = SimpleBooleanProperty()
 
+    private val previewModeProperty = SimpleBooleanProperty()
+
     private val inputFiles = FXCollections.observableArrayList<File>()
     private val scriptNames = FXCollections.observableArrayList<String>()
     private val outputFiles = FXCollections.observableArrayList<File>()
     private val hiddenOutputFiles = mutableListOf<File>()
+
+    private val tempInputDirectory = Files.createTempDirectory("kimage_in_").toFile()
+    private val tempOutputDirectory = Files.createTempDirectory("kimage_out_").toFile()
+
+    init {
+        tempInputDirectory.deleteOnExit()
+        tempOutputDirectory.deleteOnExit()
+        println("tempInputDirectory = $tempInputDirectory")
+        println("tempOutputDirectory = $tempOutputDirectory")
+    }
 
     override fun start(primaryStage: Stage) {
         this.primaryStage = primaryStage
@@ -526,17 +548,20 @@ class KImageApplication : Application() {
 
     private fun updateImageView(imageView: ImageView, selectedFile: File?) {
         if (selectedFile == null) {
+            currentInputImage = null
             imageView.image = dummyImage
             updateZoom()
         } else {
             try {
                 runWithProgressDialog("Load Image", "Loading image $selectedFile") {
-                    val image = ImageReader.read(selectedFile)
-                    val writableImage = JavaFXImageUtil.toWritableImage(image)
+                    currentInputImage = ImageReader.read(selectedFile)
+                    currentInputImage?.let {
+                        val writableImage = JavaFXImageUtil.toWritableImage(it)
 
-                    Platform.runLater {
-                        imageView.image = writableImage
-                        updateZoom()
+                        Platform.runLater {
+                            imageView.image = writableImage
+                            updateZoom()
+                        }
                     }
                 }
             } catch (ex: Exception) {
@@ -565,8 +590,6 @@ class KImageApplication : Application() {
                         codeTextArea.text = script.code
 
                         infoTabPane.selectionModel.select(infoTabDocu)
-
-                        val argumentStrings = mutableMapOf<String, String>()
 
                         children += label(script.title) {
                             styleClass += "header2"
@@ -642,10 +665,84 @@ class KImageApplication : Application() {
                                 }
                             }
                         }
+                        children += togglebutton("Preview Mode") {
+                            tooltip = Tooltip("Preview the ${script.name} script.")
+                            selectedProperty().bindBidirectional(previewModeProperty)
+                            previewModeProperty.addListener { _, _, value ->
+                                if (value) {
+                                    previewScript = script
+                                    previewCommand = command
+                                } else {
+                                    previewScript = null
+                                    previewCommand = null
+                                }
+                            }
+                        }
+                        children += button("Run Preview") {
+                            tooltip = Tooltip("Preview the ${script.name} script.")
+                            onAction = EventHandler {
+                                currentInputImage?.let {
+                                    previewImage(it, script, argumentStrings, command)
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
+    }
+
+    private fun previewImage(
+        image: Image,
+        script: ScriptV0_1,
+        argumentStrings: MutableMap<String, String>,
+        command: String
+    ) {
+        val croppedInputFiles = if (script.isSingle()) {
+            val croppedInputFile = cropInputFile(image)
+            listOf(croppedInputFile)
+        } else {
+            listOf()
+        }
+
+        runWithProgressDialog("Previewing ${script.name}", script.title) {
+            //val systemOut = System.out
+            try {
+                //System.setOut(PrintStream(OutputStream.nullOutputStream()))
+
+                KImageManager.executeScript(
+                    script,
+                    argumentStrings,
+                    croppedInputFiles,
+                    false,
+                    false,
+                    false,
+                    command,
+                    tempOutputDirectory.path
+                ) { _, output ->
+                    if (output is Image) {
+                        outputZoomImageView.image =JavaFXImageUtil.toWritableImage(output)
+                        updateZoom()
+                    }
+                }
+            } catch (ex: Exception) {
+                ex.printStackTrace(System.out)
+            } finally {
+                //System.setOut(systemOut)
+            }
+        }
+    }
+
+    private fun cropInputFile(image: Image): File {
+        val croppedInputFile = File(tempInputDirectory, "input.png")
+        val croppedInputImage = image.crop(
+            zoomCenterXProperty.get() - ZOOM_WIDTH / 2,
+            zoomCenterYProperty.get() - ZOOM_HEIGHT / 2,
+            ZOOM_WIDTH,
+            ZOOM_HEIGHT
+        )
+        ImageWriter.write(croppedInputImage, croppedInputFile)
+        return croppedInputFile
     }
 
     private fun GridPaneContext.setupArgumentEditor(
@@ -966,6 +1063,9 @@ class KImageApplication : Application() {
 
             setZoom(zoomX, zoomY)
         }
+        imageView.onMouseReleased = EventHandler {
+            updateFinalZoom()
+        }
     }
 
     private fun setZoom(x: Int, y: Int) {
@@ -978,7 +1078,6 @@ class KImageApplication : Application() {
     private fun setMouseDragEvents(node: Node, handler: EventHandler<in MouseEvent>) {
         node.onMouseClicked = handler
         node.onMouseDragged = handler
-        node.onMouseReleased = handler
     }
 
     private var zoomDragX: Double? = null
@@ -999,7 +1098,8 @@ class KImageApplication : Application() {
             zoomCenterYProperty.set(zoomY)
             updateZoom(zoomX, zoomY)
         }
-        imageView.onMouseDragReleased = EventHandler {
+        imageView.onMouseReleased = EventHandler {
+            updateFinalZoom()
             zoomDragX = null
             zoomDragY = null
         }
@@ -1034,6 +1134,17 @@ class KImageApplication : Application() {
 
                 val rgbDelta = calculateDeltaColor(rgbInput, rgbOutput, deltaFactor)
                 deltaZoomImage.pixelWriter.setColor(x, y, rgbDelta)
+            }
+        }
+    }
+
+    private fun updateFinalZoom() {
+        if (previewModeProperty.get()) {
+            val script = previewScript
+            val command = previewCommand
+            val image = currentInputImage
+            if (image != null && script != null && command != null) {
+                previewImage(image, script, argumentStrings, command)
             }
         }
     }

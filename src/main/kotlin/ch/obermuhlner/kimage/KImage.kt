@@ -260,7 +260,8 @@ object KImageManager {
         verboseMode: Boolean,
         debugMode: Boolean,
         outputPrefix: String,
-        outputDirectory: String
+        outputDirectory: String,
+        outputHandler: (inputFile: File, output: Any?) -> Unit = { inputFile, output -> defaultOutputHandler(outputFile(inputFile, outputPrefix, outputDirectory), output) }
     ) {
         if (helpMode) {
             when (script) {
@@ -271,16 +272,13 @@ object KImageManager {
         } else {
             when (script) {
                 is ScriptV0_1 -> {
-                    script.execute(inputFiles, arguments, verboseMode, debugMode) { inputFile, output ->
-                        outputHandler(outputFile(inputFile, outputPrefix, outputDirectory), output)
-                    }
+                    script.execute(inputFiles, arguments, verboseMode, debugMode, outputHandler)
                 }
             }
         }
     }
 
-    // TODO get rid of duplicate impl
-    private fun outputHandler(outputFile: File, output: Any?): Unit {
+    fun defaultOutputHandler(outputFile: File, output: Any?) {
         when(output) {
             is Image -> {
                 println("Output file: $outputFile")
