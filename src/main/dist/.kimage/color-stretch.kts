@@ -208,11 +208,13 @@ kimage(0.1) {
                 println()
             }
 
-            val outputFile = inputFile.prefixName("color-stretch(${brightness},${curve})_")
-            println("Saving $outputFile")
-            ImageWriter.write(image, outputFile)
+            if (curve == "all") {
+                val outputFile = inputFile.prefixName("color-stretch(${brightness},${curve})_")
+                println("Saving $outputFile")
+                ImageWriter.write(image, outputFile)
+            }
         }
 
-        null
+        image
     }
 }
