@@ -161,7 +161,7 @@ fun textFormatter(defaultValue: Int?, min: Int? = null, max: Int? = null): TextF
 fun textFormatter(defaultValue: Double?, min: Double? = null, max: Double? = null): TextFormatter<Double> {
     val converter = DoubleStringConverter()
     return TextFormatter(converter, defaultValue) { change ->
-        filter(change, Regex("-?[0-9]*\\.?[0-9]*")) {
+        filter(change, Regex("-?[0-9]*\\.?[0-9]*(-?E[0-9]*)?")) {
             val value = converter.fromString(change.controlNewText)
             if (value != null) {
                 if (min != null && value < min) {
