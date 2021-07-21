@@ -20,6 +20,7 @@ import javafx.geometry.Insets
 import javafx.scene.Node
 import javafx.scene.Parent
 import javafx.scene.Scene
+import javafx.scene.canvas.Canvas
 import javafx.scene.control.*
 import javafx.scene.image.ImageView
 import javafx.scene.image.WritableImage
@@ -57,6 +58,9 @@ class KImageApplication : Application() {
     private val inputZoomImageView = ImageView(inputZoomImage)
     private val outputZoomImageView = ImageView(outputZoomImage)
     private val deltaZoomImageView = ImageView(deltaZoomImage)
+
+    private val inputZoomHistogramCanvas = Canvas(HISTOGRAM_WIDTH.toDouble(), HISTOGRAM_HEIGHT.toDouble())
+    private val outputZoomHistogramCanvas = Canvas(HISTOGRAM_WIDTH.toDouble(), HISTOGRAM_HEIGHT.toDouble())
 
     private var currentInputImage: Image? = null
 
@@ -280,7 +284,8 @@ class KImageApplication : Application() {
             }
             row {
                 cell {
-                    label("")
+                    inputZoomHistogramCanvas
+                    //inputHistogramImageView
                 }
                 cell {
                     vbox(SPACING) {
@@ -306,7 +311,8 @@ class KImageApplication : Application() {
                     }
                 }
                 cell {
-                    label("")
+                    outputZoomHistogramCanvas
+                    //outputHistogramImageView
                 }
             }
         }
@@ -1117,22 +1123,106 @@ class KImageApplication : Application() {
 
         val deltaFactor = zoomDeltaFactorProperty.get()
 
+        val inputZoomHistogram = Histogram(256)
+        val outputZoomHistogram = Histogram(256)
+
         for (y in 0 until ZOOM_HEIGHT) {
             for (x in 0 until ZOOM_WIDTH) {
                 val xInput = clamp(zoomX + x - zoomWidthHalf, 0, inputImageWidth)
                 val yInput = clamp(zoomY + y - zoomHeightHalf, 0, inputImageHeight)
                 val rgbInput = inputImage.pixelReader.getColor(xInput, yInput)
                 inputZoomImage.pixelWriter.setColor(x, y, rgbInput)
+                inputZoomHistogram.add(rgbInput)
 
                 val xOutput = clamp(zoomX + x - zoomWidthHalf, 0, outputImageWidth)
                 val yOutput = clamp(zoomY + y - zoomHeightHalf, 0, outputImageHeight)
                 val rgbOutput = outputImage.pixelReader.getColor(xOutput, yOutput)
                 outputZoomImage.pixelWriter.setColor(x, y, rgbOutput)
+                outputZoomHistogram.add(rgbOutput)
 
                 val rgbDelta = calculateDeltaColor(rgbInput, rgbOutput, deltaFactor)
                 deltaZoomImage.pixelWriter.setColor(x, y, rgbDelta)
             }
         }
+
+        drawHistogram(inputZoomHistogram, inputZoomHistogramCanvas)
+        drawHistogram(outputZoomHistogram, outputZoomHistogramCanvas)
+    }
+
+    private fun drawHistogram(histogram: Histogram, histogramCanvas: Canvas) {
+        val gc = histogramCanvas.graphicsContext2D
+
+        val background = Color.grayRgb(0xd0)
+        gc.fill = background
+        gc.fillRect(0.0, 0.0, histogramCanvas.width, histogramCanvas.height)
+        gc.lineWidth = 2.0
+
+        val max = histogram.max()
+
+        val h = histogramCanvas.height.toInt()
+
+        for (x in 0 until histogram.n) {
+            val rY = (histogram.red(x) * histogramCanvas.height / max).toInt()
+            val gY = (histogram.green(x) * histogramCanvas.height / max).toInt()
+            val bY = (histogram.blue(x) * histogramCanvas.height / max).toInt()
+            val maxY = max(rY, max(gY, bY))
+
+            for (y in 0 until maxY) {
+                val color = if (y < rY) {
+                    if (y < gY) {
+                        if (y < bY) {
+                            Color.WHITE
+                        } else {
+                            Color.YELLOW
+                        }
+                    } else {
+                        if (y < bY) {
+                            Color.MAGENTA
+                        } else {
+                            Color.RED
+                        }
+                    }
+                } else {
+                    if (y < gY) {
+                        if (y < bY) {
+                            Color.CYAN
+                        } else {
+                            Color.GREEN
+                        }
+                    } else {
+                        if (y < bY) {
+                            Color.BLUE
+                        } else {
+                            background
+                        }
+                    }
+                }
+                gc.pixelWriter.setColor(x, h - y, color)
+            }
+        }
+    }
+
+    class Histogram(val n: Int = 256) {
+        private val countR = IntArray(n)
+        private val countG = IntArray(n)
+        private val countB = IntArray(n)
+
+        fun add(color: Color) {
+            val r = (color.red * (n-1)).toInt()
+            val g = (color.green * (n-1)).toInt()
+            val b = (color.blue * (n-1)).toInt()
+            countR[r]++
+            countG[g]++
+            countB[b]++
+        }
+
+        fun max(): Int {
+            return max(max(countR.maxOrNull()!!, countG.maxOrNull()!!), countB.maxOrNull()!!)
+        }
+
+        fun red(index: Int): Int = countR[index]
+        fun green(index: Int): Int = countG[index]
+        fun blue(index: Int): Int = countB[index]
     }
 
     private fun updateFinalZoom() {
@@ -1188,8 +1278,11 @@ class KImageApplication : Application() {
         private const val IMAGE_WIDTH = 400
         private const val IMAGE_HEIGHT = 400
 
-        private const val ZOOM_WIDTH = 200
-        private const val ZOOM_HEIGHT = 200
+        private const val ZOOM_WIDTH = 256
+        private const val ZOOM_HEIGHT = 256
+
+        private const val HISTOGRAM_WIDTH = 256
+        private const val HISTOGRAM_HEIGHT = 100
 
         private const val FILE_TABLE_WIDTH = 400
         private const val FILE_TABLE_HEIGHT = 200
