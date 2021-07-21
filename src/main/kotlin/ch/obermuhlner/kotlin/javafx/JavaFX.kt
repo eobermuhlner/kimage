@@ -161,7 +161,7 @@ fun textFormatter(defaultValue: Int?, min: Int? = null, max: Int? = null): TextF
 fun textFormatter(defaultValue: Double?, min: Double? = null, max: Double? = null): TextFormatter<Double> {
     val converter = DoubleStringConverter()
     return TextFormatter(converter, defaultValue) { change ->
-        filter(change, Regex("-?[0-9]*\\.?[0-9]*(-?E[0-9]*)?")) {
+        filter(change, Regex("-?[0-9]*\\.?[0-9]*(E-?[0-9]*)?")) {
             val value = converter.fromString(change.controlNewText)
             if (value != null) {
                 if (min != null && value < min) {
@@ -222,6 +222,9 @@ fun menuitem(text: String, initializer: MenuItem.() -> Unit)
 
 fun menuitem(text: String, graphic: Node, initializer: MenuItem.() -> Unit)
         = MenuItem(text, graphic).apply(initializer)
+
+fun menuitemSeparator()
+        = SeparatorMenuItem()
 
 
 fun tabpane(initializer: TabPane.() -> Unit)
