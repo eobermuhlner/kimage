@@ -515,6 +515,7 @@ class KImageApplication : Application() {
                                 }
                             }
                         },
+                        menuitemSeparator(),
                         menuitem("Delete file forever", FontIcon()) {
                             id = "delete-forever-icon"
                             onAction = EventHandler {
