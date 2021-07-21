@@ -1203,20 +1203,29 @@ object TestScript {
                         The X coordinate of the center of the vignette effect.
                         The default value is the center of the image.
                         """
+                    hint = Hint.ImageX
                 }
                 optionalInt("centerY") {
                     description = """
                         The Y coordinate of the center of the vignette effect.
                         The default value is the center of the image.
                         """
+                    hint = Hint.ImageY
                 }
-                string("mode") {
+                string("channel") {
                     description = """
                         Controls which channels are used to calculate the vignette effect.
-                        The `rgb` mode calculates the effect on the three color channels separately.
+                        The `rgb` channel calculates the effect on the three color channels separately.
                         """
                     allowed = listOf("rgb", "gray", "luminance", "red", "green", "blue")
                     default = "rgb"
+                }
+                string("model") {
+                    description = """
+                        The mathematical model use to calculate the vignette effect.
+                        """
+                    allowed = listOf("gauss", "polynomial", "auto")
+                    default = "auto"
                 }
                 double("kappa") {
                     description = """
@@ -1244,16 +1253,17 @@ object TestScript {
                 val kappa: Double by arguments
                 var centerX: Optional<Int> by arguments
                 var centerY: Optional<Int> by arguments
-                val mode: String by arguments
+                val channel: String by arguments
+                val model: String by arguments
 
-                val channels = when (mode) {
+                val channels = when (channel) {
                     "gray" -> listOf(Channel.Gray)
                     "luminance" -> listOf(Channel.Luminance)
                     "red" -> listOf(Channel.Red)
                     "green" -> listOf(Channel.Green)
                     "blue" -> listOf(Channel.Blue)
                     "rgb" -> listOf(Channel.Red, Channel.Green, Channel.Blue)
-                    else -> throw IllegalArgumentException("Unknown channel mode: $mode")
+                    else -> throw IllegalArgumentException("Unknown channel: $channel")
                 }
                 val channelMatrices = mutableListOf<Matrix>()
 
@@ -1290,7 +1300,7 @@ object TestScript {
                         for (y in 0 until inputImage.height) {
                             val points = WeightedObservedPoints()
                             for (x in 0 until inputImage.width) {
-                                val value = matrix.getPixel(x, y).toDouble()
+                                val value = matrix.getPixel(x, y)
                                 if (value in low..high) {
                                     points.add(x.toDouble(), value)
                                 }
@@ -1322,7 +1332,7 @@ object TestScript {
                         for (x in 0 until inputImage.width) {
                             val points = WeightedObservedPoints()
                             for (y in 0 until inputImage.height) {
-                                val value = matrix.getPixel(x, y).toDouble()
+                                val value = matrix.getPixel(x, y)
                                 if (value in low..high) {
                                     points.add(y.toDouble(), value)
                                 }
@@ -1380,20 +1390,26 @@ object TestScript {
                     for (i in xValues.indices) {
                         points.add(xValues[i], yValues[i])
                     }
-                    val polynomialFit2 = PolynomialCurveFitter.create(2).fit(points.toList())
-                    println("Apache polynomialFit2: ${polynomialFit2.contentToString()}")
                     val gaussFit = GaussianCurveFitter.create().fit(points.toList())
-                    println("Apache gaussFit: ${gaussFit.contentToString()}")
+                    println("Gauss: ${gaussFit.contentToString()}")
+                    val polynomialFit2 = PolynomialCurveFitter.create(2).fit(points.toList())
+                    println("Polynomial: ${polynomialFit2.contentToString()}")
 
-                    var error = 0.0
+                    var errorGauss = 0.0
+                    var errorPolynomial = 0.0
                     for (i in xValues.indices) {
                         val y1 = yValues[i]
-                        val y2 = polynomialFunction(xValues[i], polynomialFit2)
-                        val delta = y1 - y2
-                        error += delta * delta
+                        val yGauss = gaussFunction(xValues[i], gaussFit[0], gaussFit[1], gaussFit[2])
+                        val deltaGauss = y1 - yGauss
+                        errorGauss += deltaGauss * deltaGauss
+                        val yPolynomial = polynomialFunction(xValues[i], polynomialFit2)
+                        val deltaPolynomial = y1 - yPolynomial
+                        errorPolynomial += deltaPolynomial * deltaPolynomial
                     }
-                    error /= xValues.size
-                    println("Standard Error: $error")
+                    errorGauss /= xValues.size
+                    errorPolynomial /= xValues.size
+                    println("Standard Error (Gauss):      $errorGauss")
+                    println("Standard Error (Polynomial): $errorPolynomial")
                     println()
 
                     if (debugMode) {
@@ -1417,7 +1433,17 @@ object TestScript {
                         val dx = (centerX.get() - column).toDouble()
                         val dy = (centerY.get() - row).toDouble()
                         val distance = sqrt(dx*dx + dy*dy)
-                        polynomialFunction(distance, polynomialFit2)
+                        when (model) {
+                            "gauss" -> gaussFunction(distance, gaussFit[0], gaussFit[1], gaussFit[2])
+                            "polynomial" -> polynomialFunction(distance, polynomialFit2)
+                            "auto" -> if (errorGauss < errorPolynomial) {
+                                gaussFunction(distance, gaussFit[0], gaussFit[1], gaussFit[2])
+                            } else {
+                                polynomialFunction(distance, polynomialFit2)
+                            }
+                            else -> throw IllegalArgumentException("Unknown model: $model")
+                        }
+
                     }
 
                     val flatMax = flatMatrix.max()
@@ -1564,10 +1590,10 @@ object TestScript {
             }
         }
 
-    fun scriptTestMulti(): Script =
+    fun scriptTestArgs(): Script =
         kimage(0.1) {
-            name = "test-multi"
-            title = "Test script to show how to handle multiple images in a kimage script"
+            name = "test-args"
+            title = "Test script to show how to handle arguments in a kimage script"
             description = """
                 Example script as starting point for developers.
                 """
@@ -1589,13 +1615,24 @@ object TestScript {
                     max = 100.0
                     default = 50.0
                 }
+                optionalDouble("optionalDoubleArg") {
+                    description = "Example argument for an optional double value."
+                    min = 0.0
+                    max = 100.0
+                }
                 boolean("booleanArg") {
                     description = "Example argument for a boolean value."
                     default = false
                 }
+                optionalBoolean("optionalBooleanArg") {
+                    description = "Example argument for am optional boolean value."
+                }
                 string("stringArg") {
                     description = "Example argument for a string value."
                     default = "undefined"
+                }
+                optionalString("optionalStringArg") {
+                    description = "Example argument for an optional string value."
                 }
                 string("allowedStringArg") {
                     description = "Example argument for a string value with some allowed strings."
@@ -1603,26 +1640,38 @@ object TestScript {
                     default = "red"
                 }
                 string("regexStringArg") {
-                    description = "Example argument for a string value with regular expression."
+                    description = """
+                Example argument for a string value with regular expression.
+                The input only allows `a` characters (at least one).
+                """
                     regex = "a+"
                     default = "aaa"
                 }
                 file("fileArg") {
                     description = "Example argument for a file."
                     isFile = true
+                    default = File("unknown.txt")
+                }
+                file("mandatoryFileArg") {
+                    description = "Example argument for a file."
+                    isFile = true
                 }
                 file("dirArg") {
-                    description = "Example argument for a directory."
-                    isDirectory = true
-                }
-                file("dirWithDefaultArg") {
                     description = "Example argument for a directory with default."
                     isDirectory = true
                     default = File(".")
                 }
+                file("mandatoryDirArg") {
+                    description = "Example argument for a mandatory directory."
+                    isDirectory = true
+                }
                 optionalFile("optionalFileArg") {
                     description = "Example argument for an optional file."
                     isFile = true
+                }
+                optionalFile("optionalDirArg") {
+                    description = "Example argument for an optional directory."
+                    isDirectory = true
                 }
                 list("listOfIntArg") {
                     description = "Example argument for a list of integer values."
@@ -1674,14 +1723,19 @@ object TestScript {
                 val intArg: Int by arguments
                 val optionalIntArg: Optional<Int> by arguments
                 val doubleArg: Double by arguments
+                val optionalDoubleArg: Optional<Double> by arguments
                 val booleanArg: Boolean by arguments
+                val optionalBooleanArg: Optional<Boolean> by arguments
                 val stringArg: String by arguments
+                val optionalStringArg: Optional<String> by arguments
                 val allowedStringArg: String by arguments
                 val regexStringArg: String by arguments
                 val fileArg: File by arguments
+                val mandatoryFileArg: File by arguments
                 val dirArg: File by arguments
-                val dirWithDefaultArg: File by arguments
+                val mandatoryDirArg: File by arguments
                 val optionalFileArg: Optional<File> by arguments
+                val optionalDirArg: Optional<File> by arguments
 
                 val listOfIntArg: List<Int> by arguments
                 val optionalListOfIntArg: Optional<List<Int>> by arguments
@@ -1697,22 +1751,27 @@ object TestScript {
                 for (rawArgument in rawArguments) {
                     val key: String = rawArgument.key
                     val value: String = rawArgument.value
-                    println("  Argument: ${key} = ${value}")
+                    println("  ${key} = ${value}")
                 }
                 println()
 
-                println("Processed Arguments:")
+                println("Processed Arguments as Variables:")
                 println("  intArg = $intArg")
                 println("  optionalIntArg = $optionalIntArg")
                 println("  doubleArg = $doubleArg")
+                println("  optionalDoubleArg = $optionalDoubleArg")
                 println("  booleanArg = $booleanArg")
+                println("  optionalBooleanArg = $optionalBooleanArg")
                 println("  stringArg = $stringArg")
+                println("  optionalStringArg = $optionalStringArg")
                 println("  allowedStringArg = $allowedStringArg")
                 println("  regexStringArg = $regexStringArg")
                 println("  fileArg = $fileArg")
+                println("  mandatoryFileArg = $mandatoryFileArg")
                 println("  dirArg = $dirArg")
-                println("  dirWithDefaultArg = $dirWithDefaultArg")
+                println("  mandatoryDirArg = $mandatoryDirArg")
                 println("  optionalFileArg = $optionalFileArg")
+                println("  optionalDirArg = $optionalDirArg")
                 println("  listOfIntArg = $listOfIntArg")
                 println("  optionalListOfIntArg = $optionalListOfIntArg")
                 println("  recordArg = $recordArg")
@@ -1724,6 +1783,69 @@ object TestScript {
                 println("Input Files:")
                 for (file in inputFiles) {
                     println("  File: $file exists=${file.exists()}")
+                }
+            }
+        }
+
+    fun scriptTestMulti(): Script =
+        kimage(0.1) {
+            name = "test-multi"
+            title = "Test script to show how to process multiple images in a kimage script"
+            description = """
+                Example script as starting point for developers.
+                """
+            arguments {
+                boolean("center") {
+                    description = "Center images to fit the first image."
+                    default = false
+                }
+            }
+
+            // 'multi' means that all input files are processed together in a single run
+            multi {
+                // The processed arguments are available in a Map 'arguments'
+                val center: Boolean by arguments // Use the kotlin delegate by feature to map the arguments into typed variables
+
+                // Variables 'verboseMode' and 'debugMode' are automatically available
+                if (verboseMode) {
+                    println("arguments  = $arguments")
+
+                    // The raw unprocessed arguments (no default values filled) are available in the rare case you need them
+                    println("rawArguments  = $rawArguments")
+                }
+
+                // The input files can now be processed
+                println("inputFiles  = $inputFiles")
+
+                // Note: In 'multi' mode there are no 'inputFile' or 'inputImage' variables
+                //       You need to load the images yourself and process them.
+                //       Preloading all the input images would be more convenient but might lead to out-of-memory problems
+
+                // The following processing code is a documented version of the 'stack-average' script:
+
+                var stacked: Image? = null // The result image is initally null
+
+                for (inputFile in inputFiles) {
+                    println("Loading image: $inputFile")
+                    val image = ImageReader.read(inputFile) // Load an input image (one by one - only the stacked image is kept in memory)
+                    stacked = if (stacked == null) {
+                        image // If the input image is the first image assign it to 'stacked'
+                    } else {
+                        // Ensure input image has the same size as 'stacked'
+                        val croppedImage = if (center) {
+                            image.cropCenter(stacked.width/2, stacked.height/2, stacked.width, stacked.height)
+                        } else {
+                            image.crop(0, 0, stacked.width, stacked.height)
+                        }
+                        stacked + croppedImage // Assign the pixel-wise sum of 'stacked' and 'croppedImage' to 'stacked'
+                    }
+                }
+
+                // The last value in the script is the output
+                if (stacked == null) {
+                    null // If no image was processed return null
+                } else {
+                    stacked / inputFiles.size.toDouble() // Pixel-wise divide the stacked image by the number of input files -> average pixels
                 }
             }
         }
