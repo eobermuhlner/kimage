@@ -47,6 +47,10 @@ class KImageApplication : Application() {
 
     private lateinit var primaryStage: Stage
 
+    private val red = Color.color(1.0, 0.0, 0.0, 0.8)
+    private val green = Color.color(0.0, 1.0, 0.0, 0.8)
+    private val blue = Color.color(0.0, 0.0, 1.0, 0.8)
+
     private val inputZoomImage = WritableImage(ZOOM_WIDTH, ZOOM_HEIGHT)
     private val outputZoomImage = WritableImage(ZOOM_WIDTH, ZOOM_HEIGHT)
     private val deltaZoomImage = WritableImage(ZOOM_WIDTH, ZOOM_HEIGHT)
@@ -1153,55 +1157,39 @@ class KImageApplication : Application() {
     private fun drawHistogram(histogram: Histogram, histogramCanvas: Canvas) {
         val gc = histogramCanvas.graphicsContext2D
 
-        val background = Color.grayRgb(0xd0)
+        val background = Color.WHITE
         gc.fill = background
         gc.fillRect(0.0, 0.0, histogramCanvas.width, histogramCanvas.height)
-        gc.lineWidth = 2.0
+        gc.lineWidth = 1.0
 
         val max = histogram.max()
 
         val h = histogramCanvas.height.toInt()
 
-        for (x in 0 until histogram.n) {
-            val rY = (histogram.red(x) * histogramCanvas.height / max).toInt()
-            val gY = (histogram.green(x) * histogramCanvas.height / max).toInt()
-            val bY = (histogram.blue(x) * histogramCanvas.height / max).toInt()
-            val maxY = max(rY, max(gY, bY))
+        var rY1 = h - (histogram.red(0) * histogramCanvas.height / max)
+        var gY1 = h - (histogram.green(0) * histogramCanvas.height / max)
+        var bY1 = h - (histogram.blue(0) * histogramCanvas.height / max)
 
-            for (y in 0 until maxY) {
-                val color = if (y < rY) {
-                    if (y < gY) {
-                        if (y < bY) {
-                            Color.WHITE
-                        } else {
-                            Color.YELLOW
-                        }
-                    } else {
-                        if (y < bY) {
-                            Color.MAGENTA
-                        } else {
-                            Color.RED
-                        }
-                    }
-                } else {
-                    if (y < gY) {
-                        if (y < bY) {
-                            Color.CYAN
-                        } else {
-                            Color.GREEN
-                        }
-                    } else {
-                        if (y < bY) {
-                            Color.BLUE
-                        } else {
-                            background
-                        }
-                    }
-                }
-                gc.pixelWriter.setColor(x, h - y, color)
-            }
+        for (x in 1 until histogram.n) {
+            val rY = h - (histogram.red(x) * histogramCanvas.height / max)
+            val gY = h - (histogram.green(x) * histogramCanvas.height / max)
+            val bY = h - (histogram.blue(x) * histogramCanvas.height / max)
+
+            gc.stroke = red
+            gc.strokeLine(x.toDouble()-1, rY1, x.toDouble(), rY)
+
+            gc.stroke = green
+            gc.strokeLine(x.toDouble()-1, gY1, x.toDouble(), gY)
+
+            gc.stroke = blue
+            gc.strokeLine(x.toDouble()-1, bY1, x.toDouble(), bY)
+
+            rY1 = rY
+            gY1 = gY
+            bY1 = bY
+
         }
-    }
+}
 
     class Histogram(val n: Int = 256) {
         private val countR = IntArray(n)
@@ -1283,7 +1271,7 @@ class KImageApplication : Application() {
         private const val ZOOM_HEIGHT = 256
 
         private const val HISTOGRAM_WIDTH = 256
-        private const val HISTOGRAM_HEIGHT = 100
+        private const val HISTOGRAM_HEIGHT = 80
 
         private const val FILE_TABLE_WIDTH = 400
         private const val FILE_TABLE_HEIGHT = 200
