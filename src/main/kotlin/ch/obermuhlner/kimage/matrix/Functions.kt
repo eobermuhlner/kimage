@@ -12,6 +12,8 @@ fun Matrix.setPixel(x: Int, y: Int, value: Double) {
     this[y, x] = value
 }
 
+fun Matrix.isPixelInside(x: Int, y: Int) = isInside(y, x)
+
 fun Matrix.contentToString(multiline: Boolean = false): String {
     val str = StringBuilder()
 

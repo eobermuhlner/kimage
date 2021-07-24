@@ -34,6 +34,8 @@ interface Matrix : Iterable<Double> {
         }
     }
 
+    fun isInside(row: Int, column: Int) = row in 0 until rows && column in 0 until columns
+
     fun boundedColumn(column: Int) = clamp(column, 0, columns - 1)
     fun boundedRow(row: Int) = clamp(row, 0, rows - 1)
 
