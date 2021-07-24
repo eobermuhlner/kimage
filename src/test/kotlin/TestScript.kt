@@ -6,6 +6,7 @@ import ch.obermuhlner.kimage.image.*
 import ch.obermuhlner.kimage.io.*
 import ch.obermuhlner.kimage.math.*
 import ch.obermuhlner.kimage.matrix.*
+import ch.obermuhlner.util.StreamGobbler
 import org.apache.commons.math3.fitting.*
 import org.apache.commons.math3.fitting.PolynomialCurveFitter
 import org.apache.commons.math3.fitting.WeightedObservedPoints
@@ -13,6 +14,7 @@ import org.apache.commons.math3.fitting.WeightedObservedPoints
 import java.io.*
 import java.nio.file.*
 import java.util.*
+import java.util.concurrent.Executors
 import kotlin.math.*
 
 object TestScript {
@@ -40,12 +42,308 @@ object TestScript {
         //runScript(scriptRemoveVignette(), mapOf(), "images/vignette/flat_large.tif")
         //runScript(scriptRemoveVignette(), mapOf("mode" to "rgb"), "images/vignette/IMG_6800.TIF")
 
-        //runScript(scriptRemoveOutliers(), mapOf("kappa" to "20"), "images/outlier-pixels/bias_10s_ISO1600.TIF")
-        runScript(scriptRemoveOutliers(), mapOf("kappa" to "20"), "images/outlier-pixels/bias_30s_ISO1600.TIF")
+        runScript(scriptRemoveOutliers(), mapOf("kappa" to "10"), "images/outlier-pixels/bias_10s_ISO1600.tiff")
+        //runScript(scriptRemoveOutliers(), mapOf("low" to "0", "high" to "0.5"), "images/outlier-pixels/bias_10s_ISO1600.tiff")
         //runScript(scriptRemoveOutliers(), mapOf("kappa" to "20"), "images/outlier-pixels/bias_1over4000s_ISO1600.TIF")
 
         //runScript(scriptTestMulti(), mapOf())
+
+        //runScript(scriptAutoColor(), mapOf())
+
+        //runScript(scriptConvertRaw(), mapOf("interpolation" to "none-unscaled"), "images/outlier-pixels/bias_10s_ISO1600.CR2")
+        //runScript(scriptConvertRaw(), mapOf(), "images/raw/IMG_8920.cr2")
     }
+
+    private fun scriptConvertRaw(): Script =
+        kimage(0.1) {
+            name = "convert-raw"
+            title = "Convert an image from raw format into tiff"
+            description = """
+                Convert an image into another format.
+                """
+            arguments {
+                string("dcraw") {
+                    default = "dcraw"
+                }
+                string("rotate") {
+                    allowed = listOf("0", "90", "180", "270", "auto")
+                    default = "auto"
+                }
+                boolean("aspectRatio") {
+                    default = true
+                }
+                string("whitebalance") {
+                    allowed = listOf("camera", "image", "custom", "fixed")
+                    default = "camera"
+                }
+                optionalList("multipliers") {
+                    min = 4
+                    max = 4
+                    double {
+                    }
+                }
+                string("colorspace") {
+                    allowed = listOf("raw", "sRGB", "AdobeRGB", "WideGamutRGB", "KodakProPhotoRGB", "XYZ", "ACES", "embed")
+                    default = "sRGB"
+                }
+                string("interpolation") {
+                    allowed = listOf("bilinear", "variable-number-gradients", "patterned-pixel-grouping", "adaptive-homogeneity-directed", "none", "none-unscaled", "none-uncropped")
+                    default = "adaptive-homogeneity-directed"
+                }
+                int("medianPasses") {
+                    default = 0
+                }
+                string("bits") {
+                    allowed = listOf("8", "16")
+                    default = "16"
+                }
+                record("gamma") {
+                    double("gammaPower") {
+                        default = 2.222
+                    }
+                    double("gammaSlope") {
+                        default = 4.5
+                    }
+                }
+                double("brightness") {
+                    default = 1.0
+                }
+            }
+
+            fun dcraw(
+                dcraw: String,
+                aspectRatio: Boolean,
+                rotate: String,
+                whitebalance: String,
+                multipliers: Optional<List<Double>>,
+                colorspace: String,
+                interpolation: String,
+                medianPasses: Int,
+                bits: String,
+                brightness: Double,
+                file: File
+            ) {
+                val processBuilder = ProcessBuilder()
+
+                val command = mutableListOf(dcraw, "-T", "-v")
+                if (!aspectRatio) {
+                    command.add("-j")
+                }
+                when (rotate) {
+                    "0" -> {
+                        command.add("-t")
+                        command.add("0")
+                    }
+                    "90" -> {
+                        command.add("-t")
+                        command.add("90")
+                    }
+                    "180" -> {
+                        command.add("-t")
+                        command.add("180")
+                    }
+                    "270" -> {
+                        command.add("-t")
+                        command.add("270")
+                    }
+                    "auto" -> {}
+                    else -> throw java.lang.IllegalArgumentException("Unknown rotate: $rotate")
+                }
+                when (whitebalance) {
+                    "camera" -> command.add("-w")
+                    "image" -> command.add("-a")
+                    "custom" -> {
+                        command.add("-r")
+                        if (multipliers.isPresent) {
+                            command.add(multipliers.get()[0].toString())
+                            command.add(multipliers.get()[1].toString())
+                            command.add(multipliers.get()[2].toString())
+                            command.add(multipliers.get()[3].toString())
+                        } else {
+                            command.add("1")
+                            command.add("1")
+                            command.add("1")
+                            command.add("1")
+                        }
+                    }
+                    "fixed" -> command.add("-W")
+                    else -> throw java.lang.IllegalArgumentException("Unknown whitebalance: $whitebalance")
+                }
+                when (colorspace) {
+                    "raw" -> {
+                        command.add("-o")
+                        command.add("0")
+                    }
+                    "sRGB" -> {
+                        command.add("-o")
+                        command.add("1")
+                    }
+                    "AdobeRGB" -> {
+                        command.add("-o")
+                        command.add("2")
+                    }
+                    "WideGamutRGB" -> {
+                        command.add("-o")
+                        command.add("3")
+                    }
+                    "KodakProPhotoRGB" -> {
+                        command.add("-o")
+                        command.add("4")
+                    }
+                    "XYZ" -> {
+                        command.add("-o")
+                        command.add("5")
+                    }
+                    "ACES" -> {
+                        command.add("-o")
+                        command.add("6")
+                    }
+                    "embed" -> {
+                        command.add("-p")
+                        command.add("embed")
+                    }
+                    else -> throw java.lang.IllegalArgumentException("Unknown colorspace: $colorspace")
+                }
+                when (interpolation) {
+                    // "bilinear", "variable-number-gradients", "patterned-pixel-grouping", "adaptive-homogeneity-directed", "none", "none-unscaled", "none-uncropped"
+                    "bilinear" -> {
+                        command.add("-q")
+                        command.add("0")
+                    }
+                    "variable-number-gradients" -> {
+                        command.add("-q")
+                        command.add("1")
+                    }
+                    "patterned-pixel-grouping" -> {
+                        command.add("-q")
+                        command.add("2")
+                    }
+                    "adaptive-homogeneity-directed" -> {
+                        command.add("-q")
+                        command.add("3")
+                    }
+                    "none" -> command.add("-d")
+                    "none-unscaled" -> command.add("-D")
+                    "none-uncropped" -> command.add("-E")
+                    else -> throw java.lang.IllegalArgumentException("Unknown interpolation: $interpolation")
+                }
+                if (medianPasses > 0) {
+                    command.add("-m")
+                    command.add(medianPasses.toString())
+                }
+                when (bits) {
+                    "16" -> command.add("-6")
+                    else -> {}
+                }
+                command.add("-b")
+                command.add(brightness.toString())
+                command.add(file.path)
+
+                println("Command: $command")
+
+                processBuilder.command(command)
+                //processBuilder.directory(file.parentFile)
+
+                val process = processBuilder.start()
+
+                Executors.newSingleThreadExecutor().submit(StreamGobbler(process.errorStream, System.out::println))
+                val exitCode = process.waitFor()
+                println("Exit code: $exitCode")
+            }
+
+            multi {
+                val dcraw: String by arguments
+                val aspectRatio: Boolean by arguments
+                val rotate: String by arguments
+                val whitebalance: String by arguments
+                val multipliers: Optional<List<Double>> by arguments
+                val colorspace: String by arguments
+                val interpolation: String by arguments
+                val medianPasses: Int by arguments
+                val bits: String by arguments
+                val brightness: Double by arguments
+
+                for (inputFile in inputFiles) {
+                    println("Converting $inputFile")
+                    dcraw(dcraw, aspectRatio, rotate, whitebalance, multipliers, colorspace, interpolation, medianPasses, bits, brightness, inputFile)
+                    println()
+                }
+
+                null
+            }
+        }
+
+    private fun scriptAutoColor(): Script =
+        kimage(0.1) {
+            name = "auto-color"
+            title = "Automatically correct colors"
+            description = """
+                Stretch the pixel values so that the entire color range is used.
+                """
+            arguments {
+                double("kappa") {
+                    description = """
+                        The kappa factor is used in sigma-clipping of sample values to determine the outlier values.
+                        """
+                    default = 10.0
+                }
+                optionalDouble("low") {
+                    description = """
+                        The low threshold to remove outliers below.
+                        The default `low` value is calculated from the image using the `kappa` factor.
+                        """
+                }
+                optionalDouble("high") {
+                    description = """
+                        The high threshold to remove outliers below.
+                        The default `high` value is calculated from the image using the `kappa` factor.
+                        """
+                }
+            }
+
+            single {
+                val kappa: Double by arguments
+                var low: Optional<Double> by arguments
+                var high: Optional<Double> by arguments
+
+                val outputMatrices = mutableMapOf<Channel, Matrix>()
+                for (channel in inputImage.channels) {
+                    println("Processing channel: $channel")
+
+                    val matrix = inputImage[channel]
+
+                    val globalMedian = matrix.fastMedian()
+                    val globalStddev = matrix.stddev()
+                    if (!low.isPresent) {
+                        low = Optional.of(globalMedian - globalStddev * kappa)
+                    }
+                    if (!high.isPresent) {
+                        high = Optional.of(globalMedian + globalStddev * kappa)
+                    }
+
+                    val range = high.get() - low.get()
+
+
+                    if (verboseMode) {
+                        println("Median value: $globalMedian")
+                        println("Standard deviation: $globalStddev")
+                        println("Clipping range: $low .. $high")
+                    }
+
+                    val m = matrix.create()
+                    for (row in 0 until matrix.rows) {
+                        for (column in 0 until matrix.columns) {
+                            val value = matrix[row, column]
+                            m[row, column] = (value - low.get()) / range
+                        }
+                    }
+
+                    outputMatrices[channel] = m
+                }
+
+                MatrixImage(inputImage.width, inputImage.height, inputImage.channels) { channel, _, _ -> outputMatrices[channel]!! }
+            }
+        }
 
     private fun scriptRemoveOutliers(): Script =
         kimage(0.1) {
@@ -100,6 +398,8 @@ object TestScript {
                 val method: String by arguments
                 val localRadius: Int by arguments
 
+                val badpixels: MutableSet<Pair<Int, Int>> = mutableSetOf()
+                val badpixelMatrices = mutableMapOf<Channel, Matrix>()
                 val outputMatrices = mutableMapOf<Channel, Matrix>()
                 for (channel in inputImage.channels) {
                     println("Processing channel: $channel")
@@ -122,33 +422,57 @@ object TestScript {
                     }
 
                     var outlierCount = 0
-                    val m = matrix.create()
+                    val outputMatrix = matrix.create()
+                    val badpixelMatrix = matrix.create()
                     for (row in 0 until matrix.rows) {
                         for (column in 0 until matrix.columns) {
                             val value = matrix[row, column]
-                            m[row, column] = if (value in low.get() .. high.get()) {
+                            outputMatrix[row, column] = if (value in low.get() .. high.get()) {
                                 matrix[row, column]
                             } else {
+                                badpixels.add(Pair(column, row))
                                 outlierCount++
-                                when (method) {
+                                val replacedValue = when (method) {
                                     "global-median" -> globalMedian
                                     "local-median" -> matrix.medianAround(row, column, localRadius)
                                     else -> throw java.lang.IllegalArgumentException("Unknown method: $method")
                                 }
-
+                                badpixelMatrix[row, column] = replacedValue
+                                replacedValue
                             }
                         }
                     }
                     println("Found $outlierCount outliers")
                     println()
 
-                    outputMatrices[channel] = m
+                    badpixelMatrices[channel] = badpixelMatrix
+                    outputMatrices[channel] = outputMatrix
+                }
+
+                val file = inputFile.prefixName("badpixels_").suffixExtension(".txt")
+                println("Saving $file")
+                val badpixelWriter = PrintWriter(FileWriter(file))
+
+                for (badpixel in badpixels) {
+                    badpixelWriter.println(String.format("%6d %6d 0", badpixel.first, badpixel.second))
+                    if (debugMode) {
+                        val badPixelFile = inputFile.prefixName("badpixel_${badpixel.first}_${badpixel.second}_")
+                        val badPixelCrop = inputImage.cropCenter(5, badpixel.first, badpixel.second).scaleBy(4.0, 4.0, Scaling.Nearest)
+                        ImageWriter.write(badPixelCrop, badPixelFile)
+                    }
+                }
+                badpixelWriter.close()
+
+                if (debugMode) {
+                    val badpixelImageFile = inputFile.prefixName("badpixel_")
+                    println("Saving $badpixelImageFile")
+                    val badpixelImage = MatrixImage(inputImage.width, inputImage.height, inputImage.channels) { channel, _, _ -> badpixelMatrices[channel]!! }
+                    ImageWriter.write(badpixelImage, badpixelImageFile)
                 }
 
                 MatrixImage(inputImage.width, inputImage.height, inputImage.channels) { channel, _, _ -> outputMatrices[channel]!! }
             }
         }
-
 
     private fun scriptRemoveBackgroundMedian(): Script =
         kimage(0.1) {
@@ -397,6 +721,42 @@ object TestScript {
                         ImageWriter.write(deltaImage, deltaFile)
                     }
 
+                    println()
+                }
+            }
+        }
+
+    private fun scriptInfo(): Script =
+        kimage(0.1) {
+            name = "info"
+            title = "Print info about images"
+            arguments {
+            }
+
+            multi {
+                println(String.format("%-40s %6s %6s %12s %5s %5s %-8s %-8s", "Name", "Exists", "Type", "Bytes", "Width", "Height", "Median", "Stddev"))
+                for (file in inputFiles) {
+                    val fileSize = if (file.exists()) Files.size(file.toPath()) else 0
+                    val fileType = if (file.isFile()) "File" else if (file.isDirectory()) "Dir" else "Other"
+
+                    print(String.format("%-40s %6s %6s %12d", file.name, file.exists(), fileType, fileSize))
+                    if (file.isFile()) {
+                        try {
+                            val image = ImageReader.read(file)
+
+                            print(
+                                String.format(
+                                    "%5d %5d %8.5f %8.5f",
+                                    image.width,
+                                    image.height,
+                                    image.values().median(),
+                                    image.values().stddev()
+                                )
+                            )
+                        } catch (ex: Exception) {
+                            // ignore
+                        }
+                    }
                     println()
                 }
             }
