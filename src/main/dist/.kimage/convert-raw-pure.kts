@@ -22,7 +22,7 @@ kimage(0.1) {
         }
         string("interpolation") {
             allowed = listOf("none", "none-unscaled", "none-uncropped")
-            default = "none"
+            default = "none-uncropped"
         }
     }
 
