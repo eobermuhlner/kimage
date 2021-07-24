@@ -53,7 +53,7 @@ object TestScript {
         //runScript(scriptConvertRaw(), mapOf("interpolation" to "none-unscaled"), "images/outlier-pixels/bias_10s_ISO1600.CR2")
         //runScript(scriptConvertRaw(), mapOf(), "images/raw/IMG_8920.cr2")
 
-        runScript(scriptDebayer(), mapOf("interpolation" to "superpixel"), "images/raw/IMG_8922_pure_scaled.tiff")
+        runScript(scriptDebayer(), mapOf("interpolation" to "nearest", "badpixels" to "images/raw/badpixels_uncropped.txt"), "images/raw/dark_10s_uncropped.tiff")
     }
 
     private fun scriptDebayer(): Script =
@@ -78,8 +78,11 @@ object TestScript {
                     default = 1.0
                 }
                 string("interpolation") {
-                    allowed = listOf("superpixel", "none", "bilinear")
+                    allowed = listOf("superpixel", "none", "nearest", "bilinear")
                     default = "superpixel"
+                }
+                optionalFile("badpixels") {
+                    isFile = true
                 }
             }
 
@@ -89,13 +92,29 @@ object TestScript {
                 val red: Double by arguments
                 val green: Double by arguments
                 val blue: Double by arguments
+                val badpixels: Optional<File> by arguments
+
+                val badpixelCoords = if (badpixels.isPresent()) {
+                    badpixels.get().readLines()
+                        .filter { !it.isBlank() }
+                        .filter { !it.startsWith("#") }
+                        .map {
+                            val values = it.trim().split(Regex("\\s+"))
+                            if (values.size >= 2) {
+                                Pair(Integer.parseInt(values[0]), Integer.parseInt(values[1]))
+                            } else {
+                                throw java.lang.IllegalArgumentException("Format must be 'x y'")
+                            }
+                        }.toSet()
+                } else {
+                    setOf()
+                }
 
                 val (width, height) = when (interpolation) {
                     "superpixel" -> Pair(inputImage.width / 2, inputImage.height / 2)
                     else -> Pair(inputImage.width, inputImage.height)
                 }
 
-                // TODO hardcoded "rggb" pattern
                 val (rX, rY) = when (pattern) {
                     "rggb" -> Pair(0, 0)
                     "bggr" -> Pair(1, 1)
@@ -127,6 +146,24 @@ object TestScript {
 
                 val mosaic = inputImage[Channel.Gray]
 
+                println("Bad pixels: $badpixelCoords")
+                for (badpixelCoord in badpixelCoords) {
+                    val x = badpixelCoord.first
+                    val y = badpixelCoord.second
+
+                    val surroundingValues = mutableListOf<Double>()
+                    for (dy in -2 .. +2 step 4) {
+                        for (dx in -2 .. +2 step 4) {
+                            if (mosaic.isPixelInside(x + dx, y + dy) && !badpixelCoords.contains(Pair(x + dx, y + dy))) {
+                                surroundingValues.add(mosaic.getPixel(x + dx, y + dy))
+                            }
+                        }
+                    }
+
+                    mosaic.setPixel(x, y, surroundingValues.median())
+                }
+
+
                 val redMatrix = Matrix.matrixOf(height, width)
                 val greenMatrix = Matrix.matrixOf(height, width)
                 val blueMatrix = Matrix.matrixOf(height, width)
@@ -156,6 +193,28 @@ object TestScript {
                                 greenMatrix.setPixel(x+g1X, y+g1Y, g1)
                                 greenMatrix.setPixel(x+g2X, y+g2Y, g2)
                                 blueMatrix.setPixel(x+bX, y+bY, b)
+                            }
+                        }
+                    }
+                    "nearest" -> {
+                        for (y in 0 until height step 2) {
+                            for (x in 0 until width step 2) {
+                                val r = mosaic.getPixel(x+rX, y+rY) * red
+                                val g1 = mosaic.getPixel(x+g1X, y+g1Y) * green
+                                val g2 = mosaic.getPixel(x+g2X, y+g2Y) * green
+                                val b = mosaic.getPixel(x+bX, y+bY) * blue
+                                redMatrix.setPixel(x+0, y+0, r)
+                                redMatrix.setPixel(x+1, y+0, r)
+                                redMatrix.setPixel(x+0, y+1, r)
+                                redMatrix.setPixel(x+1, y+1, r)
+                                blueMatrix.setPixel(x+0, y+0, b)
+                                blueMatrix.setPixel(x+1, y+0, b)
+                                blueMatrix.setPixel(x+0, y+1, b)
+                                blueMatrix.setPixel(x+1, y+1, b)
+                                greenMatrix.setPixel(x+0, y+0, g1)
+                                greenMatrix.setPixel(x+1, y+0, g1)
+                                greenMatrix.setPixel(x+0, y+1, g2)
+                                greenMatrix.setPixel(x+1, y+1, g2)
                             }
                         }
                     }
