@@ -370,7 +370,7 @@ class KImageApplication : Application() {
                                 selectionModel.selectedItems.toList().forEach {
                                     inputFiles.remove(it)
                                 }
-                                updateImageView(inputImageView, selectionModel.selectedItem)
+                                updateImageView(inputImageView, selectionModel.selectedItem, true)
                             }
                         }
                     )
@@ -385,7 +385,7 @@ class KImageApplication : Application() {
                 }
 
                 selectionModel.selectedItemProperty().addListener { _, _, selected ->
-                    updateImageView(inputImageView, selected)
+                    updateImageView(inputImageView, selected, true)
                 }
             }
         }
@@ -527,7 +527,7 @@ class KImageApplication : Application() {
                                     outputFiles.remove(it)
                                     it.delete()
                                 }
-                                updateImageView(outputImageView, selectionModel.selectedItem)
+                                updateImageView(outputImageView, selectionModel.selectedItem, false)
                             }
                         }
                     )
@@ -551,22 +551,27 @@ class KImageApplication : Application() {
                 }
 
                 selectionModel.selectedItemProperty().addListener { _, _, selected ->
-                    updateImageView(outputImageView, selected)
+                    updateImageView(outputImageView, selected, false)
                 }
             }
         }
     }
 
-    private fun updateImageView(imageView: ImageView, selectedFile: File?) {
+    private fun updateImageView(imageView: ImageView, selectedFile: File?, updateCurrentInputImage: Boolean) {
         if (selectedFile == null) {
-            currentInputImage = null
+            if (updateCurrentInputImage) {
+                currentInputImage = null
+            }
             imageView.image = dummyImage
             updateZoom()
         } else {
             try {
-                runWithProgressDialog("Load Image", "Loading image $selectedFile") {
-                    currentInputImage = ImageReader.read(selectedFile)
-                    currentInputImage?.let {
+                runWithProgressDialog("Load Image", "Loading image $selectedFile", 200) {
+                    val image = ImageReader.read(selectedFile)
+                    if (updateCurrentInputImage) {
+                        currentInputImage = image
+                    }
+                    image?.let {
                         val writableImage = JavaFXImageUtil.toWritableImage(it)
 
                         Platform.runLater {
@@ -588,7 +593,7 @@ class KImageApplication : Application() {
         val debugModeProperty = SimpleBooleanProperty(false)
 
         node(commandArgumentEditor) {
-            runWithProgressDialog("Compiling Script", "Compiling script $command") {
+            runWithProgressDialog("Compiling Script", "Compiling script $command", 200) {
                 val script = KImageManager.script(command)
 
                 Platform.runLater {
@@ -642,12 +647,11 @@ class KImageApplication : Application() {
                             id = "play-icon"
                             tooltip = Tooltip("Run the ${script.name} script.")
                             onAction = EventHandler {
-                                isDisable = true
                                 updateOutputDirectoryFiles(outputHideOldFilesProperty.get())
 
                                 infoTabPane.selectionModel.select(infoTabLog)
 
-                                runWithProgressDialog("Running ${script.name}", script.title) {
+                                runWithProgressDialog("Running ${script.name}", script.title, 0) {
                                     val systemOut = System.out
                                     try {
                                         logTextArea.clear()
@@ -670,15 +674,14 @@ class KImageApplication : Application() {
                                         System.setOut(systemOut)
                                         Platform.runLater {
                                             updateOutputDirectoryFiles(false)
-                                            this@button.isDisable = false
                                         }
                                     }
                                 }
                             }
                         }
-                        children += togglebutton("Preview Mode") {
+                        children += checkbox(previewModeProperty) {
                             tooltip = Tooltip("Preview the ${script.name} script.")
-                            selectedProperty().bindBidirectional(previewModeProperty)
+                            text = "Preview Mode"
                             previewModeProperty.addListener { _, _, value ->
                                 if (value) {
                                     previewScript = script
@@ -707,10 +710,10 @@ class KImageApplication : Application() {
             listOf()
         }
 
-        runWithProgressDialog("Previewing ${script.name}", script.title) {
+        runWithProgressDialog("Previewing ${script.name}", script.title, 100) {
             //val systemOut = System.out
             try {
-                //System.setOut(PrintStream(OutputStream.nullOutputStream()))
+                System.setOut(PrintStream(OutputStream.nullOutputStream()))
 
                 KImageManager.executeScript(
                     script,
@@ -723,8 +726,10 @@ class KImageApplication : Application() {
                     tempOutputDirectory.path
                 ) { _, output ->
                     if (output is Image) {
-                        outputZoomImageView.image = JavaFXImageUtil.toWritableImage(output)
-                        updateZoom()
+                        val writableImage = JavaFXImageUtil.toWritableImage(output)
+                        Platform.runLater {
+                            updateZoom(outputOffsetX = 0, outputOffsetY = 0, outputImage = writableImage)
+                        }
                     }
                 }
             } catch (ex: Exception) {
@@ -987,7 +992,7 @@ class KImageApplication : Application() {
         return renderer.render(parser.parse(markdown))
     }
 
-    private fun runWithProgressDialog(title: String, message: String, function: () -> Unit) {
+    private fun runWithProgressDialog(title: String, message: String, sleepMillis: Long, function: () -> Unit) {
         var progressDialog: ProgressDialog? = null
         var finished = false
         var exception: Throwable? = null
@@ -1011,7 +1016,7 @@ class KImageApplication : Application() {
             }
         }.start()
 
-        Thread.sleep(200)
+        Thread.sleep(sleepMillis)
         synchronized(this) {
             if (!finished) {
                 val dialogContent = vbox(SPACING) {
@@ -1080,7 +1085,7 @@ class KImageApplication : Application() {
         zoomCenterXProperty.set(x)
         zoomCenterYProperty.set(y)
         infoTabPane.selectionModel.select(infoTabZoom)
-        updateZoom(x, y)
+        updateZoom(zoomX = x, zoomY = y)
     }
 
     private fun setMouseDragEvents(node: Node, handler: EventHandler<in MouseEvent>) {
@@ -1104,7 +1109,7 @@ class KImageApplication : Application() {
             var zoomY = zoomCenterYProperty.get() + deltaY.toInt()
             zoomCenterXProperty.set(zoomX)
             zoomCenterYProperty.set(zoomY)
-            updateZoom(zoomX, zoomY)
+            updateZoom(zoomX = zoomX, zoomY = zoomY)
         }
         imageView.onMouseReleased = EventHandler {
             updateFinalZoom()
@@ -1113,10 +1118,25 @@ class KImageApplication : Application() {
         }
     }
 
-    private fun updateZoom(zoomX: Int = zoomCenterXProperty.get(), zoomY: Int = zoomCenterYProperty.get()) {
-        val inputImage = inputImageView.image
-        val outputImage = outputImageView.image
+    private fun updateZoom(
+        zoomX: Int = zoomCenterXProperty.get(),
+        zoomY: Int = zoomCenterYProperty.get(),
+    ) {
+        updateZoom(
+            inputOffsetX = zoomX - ZOOM_WIDTH/2,
+            inputOffsetY = zoomY - ZOOM_HEIGHT/2,
+            outputOffsetX = zoomX - ZOOM_WIDTH/2,
+            outputOffsetY = zoomY - ZOOM_HEIGHT/2)
+    }
 
+    private fun updateZoom(
+        inputOffsetX: Int = zoomCenterXProperty.get() - ZOOM_WIDTH/2,
+        inputOffsetY: Int = zoomCenterYProperty.get() - ZOOM_HEIGHT/2,
+        inputImage: javafx.scene.image.Image = inputImageView.image,
+        outputOffsetX: Int = zoomCenterXProperty.get() - ZOOM_WIDTH/2,
+        outputOffsetY: Int = zoomCenterYProperty.get() - ZOOM_HEIGHT/2,
+        outputImage: javafx.scene.image.Image = outputImageView.image
+    ) {
         val inputImageWidth = inputImage.width.toInt() - 1
         val inputImageHeight = inputImage.height.toInt() - 1
 
@@ -1133,14 +1153,14 @@ class KImageApplication : Application() {
 
         for (y in 0 until ZOOM_HEIGHT) {
             for (x in 0 until ZOOM_WIDTH) {
-                val xInput = clamp(zoomX + x - zoomWidthHalf, 0, inputImageWidth)
-                val yInput = clamp(zoomY + y - zoomHeightHalf, 0, inputImageHeight)
+                val xInput = clamp(x + inputOffsetX, 0, inputImageWidth)
+                val yInput = clamp(y + inputOffsetY, 0, inputImageHeight)
                 val rgbInput = inputImage.pixelReader.getColor(xInput, yInput)
                 inputZoomImage.pixelWriter.setColor(x, y, rgbInput)
                 inputZoomHistogram.add(rgbInput)
 
-                val xOutput = clamp(zoomX + x - zoomWidthHalf, 0, outputImageWidth)
-                val yOutput = clamp(zoomY + y - zoomHeightHalf, 0, outputImageHeight)
+                val xOutput = clamp(x + outputOffsetX, 0, outputImageWidth)
+                val yOutput = clamp(y + outputOffsetY, 0, outputImageHeight)
                 val rgbOutput = outputImage.pixelReader.getColor(xOutput, yOutput)
                 outputZoomImage.pixelWriter.setColor(x, y, rgbOutput)
                 outputZoomHistogram.add(rgbOutput)
@@ -1242,7 +1262,10 @@ class KImageApplication : Application() {
         val fileChooser = FileChooser()
         fileChooser.initialDirectory = initialDirectory
         fileChooser.title = title
-        fileChooser.extensionFilters.add(FileChooser.ExtensionFilter("Image", "*.tif", "*.tiff", "*.png", "*.jpg", "*.jpeg"))
+        fileChooser.extensionFilters.add(FileChooser.ExtensionFilter("Image", "*.tif", "*.tiff", "*.png", "*.jpg", "*.jpeg", "*.rwz", "*.rw2", "*.cr2", "*.cr3", "*.nrw", "*.eip", "*.raf", "*.erf", "*.arw", "*.k25", "*.dng", "*.srf", "*.dcr", "*.raw", "*.crf", "*.bay"))
+        fileChooser.extensionFilters.add(FileChooser.ExtensionFilter("Bitmap Image", "*.tif", "*.tiff", "*.png", "*.jpg", "*.jpeg"))
+        fileChooser.extensionFilters.add(FileChooser.ExtensionFilter("RAW Image", "*.rwz", "*.rw2", "*.cr2", "*.cr3", "*.nrw", "*.eip", "*.raf", "*.erf", "*.arw", "*.k25", "*.dng", "*.srf", "*.dcr", "*.raw", "*.crf", "*.bay"))
+
         fileChooser.extensionFilters.add(FileChooser.ExtensionFilter("All", "*"))
         return fileChooser.showOpenMultipleDialog(primaryStage)
     }
