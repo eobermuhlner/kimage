@@ -61,6 +61,8 @@ kimage(0.1) {
         val method: String by arguments
         val localRadius: Int by arguments
 
+        val badpixels: MutableSet<Pair<Int, Int>> = mutableSetOf()
+        val badpixelMatrices = mutableMapOf<Channel, Matrix>()
         val outputMatrices = mutableMapOf<Channel, Matrix>()
         for (channel in inputImage.channels) {
             println("Processing channel: $channel")
@@ -69,9 +71,6 @@ kimage(0.1) {
 
             val globalMedian = matrix.fastMedian()
             val globalStddev = matrix.stddev()
-            if (!low.isPresent) {
-                low = Optional.of(globalMedian - globalStddev * kappa)
-            }
             if (!low.isPresent) {
                 low = Optional.of(globalMedian - globalStddev * kappa)
             }
@@ -86,27 +85,52 @@ kimage(0.1) {
             }
 
             var outlierCount = 0
-            val m = matrix.create()
+            val outputMatrix = matrix.create()
+            val badpixelMatrix = matrix.create()
             for (row in 0 until matrix.rows) {
                 for (column in 0 until matrix.columns) {
                     val value = matrix[row, column]
-                    m[row, column] = if (value in low.get() .. high.get()) {
+                    outputMatrix[row, column] = if (value in low.get() .. high.get()) {
                         matrix[row, column]
                     } else {
+                        badpixels.add(Pair(column, row))
                         outlierCount++
-                        when (method) {
+                        val replacedValue = when (method) {
                             "global-median" -> globalMedian
                             "local-median" -> matrix.medianAround(row, column, localRadius)
                             else -> throw java.lang.IllegalArgumentException("Unknown method: $method")
                         }
-
+                        badpixelMatrix[row, column] = replacedValue
+                        replacedValue
                     }
                 }
             }
             println("Found $outlierCount outliers")
             println()
 
-            outputMatrices[channel] = m
+            badpixelMatrices[channel] = badpixelMatrix
+            outputMatrices[channel] = outputMatrix
+        }
+
+        val file = inputFile.prefixName("badpixels_").suffixExtension(".txt")
+        println("Saving $file")
+        val badpixelWriter = PrintWriter(FileWriter(file))
+
+        for (badpixel in badpixels) {
+            badpixelWriter.println(String.format("%6d %6d 0", badpixel.first, badpixel.second))
+            if (debugMode) {
+                val badPixelFile = inputFile.prefixName("badpixel_${badpixel.first}_${badpixel.second}_")
+                val badPixelCrop = inputImage.cropCenter(5, badpixel.first, badpixel.second).scaleBy(4.0, 4.0, Scaling.Nearest)
+                ImageWriter.write(badPixelCrop, badPixelFile)
+            }
+        }
+        badpixelWriter.close()
+
+        if (debugMode) {
+            val badpixelImageFile = inputFile.prefixName("badpixel_")
+            println("Saving $badpixelImageFile")
+            val badpixelImage = MatrixImage(inputImage.width, inputImage.height, inputImage.channels) { channel, _, _ -> badpixelMatrices[channel]!! }
+            ImageWriter.write(badpixelImage, badpixelImageFile)
         }
 
         MatrixImage(inputImage.width, inputImage.height, inputImage.channels) { channel, _, _ -> outputMatrices[channel]!! }
