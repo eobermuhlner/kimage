@@ -187,7 +187,7 @@ interface Matrix : Iterable<Double> {
 
         m.gaussianElimination()
 
-        return m.croppedMatrix(0, columns, rows, columns)
+        return m.crop(0, columns, rows, columns)
     }
 
     fun gaussianElimination(reducedEchelonForm: Boolean = true) {
@@ -304,9 +304,18 @@ interface Matrix : Iterable<Double> {
         return result
     }
 
-    fun croppedMatrix(croppedRow: Int, croppedColumn: Int, croppedRows: Int, croppedColumns: Int, strictClipping: Boolean = true): Matrix {
+    fun crop(croppedRow: Int, croppedColumn: Int, croppedRows: Int, croppedColumns: Int, strictClipping: Boolean = true): Matrix {
         return CroppedMatrix(this, croppedRow, croppedColumn, croppedRows, croppedColumns, strictClipping)
     }
+
+    fun cropCenter(radius: Int, croppedCenterRow: Int = rows / 2, croppedCenterColumn: Int = columns / 2, strictClipping: Boolean = true): Matrix {
+        return cropCenter(radius, radius, croppedCenterRow, croppedCenterColumn, strictClipping)
+    }
+
+    fun cropCenter(radiusRow: Int, radiusColumn: Int, croppedCenterRow: Int = rows / 2, croppedCenterColumn: Int = columns / 2, strictClipping: Boolean = true): Matrix {
+        return crop(croppedCenterRow - radiusRow, croppedCenterColumn - radiusColumn, radiusRow*2+1, radiusColumn*2+1, strictClipping)
+    }
+
 
     companion object {
         private fun checkRows(rows: Int) {
