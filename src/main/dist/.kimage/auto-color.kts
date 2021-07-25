@@ -16,30 +16,32 @@ kimage(0.1) {
                 Stretch the pixel values so that the entire color range is used.
                 """
     arguments {
-        double("kappa") {
-            description = """
-                        The kappa factor is used in sigma-clipping of sample values to determine the outlier values.
-                        """
-            default = 10.0
+        double("low") {
+            default = 0.001
         }
-        optionalDouble("low") {
-            description = """
-                        The low threshold to remove outliers below.
-                        The default `low` value is calculated from the image using the `kappa` factor.
-                        """
-        }
-        optionalDouble("high") {
-            description = """
-                        The high threshold to remove outliers below.
-                        The default `high` value is calculated from the image using the `kappa` factor.
-                        """
+        double("high") {
+            default = 0.999
         }
     }
 
     single {
         val kappa: Double by arguments
-        var low: Optional<Double> by arguments
-        var high: Optional<Double> by arguments
+        var low: Double by arguments
+        var high: Double by arguments
+
+        val measureMatrix = inputImage[Channel.Luminance]
+
+        val histogram = Histogram()
+        histogram.add(measureMatrix)
+        val lowValue = histogram.estimatePercentile(low)
+        val highValue = histogram.estimatePercentile(high)
+
+        val range = highValue - lowValue
+
+        if (verboseMode) {
+            println("Low value:  $lowValue")
+            println("High value: $highValue")
+        }
 
         val outputMatrices = mutableMapOf<Channel, Matrix>()
         for (channel in inputImage.channels) {
@@ -47,29 +49,11 @@ kimage(0.1) {
 
             val matrix = inputImage[channel]
 
-            val globalMedian = matrix.fastMedian()
-            val globalStddev = matrix.stddev()
-            if (!low.isPresent) {
-                low = Optional.of(globalMedian - globalStddev * kappa)
-            }
-            if (!high.isPresent) {
-                high = Optional.of(globalMedian + globalStddev * kappa)
-            }
-
-            val range = high.get() - low.get()
-
-
-            if (verboseMode) {
-                println("Median value: $globalMedian")
-                println("Standard deviation: $globalStddev")
-                println("Clipping range: $low .. $high")
-            }
-
             val m = matrix.create()
             for (row in 0 until matrix.rows) {
                 for (column in 0 until matrix.columns) {
                     val value = matrix[row, column]
-                    m[row, column] = (value - low.get()) / range
+                    m[row, column] = (value - lowValue) / range
                 }
             }
 
