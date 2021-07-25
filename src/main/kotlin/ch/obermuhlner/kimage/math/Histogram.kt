@@ -20,7 +20,7 @@ class Histogram(private val binCount: Int = 256) {
         entryCount = 0
     }
 
-    fun add(matrix: Matrix, rowStart: Int, columnStart: Int, rows: Int, columns: Int) {
+    fun add(matrix: Matrix, rowStart: Int = 0, columnStart: Int = 0, rows: Int = matrix.rows - rowStart, columns: Int = matrix.columns - columnStart) {
         for (row in rowStart until rowStart+rows) {
             for (column in columnStart until columnStart+columns) {
                 add(matrix[row, column])
@@ -28,7 +28,7 @@ class Histogram(private val binCount: Int = 256) {
         }
     }
 
-    fun remove(matrix: Matrix, rowStart: Int, columnStart: Int, rows: Int, columns: Int) {
+    fun remove(matrix: Matrix, rowStart: Int = 0, columnStart: Int = 0, rows: Int = matrix.rows - rowStart, columns: Int = matrix.columns - columnStart) {
         for (row in rowStart until rowStart+rows) {
             for (column in columnStart until columnStart+columns) {
                 remove(matrix[row, column])
@@ -73,14 +73,20 @@ class Histogram(private val binCount: Int = 256) {
         return sum / entryCount
     }
 
-    fun estimateMedian(): Double {
-        val nHalf = entryCount / 2
+    fun estimateMedian(): Double = estimatePercentile(0.5)
+
+    fun estimatePercentile(percentile: Double): Double {
+        val nPercentile = (entryCount * percentile).toInt()
         var cumulativeN = 0
         for (i in indices) {
-            if (cumulativeN + bins[i] >= nHalf) {
+            if (cumulativeN + bins[i] >= nPercentile) {
                 val lowerLimit = i.toDouble() / (binCount - 1).toDouble()
                 val width = 1.0 / (binCount - 1).toDouble()
-                return lowerLimit + (nHalf - cumulativeN) / bins[i].toDouble() * width
+                return if (bins[i] == 0) {
+                    0.0
+                } else {
+                    lowerLimit + (nPercentile - cumulativeN) / bins[i].toDouble() * width
+                }
             }
             cumulativeN += bins[i]
         }
