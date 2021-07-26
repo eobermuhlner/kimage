@@ -440,7 +440,9 @@ class KImageApplication : Application() {
                     tooltip = Tooltip("Create a new directory.")
                     onAction = EventHandler {
                         val dialog = TextInputDialog()
-                        dialog.title = "Create directory"
+                        dialog.title = "Create Directory"
+                        dialog.headerText = "Create new directory"
+                        dialog.width = 400.0
                         val optionalDirectoryName = dialog.showAndWait()
                         if (optionalDirectoryName.isPresent) {
                             val file = File(outputDirectoryProperty.get(), optionalDirectoryName.get())
@@ -453,7 +455,7 @@ class KImageApplication : Application() {
                 }
                 children += button(FontIcon()) {
                     id = "refresh"
-                    tooltip = Tooltip("Refresh.")
+                    tooltip = Tooltip("Refresh from file system.")
                     onAction = EventHandler {
                         updateOutputDirectoryFiles(outputHideOldFilesProperty.get())
                     }
@@ -493,6 +495,15 @@ class KImageApplication : Application() {
                         }
                     }
                     tableRow.contextMenu = ContextMenu(
+                        menuitem("Replace input", FontIcon()) {
+                            id = "bold-arrow-left-icon"
+                            onAction = EventHandler {
+                                inputFiles.clear()
+                                selectionModel.selectedItems.toList().forEach {
+                                    inputFiles.add(it)
+                                }
+                            }
+                        },
                         menuitem("Open File in Explorer", FontIcon()) {
                             id = "open-file"
                             onAction = EventHandler {
@@ -512,12 +523,17 @@ class KImageApplication : Application() {
 
                             }
                         },
-                        menuitem("Replace input", FontIcon()) {
-                            id = "bold-arrow-left-icon"
+                        menuitem("Rename File", FontIcon()) {
+                            id = "edit-file"
                             onAction = EventHandler {
-                                inputFiles.clear()
-                                selectionModel.selectedItems.toList().forEach {
-                                    inputFiles.add(it)
+                                val file = selectionModel.selectedItem
+                                val dialog = TextInputDialog(file.name)
+                                dialog.title = "Rename File"
+                                dialog.headerText = "Rename file"
+                                dialog.width = 400.0
+                                val optionalFileName = dialog.showAndWait()
+                                if (optionalFileName.isPresent) {
+                                    file.renameTo(File(file.parentFile, optionalFileName.get()))
                                 }
                             }
                         },

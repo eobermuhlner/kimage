@@ -49,6 +49,17 @@
     -fx-icon-color: white;
 }
 
+#edit-file .ikonli-font-icon {
+    -fx-icon-code: "mdi2f-file-edit-outline";
+    -fx-icon-size: 16px;
+    -fx-icon-color: dimgray;
+}
+#edit-file:focused .ikonli-font-icon {
+    -fx-icon-code: "mdi2f-file-edit-outline";
+    -fx-icon-size: 16px;
+    -fx-icon-color: white;
+}
+
 #open-folder .ikonli-font-icon {
     -fx-icon-code: "mdi2f-folder-open-outline";
     -fx-icon-size: 16px;
