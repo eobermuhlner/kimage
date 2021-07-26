@@ -28,7 +28,7 @@ kimage(0.1) {
             description = """
                 The extension to save the converted image file. 
                 """
-            allowed = ImageIO.getWriterFileSuffixes().toList().sorted()
+            allowed = ImageWriter.getWriterFileSuffixes()
         }
     }
 

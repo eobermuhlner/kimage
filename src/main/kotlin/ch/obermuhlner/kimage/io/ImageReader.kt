@@ -1,7 +1,13 @@
 package ch.obermuhlner.kimage.io
 
+import ch.obermuhlner.kimage.image.Channel
 import ch.obermuhlner.kimage.image.Image
 import ch.obermuhlner.kimage.image.MatrixImage
+import ch.obermuhlner.kimage.matrix.FloatMatrix
+import ch.obermuhlner.kimage.matrix.Matrix
+import nom.tam.fits.BasicHDU
+import nom.tam.fits.Fits
+import nom.tam.fits.ImageHDU
 import java.awt.image.BufferedImage
 import java.awt.image.DataBuffer
 import java.io.File
@@ -10,6 +16,10 @@ import javax.imageio.ImageIO
 object ImageReader {
 
     fun read(file: File): Image {
+        if (file.extension == "fits" || file.extension == "fit") {
+            return readFits(file)
+        }
+
         val image = ImageIO.read(file) ?: throw RuntimeException("Failed to read image: $file")
 
         val color = DoubleArray(3)
@@ -52,6 +62,89 @@ object ImageReader {
         }
 
         return matrixImage
+    }
+
+    private fun readFits(file: File): Image {
+        val fits = Fits(file)
+        val hdu = fits.getHDU(0)
+        if (hdu is ImageHDU) {
+            // TODO use bScale, bZero ?
+            // TODO handle 2D (hdu.axes.size == 2) as gray images
+
+            val channels = hdu.axes[0]
+            val height = hdu.axes[1]
+            val width = hdu.axes[2]
+
+            val matrices = mutableListOf<Matrix>()
+            for (channelIndex in 0 until channels) {
+                val matrix = FloatMatrix(height, width)
+
+                matrices += when (hdu.bitPix) {
+                    BasicHDU.BITPIX_BYTE -> {
+                        val data = hdu.kernel as Array<Array<ByteArray>>
+                        matrix.onEach { row, column, _ ->
+                            scaleFitsValue(data[channelIndex][row][column].toDouble(), hdu)
+                        }
+                    }
+                    BasicHDU.BITPIX_SHORT -> {
+                        val data = hdu.kernel as Array<Array<ShortArray>>
+                        matrix.onEach { row, column, _ ->
+                            scaleFitsValue(data[channelIndex][row][column].toDouble(), hdu)
+                        }
+                    }
+                    BasicHDU.BITPIX_INT -> {
+                        val data = hdu.kernel as Array<Array<IntArray>>
+                        matrix.onEach { row, column, _ ->
+                            scaleFitsValue(data[channelIndex][row][column].toDouble(), hdu)
+                        }
+                    }
+                    BasicHDU.BITPIX_LONG -> {
+                        val data = hdu.kernel as Array<Array<LongArray>>
+                        matrix.onEach { row, column, _ ->
+                            scaleFitsValue(data[channelIndex][row][column].toDouble(), hdu)
+                        }
+                    }
+                    BasicHDU.BITPIX_FLOAT -> {
+                        val data = hdu.kernel as Array<Array<FloatArray>>
+                        matrix.onEach { row, column, _ ->
+                            scaleFitsValue(data[channelIndex][row][column].toDouble(), hdu)
+                        }
+                    }
+                    BasicHDU.BITPIX_DOUBLE -> {
+                        val data = hdu.kernel as Array<Array<DoubleArray>>
+                        matrix.onEach { row, column, _ ->
+                            scaleFitsValue(data[channelIndex][row][column], hdu)
+                        }
+                    }
+                    else -> throw IllegalArgumentException("Unknown bits per pixel: ${hdu.bitPix}")
+                }
+            }
+
+            return when (matrices.size) {
+                1 -> MatrixImage(width, height,
+                    Channel.Gray to matrices[0])
+                3 -> MatrixImage(width, height,
+                    Channel.Red to matrices[0],
+                    Channel.Green to matrices[1],
+                    Channel.Blue to matrices[2])
+                4 -> MatrixImage(width, height,
+                    Channel.Red to matrices[0],
+                    Channel.Green to matrices[1],
+                    Channel.Blue to matrices[2],
+                    Channel.Alpha to matrices[3])
+                else -> throw java.lang.IllegalArgumentException("Unknown number of channels in fits: ${matrices.size}")
+            }
+        }
+
+        throw IllegalArgumentException("Unknown FITS")
+    }
+
+    private fun scaleFitsValue(value: Double, hdu: BasicHDU<*>): Double {
+        return if (hdu.minimumValue != hdu.maximumValue) {
+            hdu.bZero + (value - hdu.minimumValue) / (hdu.maximumValue - hdu.minimumValue) * hdu.bScale
+        } else {
+            hdu.bZero + value * hdu.bScale
+        }
     }
 
 }

@@ -3,13 +3,29 @@ package ch.obermuhlner.kimage.io
 import ch.obermuhlner.kimage.image.Image
 import ch.obermuhlner.kimage.image.onEach
 import ch.obermuhlner.kimage.math.clamp
+import nom.tam.fits.Fits
+import nom.tam.fits.FitsFactory
+import nom.tam.util.BufferedFile
 import java.awt.color.ColorSpace
 import java.awt.image.*
 import java.io.File
+import java.lang.IllegalArgumentException
 import javax.imageio.ImageIO
 import javax.imageio.ImageTypeSpecifier
 
 object ImageWriter {
+    fun getWriterFileSuffixes(): List<String> {
+        val suffixes = ImageIO.getWriterFileSuffixes().toMutableSet()
+
+        for (format in ImageFormat.values()) {
+            for (extension in format.extensions) {
+                suffixes += extension
+            }
+        }
+
+        return suffixes.toList().sorted()
+    }
+
     fun write(image: Image, output: File) {
         val name = output.name
         for (format in ImageFormat.values()) {
@@ -26,10 +42,16 @@ object ImageWriter {
     fun write(image: Image, output: File, format: ImageFormat) {
         image.onEach { v -> clamp(v, 0.0, 1.0) }
 
+        if (format == ImageFormat.FITS) {
+            writeFits(image, output)
+            return
+        }
+
         val bufferedImage = when (format) {
             ImageFormat.TIF -> createBufferedImageUShort(image.width, image.height)
             ImageFormat.PNG -> createBufferedImageUShort(image.width, image.height)
             ImageFormat.JPG -> BufferedImage(image.width, image.height, BufferedImage.TYPE_INT_RGB)
+            else -> throw IllegalArgumentException("Unknown format: $format")
         }
 
         val color = DoubleArray(3)
@@ -64,6 +86,23 @@ object ImageWriter {
         }
 
         ImageIO.write(bufferedImage, format.name, output)
+    }
+
+    private fun writeFits(image: Image, output: File) {
+        val data = Array(3) { channelIndex ->
+            Array(image.height) { row ->
+                FloatArray(image.width) { column ->
+                    image[image.channels[channelIndex]][row, column].toFloat()
+                }
+            }
+        }
+
+        val fits = Fits()
+        fits.addHDU(FitsFactory.hduFactory(data))
+
+        val bufferedFile = BufferedFile(output, "rw")
+        fits.write(bufferedFile)
+        bufferedFile.close()
     }
 
     private fun createBufferedImageIntRGB(width: Int, height: Int): BufferedImage {
