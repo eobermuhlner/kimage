@@ -48,14 +48,14 @@ object TestScript {
 
         //runScript(scriptTestMulti(), mapOf())
 
-        runScript(scriptAutoColor(), mapOf(), "images/raw/dark_10s_uncropped.tiff")
+        //runScript(scriptAutoColor(), mapOf(), "images/raw/dark_10s_uncropped.tiff")
 
         //runScript(scriptConvertRaw(), mapOf("interpolation" to "none-unscaled"), "images/outlier-pixels/bias_10s_ISO1600.CR2")
         //runScript(scriptConvertRaw(), mapOf(), "images/raw/IMG_8920.cr2")
 
         // IMG_8922.CR2 : multipliers 2.122024 1.000000 1.455032 1.000000
 
-        //runScript(scriptDebayer(), mapOf("interpolation" to "superpixel", "badpixels" to "images/raw/badpixels_uncropped.txt", "whitebalance" to "local-median", "localX" to "6036", "localY" to "2389", "localRadius" to "10", "stretch" to "true"), "images/raw/IMG_8922_pure_uncropped.tiff")
+        runScript(scriptDebayer(), mapOf("interpolation" to "bilinear", "whitebalance" to "highlight-median", "localX" to "6036", "localY" to "2389", "localRadius" to "10", "stretch" to "true"), "images/raw/IMG_8922_pure-unscaled.tiff")
     }
 
     private fun scriptDebayer(): Script =
@@ -74,7 +74,7 @@ object TestScript {
                     default = "rggb"
                 }
                 string ("whitebalance") {
-                    allowed = listOf("custom", "global-median", "global-average", "local-median", "local-average")
+                    allowed = listOf("custom", "global-median", "global-average", "highlight-median", "local-median", "local-average")
                     default = "custom"
                 }
                 optionalInt("localX") {
@@ -187,6 +187,7 @@ object TestScript {
                 val mosaicGreen1Matrix = DoubleMatrix(mosaic.rows / 2, mosaic.columns / 2)
                 val mosaicGreen2Matrix = DoubleMatrix(mosaic.rows / 2, mosaic.columns / 2)
                 val mosaicBlueMatrix = DoubleMatrix(mosaic.rows / 2, mosaic.columns / 2)
+                val mosaicGrayMatrix = DoubleMatrix(mosaic.rows / 2, mosaic.columns / 2)
 
                 for (y in 0 until inputImage.height step 2) {
                     for (x in 0 until inputImage.width step 2) {
@@ -194,11 +195,13 @@ object TestScript {
                         val g1 = mosaic.getPixel(x+g1X, y+g1Y)
                         val g2 = mosaic.getPixel(x+g2X, y+g2Y)
                         val b = mosaic.getPixel(x+bX, y+bY)
+                        val gray = (r + r + g1 + g2 + b + b) / 6
 
                         mosaicRedMatrix.setPixel(x/2, y/2, r)
                         mosaicGreen1Matrix.setPixel(x/2, y/2, g1)
                         mosaicGreen2Matrix.setPixel(x/2, y/2, g2)
                         mosaicBlueMatrix.setPixel(x/2, y/2, b)
+                        mosaicGrayMatrix.setPixel(x/2, y/2, gray)
                     }
                 }
 
@@ -220,6 +223,28 @@ object TestScript {
                         red = Optional.of(mosaicRedMatrix.average())
                         green = Optional.of((mosaicGreen1Matrix.average() + mosaicGreen2Matrix.average()) / 2)
                         blue = Optional.of(mosaicBlueMatrix.average())
+                    }
+                    "highlight-median" -> {
+                        val histogram = Histogram()
+                        histogram.add(mosaicGrayMatrix)
+                        val highlightValue = histogram.estimatePercentile(0.9)
+
+                        val redValues = mutableListOf<Double>()
+                        val greenValues = mutableListOf<Double>()
+                        val blueValues = mutableListOf<Double>()
+                        for (row in 0 until mosaicGrayMatrix.rows) {
+                            for (column in 0 until mosaicGrayMatrix.columns) {
+                                if (mosaicGrayMatrix[row, column] >= highlightValue) {
+                                    redValues += mosaicRedMatrix[row, column]
+                                    greenValues += mosaicGreen1Matrix[row, column]
+                                    greenValues += mosaicGreen2Matrix[row, column]
+                                    blueValues += mosaicBlueMatrix[row, column]
+                                }
+                            }
+                        }
+                        red = Optional.of(redValues.median())
+                        green = Optional.of(greenValues.median())
+                        blue = Optional.of(blueValues.median())
                     }
                     "local-median" -> {
                         val halfLocalX = localX.get() / 2
@@ -293,6 +318,7 @@ object TestScript {
                     println("  redOffset   = $redOffset")
                     println("  greenOffset = $greenOffset")
                     println("  blueOffset  =  $blueOffset")
+                    println()
                 }
 
                 mosaicRedMatrix.onEach { v -> (v - redOffset) * redFactor  }
@@ -354,6 +380,40 @@ object TestScript {
                                 greenMatrix.setPixel(x+1, y+0, g1)
                                 greenMatrix.setPixel(x+0, y+1, g2)
                                 greenMatrix.setPixel(x+1, y+1, g2)
+                            }
+                        }
+                    }
+                    "bilinear" -> {
+                        for (y in 0 until height) {
+                            for (x in 0 until width) {
+                                val dx = x % 2
+                                val dy = y % 2
+
+                                val r: Double
+                                val g: Double
+                                val b: Double
+                                if (dx == rX && dy == rY) {
+                                    r = mosaic.getPixel(x, y)
+                                    g = (mosaic.getPixel(x-1, y) + mosaic.getPixel(x+1, y) + mosaic.getPixel(x, y-1) + mosaic.getPixel(x, y+1)) / 4
+                                    b = (mosaic.getPixel(x-1, y-1) + mosaic.getPixel(x-1, y+1) + mosaic.getPixel(x+1, y-1) + mosaic.getPixel(x+1, y+1)) / 4
+                                } else if (dx == bX && dy == bY) {
+                                    r = (mosaic.getPixel(x-1, y-1) + mosaic.getPixel(x-1, y+1) + mosaic.getPixel(x+1, y-1) + mosaic.getPixel(x+1, y+1)) / 4
+                                    g = (mosaic.getPixel(x-1, y) + mosaic.getPixel(x+1, y) + mosaic.getPixel(x, y-1) + mosaic.getPixel(x, y+1)) / 4
+                                    b = mosaic.getPixel(x, y)
+                                } else {
+                                    g = mosaic.getPixel(x, y)
+                                    if ((x-1) % 2 == rX) {
+                                        r = (mosaic.getPixel(x-1, y) + mosaic.getPixel(x+1, y)) / 2
+                                        b = (mosaic.getPixel(x, y-1) + mosaic.getPixel(x, y+1)) / 2
+                                    } else {
+                                        r = (mosaic.getPixel(x, y-1) + mosaic.getPixel(x, y+1)) / 2
+                                        b = (mosaic.getPixel(x-1, y) + mosaic.getPixel(x+1, y)) / 2
+                                    }
+                                }
+
+                                redMatrix.setPixel(x, y, (r - redOffset) * redFactor)
+                                greenMatrix.setPixel(x, y, (g - greenOffset) * greenFactor)
+                                blueMatrix.setPixel(x, y, (b - blueOffset) * blueFactor)
                             }
                         }
                     }
