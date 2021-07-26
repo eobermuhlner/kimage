@@ -493,13 +493,15 @@ class KImageApplication : Application() {
                         }
                     }
                     tableRow.contextMenu = ContextMenu(
-                        menuitem("Open file", FontIcon()) {
-                            id = "bold-arrow-left-icon"
+                        menuitem("Open File in Explorer", FontIcon()) {
+                            id = "open-file"
                             onAction = EventHandler {
+                                val file = selectionModel.selectedItem
+                                Desktop.getDesktop().open(file)
                             }
                         },
                         menuitem("Open Directory in Explorer", FontIcon()) {
-                            id = "open-external"
+                            id = "open-folder"
                             onAction = EventHandler {
                                 val file = selectionModel.selectedItem
                                 if (file.isDirectory) {

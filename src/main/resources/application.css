@@ -38,6 +38,28 @@
     -fx-icon-color: dimgray;
 }
 
+#open-file .ikonli-font-icon {
+    -fx-icon-code: "mdi2f-file-export-outline";
+    -fx-icon-size: 16px;
+    -fx-icon-color: dimgray;
+}
+#open-file:focused .ikonli-font-icon {
+    -fx-icon-code: "mdi2f-file-export-outline";
+    -fx-icon-size: 16px;
+    -fx-icon-color: white;
+}
+
+#open-folder .ikonli-font-icon {
+    -fx-icon-code: "mdi2f-folder-open-outline";
+    -fx-icon-size: 16px;
+    -fx-icon-color: dimgray;
+}
+#open-folder:focused .ikonli-font-icon {
+    -fx-icon-code: "mdi2f-folder-open-outline";
+    -fx-icon-size: 16px;
+    -fx-icon-color: white;
+}
+
 #refresh .ikonli-font-icon {
     -fx-icon-code: "mdi2r-refresh";
     -fx-icon-size: 16px;
