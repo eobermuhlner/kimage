@@ -436,24 +436,6 @@ class KImageApplication : Application() {
                     }
                 }
                 children += button(FontIcon()) {
-                    id = "new-folder"
-                    tooltip = Tooltip("Create a new directory.")
-                    onAction = EventHandler {
-                        val dialog = TextInputDialog()
-                        dialog.title = "Create Directory"
-                        dialog.headerText = "Create new directory"
-                        dialog.width = 400.0
-                        val optionalDirectoryName = dialog.showAndWait()
-                        if (optionalDirectoryName.isPresent) {
-                            val file = File(outputDirectoryProperty.get(), optionalDirectoryName.get())
-                            if (!file.exists()) {
-                                file.mkdir()
-                                updateOutputDirectoryFiles(outputHideOldFilesProperty.get())
-                            }
-                        }
-                    }
-                }
-                children += button(FontIcon()) {
                     id = "refresh"
                     tooltip = Tooltip("Refresh from file system.")
                     onAction = EventHandler {
@@ -504,6 +486,7 @@ class KImageApplication : Application() {
                                 }
                             }
                         },
+                        menuitemSeparator(),
                         menuitem("Open File in Explorer", FontIcon()) {
                             id = "open-file"
                             onAction = EventHandler {
@@ -523,6 +506,25 @@ class KImageApplication : Application() {
 
                             }
                         },
+                        menuitemSeparator(),
+                        menuitem("New Directory", FontIcon()) {
+                            id = "new-folder"
+                            tooltip = Tooltip("Create a new directory.")
+                            onAction = EventHandler {
+                                val dialog = TextInputDialog()
+                                dialog.title = "Create Directory"
+                                dialog.headerText = "Create new directory"
+                                dialog.dialogPane.minWidth = 300.0
+                                val optionalDirectoryName = dialog.showAndWait()
+                                if (optionalDirectoryName.isPresent) {
+                                    val file = File(outputDirectoryProperty.get(), optionalDirectoryName.get())
+                                    if (!file.exists()) {
+                                        file.mkdir()
+                                        updateOutputDirectoryFiles(outputHideOldFilesProperty.get())
+                                    }
+                                }
+                            }
+                        },
                         menuitem("Rename File", FontIcon()) {
                             id = "edit-file"
                             onAction = EventHandler {
@@ -530,7 +532,7 @@ class KImageApplication : Application() {
                                 val dialog = TextInputDialog(file.name)
                                 dialog.title = "Rename File"
                                 dialog.headerText = "Rename file"
-                                dialog.width = 400.0
+                                dialog.dialogPane.minWidth = 300.0
                                 val optionalFileName = dialog.showAndWait()
                                 if (optionalFileName.isPresent) {
                                     file.renameTo(File(file.parentFile, optionalFileName.get()))
@@ -538,7 +540,7 @@ class KImageApplication : Application() {
                             }
                         },
                         menuitemSeparator(),
-                        menuitem("Delete file forever", FontIcon()) {
+                        menuitem("Delete File forever", FontIcon()) {
                             id = "delete-forever-icon"
                             onAction = EventHandler {
                                 selectionModel.selectedItems.toList().forEach {
