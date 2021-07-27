@@ -90,6 +90,7 @@ class KImageApplication : Application() {
 
     private val zoomCenterXProperty = SimpleIntegerProperty()
     private val zoomCenterYProperty = SimpleIntegerProperty()
+    private val zoomFactorProperty = SimpleIntegerProperty(1)
 
     private val zoomDeltaFactorProperty = SimpleDoubleProperty()
 
@@ -152,6 +153,9 @@ class KImageApplication : Application() {
             updateZoom()
         }
         zoomCenterYProperty.addListener { _, _, _ ->
+            updateZoom()
+        }
+        zoomFactorProperty.addListener { _, _, _ ->
             updateZoom()
         }
         zoomDeltaFactorProperty.addListener { _, _, _ ->
@@ -269,7 +273,16 @@ class KImageApplication : Application() {
                     label("Input Zoom:")
                 }
                 cell {
-                    label("Delta Zoom:")
+                    hbox(SPACING) {
+                        children += label("Delta Zoom:")
+                        children += spinner(1, 256, 1) {
+                            prefWidth = 80.0
+                            styleClass.add(Spinner.STYLE_CLASS_SPLIT_ARROWS_HORIZONTAL)
+                            valueProperty().addListener { _, _, value ->
+                                zoomFactorProperty.set(value.toInt())
+                            }
+                        }
+                    }
                 }
                 cell {
                     label("Output Zoom:")
@@ -748,7 +761,7 @@ class KImageApplication : Application() {
                     if (output is Image) {
                         val writableImage = JavaFXImageUtil.toWritableImage(output)
                         Platform.runLater {
-                            updateZoom(outputOffsetX = 0, outputOffsetY = 0, outputImage = writableImage)
+                            updateZoom(outputCenterX = ZOOM_WIDTH / 2, outputCenterY = ZOOM_HEIGHT / 2, outputImage = writableImage)
                         }
                     }
                 }
@@ -1121,15 +1134,17 @@ class KImageApplication : Application() {
             zoomDragY = event.y
         }
         imageView.onMouseDragged = EventHandler { event: MouseEvent ->
-            val deltaX = zoomDragX!! - event.x
-            val deltaY = zoomDragY!! - event.y
-            zoomDragX = event.x
-            zoomDragY = event.y
-            var zoomX = zoomCenterXProperty.get() + deltaX.toInt()
-            var zoomY = zoomCenterYProperty.get() + deltaY.toInt()
-            zoomCenterXProperty.set(zoomX)
-            zoomCenterYProperty.set(zoomY)
-            updateZoom(zoomX = zoomX, zoomY = zoomY)
+            val deltaX = ((zoomDragX!! - event.x) / zoomFactorProperty.get() + 0.5).toInt()
+            val deltaY = ((zoomDragY!! - event.y) / zoomFactorProperty.get() + 0.5).toInt()
+            if (deltaX != 0 || deltaY != 0) {
+                val zoomX = zoomCenterXProperty.get() + deltaX
+                val zoomY = zoomCenterYProperty.get() + deltaY
+                zoomDragX = event.x
+                zoomDragY = event.y
+                zoomCenterXProperty.set(zoomX)
+                zoomCenterYProperty.set(zoomY)
+                updateZoom(zoomX = zoomX, zoomY = zoomY)
+            }
         }
         imageView.onMouseReleased = EventHandler {
             updateFinalZoom()
@@ -1143,19 +1158,20 @@ class KImageApplication : Application() {
         zoomY: Int = zoomCenterYProperty.get(),
     ) {
         updateZoom(
-            inputOffsetX = zoomX - ZOOM_WIDTH/2,
-            inputOffsetY = zoomY - ZOOM_HEIGHT/2,
-            outputOffsetX = zoomX - ZOOM_WIDTH/2,
-            outputOffsetY = zoomY - ZOOM_HEIGHT/2)
+            inputCenterX = zoomX,
+            inputCenterY = zoomY,
+            outputCenterX = zoomX,
+            outputCenterY = zoomY)
     }
 
     private fun updateZoom(
-        inputOffsetX: Int = zoomCenterXProperty.get() - ZOOM_WIDTH/2,
-        inputOffsetY: Int = zoomCenterYProperty.get() - ZOOM_HEIGHT/2,
+        inputCenterX: Int = zoomCenterXProperty.get(),
+        inputCenterY: Int = zoomCenterYProperty.get(),
         inputImage: javafx.scene.image.Image = inputImageView.image,
-        outputOffsetX: Int = zoomCenterXProperty.get() - ZOOM_WIDTH/2,
-        outputOffsetY: Int = zoomCenterYProperty.get() - ZOOM_HEIGHT/2,
-        outputImage: javafx.scene.image.Image = outputImageView.image
+        outputCenterX: Int = zoomCenterXProperty.get(),
+        outputCenterY: Int = zoomCenterYProperty.get(),
+        outputImage: javafx.scene.image.Image = outputImageView.image,
+        zoomFactor: Int = zoomFactorProperty.get()
     ) {
         val inputImageWidth = inputImage.width.toInt() - 1
         val inputImageHeight = inputImage.height.toInt() - 1
@@ -1163,8 +1179,8 @@ class KImageApplication : Application() {
         val outputImageWidth = outputImage.width.toInt() - 1
         val outputImageHeight = outputImage.height.toInt() - 1
 
-        val zoomWidthHalf = ZOOM_WIDTH / 2
-        val zoomHeightHalf = ZOOM_HEIGHT / 2
+        val zoomWidthHalf = ZOOM_WIDTH / 2 / zoomFactor
+        val zoomHeightHalf = ZOOM_HEIGHT / 2 / zoomFactor
 
         val deltaFactor = zoomDeltaFactorProperty.get()
 
@@ -1173,14 +1189,14 @@ class KImageApplication : Application() {
 
         for (y in 0 until ZOOM_HEIGHT) {
             for (x in 0 until ZOOM_WIDTH) {
-                val xInput = clamp(x + inputOffsetX, 0, inputImageWidth)
-                val yInput = clamp(y + inputOffsetY, 0, inputImageHeight)
+                val xInput = clamp(x/zoomFactor + inputCenterX - zoomWidthHalf, 0, inputImageWidth)
+                val yInput = clamp(y/zoomFactor + inputCenterY - zoomHeightHalf, 0, inputImageHeight)
                 val rgbInput = inputImage.pixelReader.getColor(xInput, yInput)
                 inputZoomImage.pixelWriter.setColor(x, y, rgbInput)
                 inputZoomHistogram.add(rgbInput)
 
-                val xOutput = clamp(x + outputOffsetX, 0, outputImageWidth)
-                val yOutput = clamp(y + outputOffsetY, 0, outputImageHeight)
+                val xOutput = clamp(x/zoomFactor + outputCenterX - zoomWidthHalf, 0, outputImageWidth)
+                val yOutput = clamp(y/zoomFactor + outputCenterY - zoomHeightHalf, 0, outputImageHeight)
                 val rgbOutput = outputImage.pixelReader.getColor(xOutput, yOutput)
                 outputZoomImage.pixelWriter.setColor(x, y, rgbOutput)
                 outputZoomHistogram.add(rgbOutput)
