@@ -225,7 +225,17 @@ object TestScript {
                 }
 
                 when (whitebalance) {
-                    "custom" -> {}
+                    "custom" -> {
+                        if (red.isPresent) {
+                            red = Optional.of(1.0 / red.get())
+                        }
+                        if (green.isPresent) {
+                            green = Optional.of(1.0 / green.get())
+                        }
+                        if (blue.isPresent) {
+                            blue = Optional.of(1.0 / blue.get())
+                        }
+                    }
                     "global-median" -> {
                         red = Optional.of(mosaicRedMatrix.median())
                         green = Optional.of((mosaicGreen1Matrix.median() + mosaicGreen2Matrix.median()) / 2)
@@ -285,16 +295,12 @@ object TestScript {
                     blue = Optional.of(1.0)
                 }
 
-                println("  red =   $red")
-                println("  green = $green")
-                println("  blue =  $blue")
-
                 val maxFactor = max(red.get(), max(green.get(), blue.get()))
                 var redFactor = maxFactor / red.get()
                 var greenFactor = maxFactor / green.get()
                 var blueFactor = maxFactor / blue.get()
 
-                println("Whitebalance:")
+                println("Whitebalance Factor:")
                 println("  red =   $redFactor")
                 println("  green = $greenFactor")
                 println("  blue =  $blueFactor")
