@@ -278,6 +278,7 @@ class KImageApplication : Application() {
                         children += spinner(1, 256, 1) {
                             prefWidth = 80.0
                             styleClass.add(Spinner.STYLE_CLASS_SPLIT_ARROWS_HORIZONTAL)
+                            tooltip = Tooltip("The zoom factor.")
                             valueProperty().addListener { _, _, value ->
                                 zoomFactorProperty.set(value.toInt())
                             }
