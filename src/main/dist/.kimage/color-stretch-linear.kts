@@ -10,10 +10,10 @@ import java.util.*
 import kotlin.math.*
 
 kimage(0.1) {
-    name = "auto-color"
-    title = "Automatically correct colors"
+    name = "color-stretch-linear"
+    title = "Linear stretching of colors"
     description = """
-                Stretch the pixel values so that the entire color range is used.
+                Stretch the pixel values linearly so that the entire color range is used.
                 """
     arguments {
         double("low") {

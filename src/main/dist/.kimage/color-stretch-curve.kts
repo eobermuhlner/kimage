@@ -8,10 +8,12 @@ import java.io.*
 import kotlin.math.*
 
 kimage(0.1) {
-    name = "color-stretch"
-    title = "Stretch the colors of an image to fill the entire value range"
+    name = "color-stretch-curve"
+    title = "Stretch the colors non-linearly to fill the entire value range"
     description = """
-                The colors are first brightened and then a curve is applied.
+                The colors are first brightened using a power function and then a curve is applied.
+                
+                The idea for this script is based on https://clarkvision.com/articles/astrophotography-rnc-color-stretch/
                 """
     arguments {
         double("brightness") {
