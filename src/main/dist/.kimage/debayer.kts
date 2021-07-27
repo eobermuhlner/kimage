@@ -38,6 +38,9 @@ kimage(0.1) {
         int("localRadius") {
             default = 10
         }
+        double("highlight") {
+            default = 0.8
+        }
         optionalDouble("red") {
         }
         optionalDouble("green") {
@@ -46,10 +49,16 @@ kimage(0.1) {
         }
         string("interpolation") {
             allowed = listOf("superpixel", "none", "nearest", "bilinear")
-            default = "superpixel"
+            default = "bilinear"
         }
         boolean("stretch") {
             default = false
+        }
+        double("stretchLow") {
+            default = 0.001
+        }
+        double("stretchHigh") {
+            default = 0.999
         }
     }
 
@@ -60,11 +69,14 @@ kimage(0.1) {
         var localX: Optional<Int> by arguments
         var localY: Optional<Int> by arguments
         val localRadius: Int by arguments
+        val highlight: Double by arguments
         var red: Optional<Double> by arguments
         var green: Optional<Double> by arguments
         var blue: Optional<Double> by arguments
         val interpolation: String by arguments
         val stretch: Boolean by arguments
+        val stretchLow: Double by arguments
+        val stretchHigh: Double by arguments
 
         val badpixelCoords = if (badpixels.isPresent()) {
             badpixels.get().readLines()
@@ -179,7 +191,7 @@ kimage(0.1) {
             "highlight-median" -> {
                 val histogram = Histogram()
                 histogram.add(mosaicGrayMatrix)
-                val highlightValue = histogram.estimatePercentile(0.9)
+                val highlightValue = histogram.estimatePercentile(highlight)
 
                 val redValues = mutableListOf<Double>()
                 val greenValues = mutableListOf<Double>()
@@ -250,8 +262,8 @@ kimage(0.1) {
                 histogram.print()
             }
 
-            val minValue = histogram.estimatePercentile(0.01)
-            val maxValue = histogram.estimatePercentile(0.99)
+            val minValue = histogram.estimatePercentile(stretchLow)
+            val maxValue = histogram.estimatePercentile(stretchHigh)
             val range = maxValue - minValue
             println("Stretch min = $minValue")
             println("Stretch max = $maxValue")
