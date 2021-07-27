@@ -28,6 +28,7 @@ import javafx.scene.input.MouseEvent
 import javafx.scene.layout.Pane
 import javafx.scene.layout.VBox
 import javafx.scene.paint.Color
+import javafx.scene.shape.Rectangle
 import javafx.scene.text.Font
 import javafx.scene.web.WebView
 import javafx.stage.*
@@ -87,6 +88,12 @@ class KImageApplication : Application() {
     private val codeTextArea = TextArea().apply {
         font = Font.font("monospace")
     }
+
+    private val inputDecorationsPane: Pane = Pane()
+    private val outputDecorationsPane: Pane = Pane()
+
+    private val crosshairColors = listOf(Color.YELLOW, Color.RED, Color.GREEN, Color.BLUE, Color.TRANSPARENT)
+    private val crosshairColorProperty: ObjectProperty<Color> = SimpleObjectProperty(crosshairColors[0])
 
     private val zoomCenterXProperty = SimpleIntegerProperty()
     private val zoomCenterYProperty = SimpleIntegerProperty()
@@ -213,10 +220,10 @@ class KImageApplication : Application() {
             }
             row {
                 cell {
-                    node(inputImageView) {
-                        isPreserveRatio = true
-                        fitWidth = IMAGE_WIDTH.toDouble()
-                        fitHeight = IMAGE_HEIGHT.toDouble()
+                    node(withZoomRectangle(inputImageView, inputDecorationsPane)) {
+                        inputImageView.isPreserveRatio = true
+                        inputImageView.fitWidth = IMAGE_WIDTH.toDouble()
+                        inputImageView.fitHeight = IMAGE_HEIGHT.toDouble()
                     }
                 }
                 cell {
@@ -252,10 +259,10 @@ class KImageApplication : Application() {
                     }
                 }
                 cell {
-                    node(outputImageView) {
-                        isPreserveRatio = true
-                        fitWidth = IMAGE_WIDTH.toDouble()
-                        fitHeight = IMAGE_HEIGHT.toDouble()
+                    node(withZoomRectangle(outputImageView, outputDecorationsPane)) {
+                        outputImageView.isPreserveRatio = true
+                        outputImageView.fitWidth = IMAGE_WIDTH.toDouble()
+                        outputImageView.fitHeight = IMAGE_HEIGHT.toDouble()
                     }
                 }
             }
@@ -281,6 +288,18 @@ class KImageApplication : Application() {
                             tooltip = Tooltip("The zoom factor.")
                             valueProperty().addListener { _, _, value ->
                                 zoomFactorProperty.set(value.toInt())
+                            }
+                        }
+                        children += button {
+                            graphic = rectangle(10.0, 10.0) {
+                                fill = Color.TRANSPARENT
+                                strokeProperty().bind(crosshairColorProperty)
+                            }
+                            tooltip = Tooltip("Toggles the color of the crosshair in the zoom images.")
+                            onAction = EventHandler {
+                                var index = crosshairColors.indexOf(crosshairColorProperty.get())
+                                index = (index + 1) % crosshairColors.size
+                                crosshairColorProperty.setValue(crosshairColors[index])
                             }
                         }
                     }
@@ -1281,6 +1300,47 @@ class KImageApplication : Application() {
             }
         }
     }
+
+    private fun withZoomRectangle(imageView: ImageView, zoomRectanglePane: Pane): Node {
+        val rectangle = Rectangle()
+        rectangle.isMouseTransparent = true
+        rectangle.strokeProperty().bind(crosshairColorProperty)
+        rectangle.fill = Color.TRANSPARENT
+
+        zoomCenterXProperty.addListener { _, _, _ -> updateZoomRectangle(imageView, rectangle) }
+        zoomCenterYProperty.addListener { _, _, _ -> updateZoomRectangle(imageView, rectangle) }
+        zoomFactorProperty.addListener { _, _, _ -> updateZoomRectangle(imageView, rectangle) }
+        imageView.imageProperty().addListener { _, _, _ -> updateZoomRectangle(imageView, rectangle) }
+
+        return Pane(imageView, rectangle, zoomRectanglePane)
+    }
+
+    private fun updateZoomRectangle(imageView: ImageView, rectangle: Rectangle) {
+        val width = ZOOM_WIDTH / zoomFactorProperty.get() / imageView.image.width * imageView.boundsInLocal.width
+        val height = ZOOM_HEIGHT / zoomFactorProperty.get()  / imageView.image.height * imageView.boundsInLocal.height
+        val x = zoomCenterXProperty.get() / imageView.image.width * imageView.boundsInLocal.width
+        val y = zoomCenterYProperty.get() / imageView.image.height * imageView.boundsInLocal.height
+
+        rectangle.x = x - width / 2
+        rectangle.y = y - height / 2
+        rectangle.width = width
+        rectangle.height = height
+
+        if (rectangle.x < 0) {
+            rectangle.width += rectangle.x
+            rectangle.x = 0.0
+        }
+        if (rectangle.y < 0) {
+            rectangle.height += rectangle.y
+            rectangle.y = 0.0
+        }
+        if (rectangle.x + rectangle.width > imageView.boundsInLocal.width) {
+            rectangle.width -= rectangle.x + rectangle.width - imageView.boundsInLocal.width
+        }
+        if (rectangle.y + rectangle.height > imageView.boundsInLocal.height) {
+            rectangle.height -= rectangle.y + rectangle.height - imageView.boundsInLocal.height
+        }
+   }
 
     private fun calculateDeltaColor(rgb1: Color, rgb2: Color, deltaFactor: Double): Color {
         val delta = (rgb1.brightness - rgb2.brightness) * deltaFactor
