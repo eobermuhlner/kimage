@@ -204,7 +204,7 @@ class ScriptV0_1 : Script(0.1) {
         println()
     }
 
-    fun execute(inputFiles: List<File>, arguments: Map<String, String>, verboseMode: Boolean, debugMode: Boolean, outputHandler: (File, Any?) -> Unit) {
+    fun execute(inputFiles: List<File>, arguments: Map<String, Any>, verboseMode: Boolean, debugMode: Boolean, outputHandler: (File, Any?) -> Unit) {
         if (title.isNotBlank()) {
             print(title)
         } else {
@@ -221,7 +221,7 @@ class ScriptV0_1 : Script(0.1) {
         }
     }
 
-    fun executeSingle(inputFiles: List<File>, arguments: Map<String, String>, verboseMode: Boolean, debugMode: Boolean, outputHandler: (File, Any?) -> Unit) {
+    fun executeSingle(inputFiles: List<File>, arguments: Map<String, Any>, verboseMode: Boolean, debugMode: Boolean, outputHandler: (File, Any?) -> Unit) {
         scriptSingle?.let {
             for (inputFile in inputFiles) {
                 val inputImage = read(inputFile)
@@ -239,7 +239,7 @@ class ScriptV0_1 : Script(0.1) {
         }
     }
 
-    fun executeMulti(inputFiles: List<File>, arguments: Map<String, String>, verboseMode: Boolean, debugMode: Boolean, outputHandler: (File, Any?) -> Unit) {
+    fun executeMulti(inputFiles: List<File>, arguments: Map<String, Any>, verboseMode: Boolean, debugMode: Boolean, outputHandler: (File, Any?) -> Unit) {
         scriptMulti?.let {
             it.executeMultiScript(inputFiles, scriptArguments, arguments, verboseMode, debugMode, outputHandler)
         }
@@ -381,7 +381,7 @@ sealed class ScriptArg(val type: String, val mandatory: Boolean) {
 
     abstract val hasDefault: Boolean
 
-    abstract fun toValue(stringValue: String?): Any
+    abstract fun toValue(stringValue: Any?): Any
 
     open fun isValid(stringValue: String): Boolean {
         return try {
@@ -404,19 +404,19 @@ open class ScriptIntArg(mandatory: Boolean = true) : ScriptArg("int", mandatory)
     override val hasDefault: Boolean
         get() = default != null
 
-    override fun toValue(stringValue: String?): Any {
-        return toIntValue(stringValue)
+    override fun toValue(anyValue: Any?): Any {
+        return toIntValue(anyValue)
     }
 
-    fun toIntValue(stringValue: String?): Int {
-        if (stringValue.isNullOrEmpty()) {
+    fun toIntValue(anyValue: Any?): Int {
+        if (anyValue == null || anyValue == "") {
             default?.let {
                 return toIntValue(it.toString());
             }
             throw ScriptArgumentException("Argument $name is mandatory")
         }
         try {
-            val value = stringValue.toInt()
+            val value = if (anyValue is Int) anyValue else anyValue.toString().toInt()
             min?.let {
                 if (value < it) {
                     throw ScriptArgumentException("Argument $name must be >= $it but is $value")
@@ -429,19 +429,19 @@ open class ScriptIntArg(mandatory: Boolean = true) : ScriptArg("int", mandatory)
             }
             return value
         } catch (ex: NumberFormatException) {
-            throw ScriptArgumentException("Argument $name must be an integer value, but is '$stringValue'")
+            throw ScriptArgumentException("Argument $name must be an integer value, but is '$anyValue'")
         }
     }
 }
 
 @KotlinDSL
 class ScriptOptionalIntArg : ScriptIntArg(false) {
-    override fun toValue(stringValue: String?): Any {
-        return toOptionalIntValue(stringValue)
+    override fun toValue(anyValue: Any?): Any {
+        return toOptionalIntValue(anyValue)
     }
 
-    fun toOptionalIntValue(stringValue: String?): Optional<Int> {
-        if (stringValue.isNullOrEmpty()) {
+    fun toOptionalIntValue(anyValue: Any?): Optional<Int> {
+        if (anyValue == null || anyValue == "") {
             if (default == null) {
                 return Optional.empty()
             }
@@ -449,7 +449,7 @@ class ScriptOptionalIntArg : ScriptIntArg(false) {
                 return Optional.of(toIntValue(it.toString()))
             }
         }
-        return Optional.of(toIntValue(stringValue))
+        return Optional.of(toIntValue(anyValue))
     }
 }
 
@@ -462,19 +462,19 @@ open class ScriptDoubleArg(mandatory: Boolean = true) : ScriptArg("double", mand
     override val hasDefault: Boolean
         get() = default != null
 
-    override fun toValue(stringValue: String?): Any {
-        return toDoubleValue(stringValue)
+    override fun toValue(anyValue: Any?): Any {
+        return toDoubleValue(anyValue)
     }
 
-    fun toDoubleValue(stringValue: String?): Double {
-        if (stringValue.isNullOrEmpty()) {
+    fun toDoubleValue(anyValue: Any?): Double {
+        if (anyValue == null || anyValue == "") {
             default?.let {
                 return toDoubleValue(it.toString())
             }
             throw ScriptArgumentException("Argument $name is mandatory")
         }
         try {
-            val value = stringValue.toDouble()
+            val value = if (anyValue is Double) anyValue else anyValue.toString().toDouble()
             min?.let {
                 if (value < it) {
                     throw ScriptArgumentException("Argument $name must be >= $it but is $value")
@@ -487,19 +487,19 @@ open class ScriptDoubleArg(mandatory: Boolean = true) : ScriptArg("double", mand
             }
             return value
         } catch (ex: NumberFormatException) {
-            throw ScriptArgumentException("Argument $name must be an integer value, but is '$stringValue'")
+            throw ScriptArgumentException("Argument $name must be an integer value, but is '$anyValue'")
         }
     }
 }
 
 @KotlinDSL
 class ScriptOptionalDoubleArg : ScriptDoubleArg(false) {
-    override fun toValue(stringValue: String?): Any {
-        return toOptionalDoubleValue(stringValue)
+    override fun toValue(anyValue: Any?): Any {
+        return toOptionalDoubleValue(anyValue)
     }
 
-    fun toOptionalDoubleValue(stringValue: String?): Optional<Double> {
-        if (stringValue.isNullOrEmpty()) {
+    fun toOptionalDoubleValue(anyValue: Any?): Optional<Double> {
+        if (anyValue == null || anyValue == "") {
             if (default == null) {
                 return Optional.empty()
             }
@@ -507,7 +507,7 @@ class ScriptOptionalDoubleArg : ScriptDoubleArg(false) {
                 return Optional.of(toDoubleValue(it.toString()))
             }
         }
-        return Optional.of(toDoubleValue(stringValue))
+        return Optional.of(toDoubleValue(anyValue))
     }
 }
 
@@ -518,29 +518,29 @@ open class ScriptBooleanArg(mandatory: Boolean = true) : ScriptArg("boolean", ma
     override val hasDefault: Boolean
         get() = default != null
 
-    override fun toValue(stringValue: String?): Any {
-        return toBooleanValue(stringValue)
+    override fun toValue(anyValue: Any?): Any {
+        return toBooleanValue(anyValue)
     }
 
-    fun toBooleanValue(stringValue: String?): Boolean {
-        if (stringValue.isNullOrEmpty()) {
+    fun toBooleanValue(anyValue: Any?): Boolean {
+        if (anyValue == null || anyValue == "") {
             default?.let {
                 return toBooleanValue(it.toString())
             }
             throw ScriptArgumentException("Argument $name is mandatory")
         }
-        return stringValue.toBoolean()
+        return if (anyValue is Boolean) anyValue else anyValue.toString().toBoolean()
     }
 }
 
 @KotlinDSL
 class ScriptOptionalBooleanArg : ScriptBooleanArg(false) {
-    override fun toValue(stringValue: String?): Any {
-        return toOptionalBooleanValue(stringValue)
+    override fun toValue(anyValue: Any?): Any {
+        return toOptionalBooleanValue(anyValue)
     }
 
-    fun toOptionalBooleanValue(stringValue: String?): Optional<Boolean> {
-        if (stringValue.isNullOrEmpty()) {
+    fun toOptionalBooleanValue(anyValue: Any?): Optional<Boolean> {
+        if (anyValue == null || anyValue == "") {
             if (default == null) {
                 return Optional.empty()
             }
@@ -548,7 +548,7 @@ class ScriptOptionalBooleanArg : ScriptBooleanArg(false) {
                 return Optional.of(toBooleanValue(it.toString()))
             }
         }
-        return Optional.of(toBooleanValue(stringValue))
+        return Optional.of(toBooleanValue(anyValue))
     }
 }
 
@@ -561,39 +561,39 @@ open class ScriptStringArg(mandatory: Boolean = true) : ScriptArg("string", mand
     override val hasDefault: Boolean
         get() = default != null
 
-    override fun toValue(stringValue: String?): Any {
-        return toStringValue(stringValue)
+    override fun toValue(anyValue: Any?): Any {
+        return toStringValue(anyValue)
     }
 
-    fun toStringValue(stringValue: String?): String {
-        if (stringValue.isNullOrEmpty()) {
+    fun toStringValue(anyValue: Any?): String {
+        if (anyValue == null || anyValue == "") {
             default?.let {
                 return toStringValue(it);
             }
             throw ScriptArgumentException("Argument $name is mandatory")
         }
         if (allowed.isNotEmpty()) {
-            if (!allowed.contains(stringValue)) {
-                throw ScriptArgumentException("Argument $name must be one of $allowed but is $stringValue")
+            if (!allowed.contains(anyValue)) {
+                throw ScriptArgumentException("Argument $name must be one of $allowed but is $anyValue")
             }
         }
         regex?.let {
-            if (!stringValue.matches(Regex(it))) {
-                throw ScriptArgumentException("Argument $name fails regular expression check: $stringValue")
+            if (!anyValue.toString().matches(Regex(it))) {
+                throw ScriptArgumentException("Argument $name fails regular expression check: $anyValue")
             }
         }
-        return stringValue
+        return anyValue.toString()
     }
 }
 
 @KotlinDSL
 class ScriptOptionalStringArg : ScriptStringArg(false) {
-    override fun toValue(stringValue: String?): Any {
-        return toOptionalStringValue(stringValue)
+    override fun toValue(anyValue: Any?): Any {
+        return toOptionalStringValue(anyValue)
     }
 
-    fun toOptionalStringValue(stringValue: String?): Optional<String> {
-        if (stringValue.isNullOrEmpty()) {
+    fun toOptionalStringValue(anyValue: Any?): Optional<String> {
+        if (anyValue == null || anyValue == "") {
             if (default == null) {
                 return Optional.empty()
             }
@@ -601,7 +601,7 @@ class ScriptOptionalStringArg : ScriptStringArg(false) {
                 return Optional.of(it)
             }
         }
-        return Optional.of(toStringValue(stringValue))
+        return Optional.of(toStringValue(anyValue))
     }
 }
 
@@ -618,18 +618,18 @@ open class ScriptFileArg(mandatory: Boolean = true) : ScriptArg("file", mandator
     override val hasDefault: Boolean
         get() = default != null
 
-    override fun toValue(stringValue: String?): Any {
-        return toFileValue(stringValue)
+    override fun toValue(anyValue: Any?): Any {
+        return toFileValue(anyValue)
     }
 
-    fun toFileValue(stringValue: String?): File {
-        if (stringValue.isNullOrEmpty()) {
+    fun toFileValue(anyValue: Any?): File {
+        if (anyValue == null || anyValue == "") {
             default?.let {
                 return toFileValue(it.toString())
             }
             throw ScriptArgumentException("Argument $name is mandatory")
         }
-        val file = File(stringValue)
+        val file = if (anyValue is File) anyValue else File(anyValue.toString())
         allowedExtensions?.let {
             if (file.extension in it) {
                 throw ScriptArgumentException("Argument $name must have one of the extensions $allowedExtensions but has ${file.extension}: $file")
@@ -666,12 +666,12 @@ open class ScriptFileArg(mandatory: Boolean = true) : ScriptArg("file", mandator
 
 @KotlinDSL
 class ScriptOptionalFileArg : ScriptFileArg(false) {
-    override fun toValue(stringValue: String?): Any {
-        return toOptionalFileValue(stringValue)
+    override fun toValue(anyValue: Any?): Any {
+        return toOptionalFileValue(anyValue)
     }
 
-    fun toOptionalFileValue(stringValue: String?): Optional<File> {
-        if (stringValue.isNullOrEmpty()) {
+    fun toOptionalFileValue(anyValue: Any?): Optional<File> {
+        if (anyValue == null || anyValue == "") {
             if (default == null) {
                 return Optional.empty()
             }
@@ -679,7 +679,7 @@ class ScriptOptionalFileArg : ScriptFileArg(false) {
                 return Optional.of(toFileValue(it.toString()))
             }
         }
-        return Optional.of(toFileValue(stringValue))
+        return Optional.of(toFileValue(anyValue))
     }
 }
 
@@ -690,29 +690,30 @@ open class ScriptImageArg(mandatory: Boolean = true) : ScriptArg("image", mandat
     override val hasDefault: Boolean
         get() = default != null
 
-    override fun toValue(stringValue: String?): Any {
-        return toImageValue(stringValue)
+    override fun toValue(anyValue: Any?): Any {
+        return toImageValue(anyValue)
     }
 
-    fun toImageValue(stringValue: String?): Image {
-        if (stringValue.isNullOrEmpty()) {
+    fun toImageValue(anyValue: Any?): Image {
+        if (anyValue == null || anyValue == "") {
             default?.let {
                 return ImageReader.read(it)
             }
             throw ScriptArgumentException("Argument $name is mandatory")
         }
-        return ImageReader.read(File(stringValue))
+        val file = if (anyValue is File) anyValue else File(anyValue.toString())
+        return ImageReader.read(file)
     }
 }
 
 @KotlinDSL
 class ScriptOptionalImageArg() : ScriptImageArg(false) {
-    override fun toValue(stringValue: String?): Any {
-        return toOptionalImageValue(stringValue)
+    override fun toValue(anyValue: Any?): Any {
+        return toOptionalImageValue(anyValue)
     }
 
-    fun toOptionalImageValue(stringValue: String?): Optional<Image> {
-        if (stringValue.isNullOrEmpty()) {
+    fun toOptionalImageValue(anyValue: Any?): Optional<Image> {
+        if (anyValue == null || anyValue == "") {
             if (default == null) {
                 return Optional.empty()
             }
@@ -720,7 +721,8 @@ class ScriptOptionalImageArg() : ScriptImageArg(false) {
                 return Optional.of(toImageValue(it.toString()))
             }
         }
-        return Optional.of(ImageReader.read(File(stringValue)))
+        val file = if (anyValue is File) anyValue else File(anyValue.toString())
+        return Optional.of(ImageReader.read(file))
     }
 }
 
@@ -733,18 +735,18 @@ open class ScriptListArg(override val arguments: MutableList<ScriptArg> = mutabl
     override val hasDefault: Boolean
         get() = default != null
 
-    override fun toValue(stringValue: String?): Any {
-        return toListValue(stringValue)
+    override fun toValue(anyValue: Any?): Any {
+        return toListValue(anyValue)
     }
 
-    fun toListValue(stringValue: String?): List<Any> {
+    fun toListValue(anyValue: Any?): List<Any> {
         if (arguments.isEmpty()) {
             throw ScriptArgumentException("Argument $name is a list, but the element type is not defined")
         }
         if (arguments.size > 1) {
             throw ScriptArgumentException("Argument $name is a list, but only one element type is allowed")
         }
-        if (stringValue.isNullOrEmpty()) {
+        if (anyValue == null || anyValue == "") {
             default?.let {
                 return toListValue(it.joinToString(","))
             }
@@ -753,7 +755,7 @@ open class ScriptListArg(override val arguments: MutableList<ScriptArg> = mutabl
 
         val values = mutableListOf<Any>()
         val scriptArg = arguments[0]
-        val stringElements = stringValue.split(',')
+        val stringElements = anyValue.toString().split(',')
 
         min?.let {
             if (stringElements.size < it) {
@@ -775,12 +777,12 @@ open class ScriptListArg(override val arguments: MutableList<ScriptArg> = mutabl
 
 @KotlinDSL
 class ScriptOptionalListArg(arguments: MutableList<ScriptArg> = mutableListOf()) : ScriptListArg(arguments, false) {
-    override fun toValue(stringValue: String?): Any {
-        return toOptionalListValue(stringValue)
+    override fun toValue(anyValue: Any?): Any {
+        return toOptionalListValue(anyValue)
     }
 
-    fun toOptionalListValue(stringValue: String?): Optional<List<Any>> {
-        if (stringValue.isNullOrEmpty()) {
+    fun toOptionalListValue(anyValue: Any?): Optional<List<Any>> {
+        if (anyValue == null || anyValue == "") {
             if (default == null) {
                 return Optional.empty()
             }
@@ -788,7 +790,7 @@ class ScriptOptionalListArg(arguments: MutableList<ScriptArg> = mutableListOf())
                 return Optional.of(toListValue(it.joinToString(",")))
             }
         }
-        return Optional.of(toListValue(stringValue))
+        return Optional.of(toListValue(anyValue))
     }
 }
 
@@ -804,12 +806,12 @@ open class ScriptRecordArg(override val arguments: MutableList<ScriptArg> = muta
             return true
         }
 
-    override fun toValue(stringValue: String?): Any {
-        return toRecordValue(stringValue)
+    override fun toValue(anyValue: Any?): Any {
+        return toRecordValue(anyValue)
     }
 
-    fun toRecordValue(stringValue: String?): Map<String, Any> {
-        if (stringValue.isNullOrEmpty()) {
+    fun toRecordValue(anyValue: Any?): Map<String, Any> {
+        if (anyValue == null || anyValue == "") {
             val valueMap = mutableMapOf<String, Any>()
 
             for (argument in arguments) {
@@ -820,7 +822,7 @@ open class ScriptRecordArg(override val arguments: MutableList<ScriptArg> = muta
         }
 
         val valueMap = mutableMapOf<String, Any>()
-        val stringElements = stringValue.split(',')
+        val stringElements = anyValue.toString().split(',')
 
         if (stringElements.size != arguments.size) {
             throw ScriptArgumentException("Argument $name is a record of ${arguments.size} elements: ${stringElements.size} elements found")
@@ -835,19 +837,19 @@ open class ScriptRecordArg(override val arguments: MutableList<ScriptArg> = muta
 
 @KotlinDSL
 class ScriptOptionalRecordArg(arguments: MutableList<ScriptArg> = mutableListOf()) : ScriptRecordArg(arguments, false) {
-    override fun toValue(stringValue: String?): Any {
-        return toOptionalRecordValue(stringValue)
+    override fun toValue(anyValue: Any?): Any {
+        return toOptionalRecordValue(anyValue)
     }
 
-    fun toOptionalRecordValue(stringValue: String?): Optional<Map<String, Any>> {
-        if (stringValue.isNullOrEmpty()) {
+    fun toOptionalRecordValue(anyValue: Any?): Optional<Map<String, Any>> {
+        if (anyValue == null || anyValue == "") {
             return try {
                 Optional.of(toRecordValue(null))
             } catch (ex: ScriptArgumentException) {
                 Optional.empty()
             }
         }
-        return Optional.of(toRecordValue(stringValue))
+        return Optional.of(toRecordValue(anyValue))
     }
 }
 
@@ -855,7 +857,7 @@ class ScriptArgumentException(message: String): RuntimeException(message)
 
 sealed class AbstractScript {
     var scriptArguments: ScriptArguments = ScriptArguments()
-    val rawArguments: MutableMap<String, String> = mutableMapOf()
+    val rawArguments: MutableMap<String, Any> = mutableMapOf()
     val arguments: MutableMap<String, Any> = mutableMapOf()
     var verboseMode: Boolean = false
     var debugMode: Boolean = false
@@ -878,7 +880,7 @@ class ScriptSingle(val executable: ScriptSingle.() -> Any?) : AbstractScript() {
     var inputFile: File = File(".")
     var inputImage: Image = MatrixImage(0, 0)
 
-    fun executeSingleScript(inputFiles: List<File>, inputFile: File, inputImage: Image, scriptArguments: ScriptArguments, rawArguments: Map<String, String>, verboseMode: Boolean, debugMode: Boolean, outputHandler: (File, Any?) -> Unit) {
+    fun executeSingleScript(inputFiles: List<File>, inputFile: File, inputImage: Image, scriptArguments: ScriptArguments, rawArguments: Map<String, Any>, verboseMode: Boolean, debugMode: Boolean, outputHandler: (File, Any?) -> Unit) {
         this.inputFiles = inputFiles
         this.inputFile = inputFile
         this.inputImage = inputImage
@@ -903,7 +905,7 @@ class ScriptSingle(val executable: ScriptSingle.() -> Any?) : AbstractScript() {
 class ScriptMulti(val executable: ScriptMulti.() -> Any?) : AbstractScript() {
     var inputFiles: List<File> = listOf()
 
-    fun executeMultiScript(inputFiles: List<File>, scriptArguments: ScriptArguments, rawArguments: Map<String, String>, verboseMode: Boolean, debugMode: Boolean, outputHandler: (File, Any?) -> Unit) {
+    fun executeMultiScript(inputFiles: List<File>, scriptArguments: ScriptArguments, rawArguments: Map<String, Any>, verboseMode: Boolean, debugMode: Boolean, outputHandler: (File, Any?) -> Unit) {
         this.inputFiles = inputFiles
         this.scriptArguments = scriptArguments
         this.verboseMode = verboseMode
@@ -927,7 +929,7 @@ class ScriptMulti(val executable: ScriptMulti.() -> Any?) : AbstractScript() {
     }
 }
 
-private fun processArguments(scriptArguments: List<ScriptArg>, rawArguments: Map<String, String>): MutableMap<String, Any> {
+private fun processArguments(scriptArguments: List<ScriptArg>, rawArguments: Map<String, Any>): MutableMap<String, Any> {
     val processed = mutableMapOf<String, Any>()
 
     for (scriptArgument in scriptArguments) {
@@ -937,7 +939,7 @@ private fun processArguments(scriptArguments: List<ScriptArg>, rawArguments: Map
     return processed
 }
 
-private fun processArgument(scriptArgument: ScriptArg, rawArgument: String?): Any {
+private fun processArgument(scriptArgument: ScriptArg, rawArgument: Any?): Any {
     return scriptArgument.toValue(rawArgument)
 }
 

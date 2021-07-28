@@ -254,7 +254,7 @@ object KImageManager {
 
     fun executeScript(
         script: Script,
-        arguments: Map<String, String>,
+        arguments: Map<String, Any>,
         inputFiles: List<File>,
         helpMode: Boolean,
         verboseMode: Boolean,

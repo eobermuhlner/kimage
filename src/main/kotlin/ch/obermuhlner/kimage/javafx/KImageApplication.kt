@@ -70,7 +70,6 @@ class KImageApplication : Application() {
 
     private var currentInputImage: Image? = null
 
-    private val argumentStrings = mutableMapOf<String, String>()
     private val argumentsProperty = SimpleMapProperty<String, Any>(FXCollections.observableHashMap())
 
     private var previewScript: ScriptV0_1? = null
@@ -714,7 +713,7 @@ class KImageApplication : Application() {
 
                                         KImageManager.executeScript(
                                             script,
-                                            argumentStrings,
+                                            argumentsProperty,
                                             inputFiles,
                                             false,
                                             verboseModeProperty.get(),
@@ -772,7 +771,7 @@ class KImageApplication : Application() {
 
                 KImageManager.executeScript(
                     script,
-                    argumentStrings,
+                    argumentsProperty,
                     croppedInputFiles,
                     false,
                     false,
@@ -825,7 +824,6 @@ class KImageApplication : Application() {
                             }
                             selectedProperty().addListener { _, _, value ->
                                 argumentsProperty[argument.name] = value
-                                argumentStrings[argument.name] = value.toString()
                             }
                         }
                     }
@@ -834,7 +832,6 @@ class KImageApplication : Application() {
                             val argProperty = remember(SimpleStringProperty())
                             argProperty.addListener { _, _, value ->
                                 argumentsProperty[argument.name] = value
-                                argumentStrings[argument.name] = value.toString()
                             }
                             children += textfield {
                                 tooltip = Tooltip(argument.tooltip())
@@ -856,7 +853,6 @@ class KImageApplication : Application() {
                             val argProperty = remember(SimpleStringProperty())
                             argProperty.addListener { _, _, value ->
                                 argumentsProperty[argument.name] = value
-                                argumentStrings[argument.name] = value.toString()
                             }
                             children += textfield {
                                 tooltip = Tooltip(argument.tooltip())
@@ -875,7 +871,6 @@ class KImageApplication : Application() {
                         val argProperty = remember(SimpleStringProperty())
                         argProperty.addListener { _, _, value ->
                             argumentsProperty[argument.name] = value
-                            argumentStrings[argument.name] = value.toString()
                         }
                         if (argument.allowed.isNotEmpty()) {
                             val allowed2 = mutableListOf<String>()
@@ -886,10 +881,6 @@ class KImageApplication : Application() {
                             combobox(allowed2) {
                                 tooltip = Tooltip(argument.tooltip())
                                 valueProperty().bindBidirectional(argProperty)
-//                                selectionModel.selectedItemProperty().addListener { _, _, value ->
-//                                    argumentsProperty[argument.name] = value
-//                                    argumentStrings[argument.name] = value
-//                                }
                                 setupEnabledWhen(argument, this.disableProperty())
                                 argument.default?.let {
                                     argProperty.set(it)
@@ -924,11 +915,9 @@ class KImageApplication : Application() {
                             argProperty.addListener { _, _, value ->
                                 if (value.isNullOrEmpty()) {
                                     argumentsProperty.remove(argument.name)
-                                    argumentStrings.remove(argument.name)
                                 } else {
                                     val file = File(inputDirectoryProperty.get(), value)
                                     argumentsProperty[argument.name] = file
-                                    argumentStrings[argument.name] = file.toString()
                                 }
                             }
                             children += textfield(argProperty) {
@@ -972,11 +961,9 @@ class KImageApplication : Application() {
                             argProperty.addListener { _, _, value ->
                                 if (value.isNullOrEmpty()) {
                                     argumentsProperty.remove(argument.name)
-                                    argumentStrings.remove(argument.name)
                                 } else {
                                     val file = File(inputDirectoryProperty.get(), value)
                                     argumentsProperty[argument.name] = file
-                                    argumentStrings[argument.name] = file.toString()
                                 }
                             }
                             children += textfield(argProperty) {
@@ -1006,7 +993,6 @@ class KImageApplication : Application() {
                             val argProperty = remember(SimpleStringProperty())
                             argProperty.addListener { _, _, value ->
                                 argumentsProperty[argument.name] = value
-                                argumentStrings[argument.name] = value.toString()
                             }
                             children += textfield(argProperty) {
                                 tooltip = Tooltip(argument.tooltip())
