@@ -75,6 +75,7 @@ kimage(0.1) {
         }
         string("prefixBad") {
             description = "The prefix of the badly aligned output files."
+            enabledWhen = Reference("saveBad").isEqual(true)
             default = "badaligned"
         }
     }

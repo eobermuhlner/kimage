@@ -215,22 +215,6 @@ object TestScript {
                     allowed = listOf("rggb", "bggr", "gbrg", "grbg")
                     default = "rggb"
                 }
-                string ("whitebalance") {
-                    allowed = listOf("custom", "global-median", "global-average", "highlight-median", "local-median", "local-average")
-                    default = "custom"
-                }
-                optionalInt("localX") {
-                    hint = Hint.ImageX
-                }
-                optionalInt("localY") {
-                    hint = Hint.ImageY
-                }
-                int("localRadius") {
-                    default = 10
-                }
-                double("highlight") {
-                    default = 0.8
-                }
                 optionalDouble("red") {
                 }
                 optionalDouble("green") {
@@ -241,32 +225,15 @@ object TestScript {
                     allowed = listOf("superpixel", "none", "nearest", "bilinear")
                     default = "bilinear"
                 }
-                boolean("stretch") {
-                    default = false
-                }
-                double("stretchLow") {
-                    default = 0.001
-                }
-                double("stretchHigh") {
-                    default = 0.999
-                }
             }
 
             single {
                 val badpixels: Optional<File> by arguments
                 val pattern: String by arguments
-                var whitebalance: String by arguments
-                var localX: Optional<Int> by arguments
-                var localY: Optional<Int> by arguments
-                val localRadius: Int by arguments
-                val highlight: Double by arguments
                 var red: Optional<Double> by arguments
                 var green: Optional<Double> by arguments
                 var blue: Optional<Double> by arguments
                 val interpolation: String by arguments
-                val stretch: Boolean by arguments
-                val stretchLow: Double by arguments
-                val stretchHigh: Double by arguments
 
                 val badpixelCoords = if (badpixels.isPresent()) {
                     badpixels.get().readLines()
@@ -359,72 +326,14 @@ object TestScript {
                     }
                 }
 
-                if (!localX.isPresent) {
-                    localX = Optional.of(inputImage.width / 2)
+                if (red.isPresent) {
+                    red = Optional.of(1.0 / red.get())
                 }
-                if (!localY.isPresent) {
-                    localY = Optional.of(inputImage.height/ 2)
+                if (green.isPresent) {
+                    green = Optional.of(1.0 / green.get())
                 }
-
-                when (whitebalance) {
-                    "custom" -> {
-                        if (red.isPresent) {
-                            red = Optional.of(1.0 / red.get())
-                        }
-                        if (green.isPresent) {
-                            green = Optional.of(1.0 / green.get())
-                        }
-                        if (blue.isPresent) {
-                            blue = Optional.of(1.0 / blue.get())
-                        }
-                    }
-                    "global-median" -> {
-                        red = Optional.of(mosaicRedMatrix.median())
-                        green = Optional.of((mosaicGreen1Matrix.median() + mosaicGreen2Matrix.median()) / 2)
-                        blue = Optional.of(mosaicBlueMatrix.median())
-                    }
-                    "global-average" -> {
-                        red = Optional.of(mosaicRedMatrix.average())
-                        green = Optional.of((mosaicGreen1Matrix.average() + mosaicGreen2Matrix.average()) / 2)
-                        blue = Optional.of(mosaicBlueMatrix.average())
-                    }
-                    "highlight-median" -> {
-                        val histogram = Histogram()
-                        histogram.add(mosaicGrayMatrix)
-                        val highlightValue = histogram.estimatePercentile(highlight)
-
-                        val redValues = mutableListOf<Double>()
-                        val greenValues = mutableListOf<Double>()
-                        val blueValues = mutableListOf<Double>()
-                        for (row in 0 until mosaicGrayMatrix.rows) {
-                            for (column in 0 until mosaicGrayMatrix.columns) {
-                                if (mosaicGrayMatrix[row, column] >= highlightValue) {
-                                    redValues += mosaicRedMatrix[row, column]
-                                    greenValues += mosaicGreen1Matrix[row, column]
-                                    greenValues += mosaicGreen2Matrix[row, column]
-                                    blueValues += mosaicBlueMatrix[row, column]
-                                }
-                            }
-                        }
-                        red = Optional.of(redValues.median())
-                        green = Optional.of(greenValues.median())
-                        blue = Optional.of(blueValues.median())
-                    }
-                    "local-median" -> {
-                        val halfLocalX = localX.get() / 2
-                        val halfLocalY = localY.get() / 2
-                        red = Optional.of(mosaicRedMatrix.cropCenter(localRadius, halfLocalY, halfLocalX, false).median())
-                        green = Optional.of((mosaicGreen1Matrix.cropCenter(localRadius, halfLocalY, halfLocalX, false).median() + mosaicGreen1Matrix.cropCenter(localRadius, halfLocalY, halfLocalX, false).median()) / 2)
-                        blue = Optional.of(mosaicBlueMatrix.cropCenter(localRadius, halfLocalY, halfLocalX, false).median())
-                    }
-                    "local-average" -> {
-                        val halfLocalX = localX.get() / 2
-                        val halfLocalY = localY.get() / 2
-                        red = Optional.of(mosaicRedMatrix.cropCenter(localRadius, halfLocalY, halfLocalX, false).average())
-                        green = Optional.of((mosaicGreen1Matrix.cropCenter(localRadius, halfLocalY, halfLocalX, false).median() + mosaicGreen1Matrix.cropCenter(localRadius, halfLocalY, halfLocalX, false).average()) / 2)
-                        blue = Optional.of(mosaicBlueMatrix.cropCenter(localRadius, halfLocalY, halfLocalX, false).average())
-                    }
-                    else -> throw IllegalArgumentException("Unknown whitebalance: $whitebalance")
+                if (blue.isPresent) {
+                    blue = Optional.of(1.0 / blue.get())
                 }
 
                 if (!red.isPresent()) {
@@ -437,12 +346,17 @@ object TestScript {
                     blue = Optional.of(1.0)
                 }
 
+                println("  red =   $red")
+                println("  green = $green")
+                println("  blue =  $blue")
+                println()
+
                 val maxFactor = max(red.get(), max(green.get(), blue.get()))
                 var redFactor = maxFactor / red.get()
                 var greenFactor = maxFactor / green.get()
                 var blueFactor = maxFactor / blue.get()
 
-                println("Whitebalance Factor:")
+                println("Whitebalance:")
                 println("  red =   $redFactor")
                 println("  green = $greenFactor")
                 println("  blue =  $blueFactor")
@@ -450,36 +364,6 @@ object TestScript {
                 var redOffset = 0.0
                 var greenOffset = 0.0
                 var blueOffset = 0.0
-
-                if (stretch) {
-                    val histogram = Histogram()
-                    histogram.add(mosaic)
-                    if (verboseMode) {
-                        histogram.print()
-                    }
-
-                    val minValue = histogram.estimatePercentile(stretchLow)
-                    val maxValue = histogram.estimatePercentile(stretchHigh)
-                    val range = maxValue - minValue
-                    println("Stretch min = $minValue")
-                    println("Stretch max = $maxValue")
-
-                    redFactor /= range
-                    redOffset = minValue
-                    greenFactor /= range
-                    greenOffset = minValue
-                    blueFactor /= range
-                    blueOffset = minValue
-
-                    println("Stretched Whitebalance:")
-                    println("  red =   $redFactor")
-                    println("  green = $greenFactor")
-                    println("  blue =  $blueFactor")
-                    println("  redOffset   = $redOffset")
-                    println("  greenOffset = $greenOffset")
-                    println("  blueOffset  =  $blueOffset")
-                    println()
-                }
 
                 mosaicRedMatrix.onEach { v -> (v - redOffset) * redFactor  }
                 mosaicGreen1Matrix.onEach { v -> (v - greenOffset) * greenFactor  }
@@ -587,225 +471,6 @@ object TestScript {
             }
         }
 
-    private fun scriptConvertRaw(): Script =
-        kimage(0.1) {
-            name = "convert-raw"
-            title = "Convert an image from raw format into tiff"
-            description = """
-                Convert an image into another format.
-                """
-            arguments {
-                string("dcraw") {
-                    default = "dcraw"
-                }
-                string("rotate") {
-                    allowed = listOf("0", "90", "180", "270", "auto")
-                    default = "auto"
-                }
-                boolean("aspectRatio") {
-                    default = true
-                }
-                string("whitebalance") {
-                    allowed = listOf("camera", "image", "custom", "fixed")
-                    default = "camera"
-                }
-                optionalList("multipliers") {
-                    min = 4
-                    max = 4
-                    double {
-                    }
-                }
-                string("colorspace") {
-                    allowed = listOf("raw", "sRGB", "AdobeRGB", "WideGamutRGB", "KodakProPhotoRGB", "XYZ", "ACES", "embed")
-                    default = "sRGB"
-                }
-                string("interpolation") {
-                    allowed = listOf("bilinear", "variable-number-gradients", "patterned-pixel-grouping", "adaptive-homogeneity-directed", "none", "none-unscaled", "none-uncropped")
-                    default = "adaptive-homogeneity-directed"
-                }
-                int("medianPasses") {
-                    default = 0
-                }
-                string("bits") {
-                    allowed = listOf("8", "16")
-                    default = "16"
-                }
-                record("gamma") {
-                    double("gammaPower") {
-                        default = 2.222
-                    }
-                    double("gammaSlope") {
-                        default = 4.5
-                    }
-                }
-                double("brightness") {
-                    default = 1.0
-                }
-            }
-
-            fun dcraw(
-                dcraw: String,
-                aspectRatio: Boolean,
-                rotate: String,
-                whitebalance: String,
-                multipliers: Optional<List<Double>>,
-                colorspace: String,
-                interpolation: String,
-                medianPasses: Int,
-                bits: String,
-                brightness: Double,
-                file: File
-            ) {
-                val processBuilder = ProcessBuilder()
-
-                val command = mutableListOf(dcraw, "-T", "-v")
-                if (!aspectRatio) {
-                    command.add("-j")
-                }
-                when (rotate) {
-                    "0" -> {
-                        command.add("-t")
-                        command.add("0")
-                    }
-                    "90" -> {
-                        command.add("-t")
-                        command.add("90")
-                    }
-                    "180" -> {
-                        command.add("-t")
-                        command.add("180")
-                    }
-                    "270" -> {
-                        command.add("-t")
-                        command.add("270")
-                    }
-                    "auto" -> {}
-                    else -> throw java.lang.IllegalArgumentException("Unknown rotate: $rotate")
-                }
-                when (whitebalance) {
-                    "camera" -> command.add("-w")
-                    "image" -> command.add("-a")
-                    "custom" -> {
-                        command.add("-r")
-                        if (multipliers.isPresent) {
-                            command.add(multipliers.get()[0].toString())
-                            command.add(multipliers.get()[1].toString())
-                            command.add(multipliers.get()[2].toString())
-                            command.add(multipliers.get()[3].toString())
-                        } else {
-                            command.add("1")
-                            command.add("1")
-                            command.add("1")
-                            command.add("1")
-                        }
-                    }
-                    "fixed" -> command.add("-W")
-                    else -> throw java.lang.IllegalArgumentException("Unknown whitebalance: $whitebalance")
-                }
-                when (colorspace) {
-                    "raw" -> {
-                        command.add("-o")
-                        command.add("0")
-                    }
-                    "sRGB" -> {
-                        command.add("-o")
-                        command.add("1")
-                    }
-                    "AdobeRGB" -> {
-                        command.add("-o")
-                        command.add("2")
-                    }
-                    "WideGamutRGB" -> {
-                        command.add("-o")
-                        command.add("3")
-                    }
-                    "KodakProPhotoRGB" -> {
-                        command.add("-o")
-                        command.add("4")
-                    }
-                    "XYZ" -> {
-                        command.add("-o")
-                        command.add("5")
-                    }
-                    "ACES" -> {
-                        command.add("-o")
-                        command.add("6")
-                    }
-                    "embed" -> {
-                        command.add("-p")
-                        command.add("embed")
-                    }
-                    else -> throw java.lang.IllegalArgumentException("Unknown colorspace: $colorspace")
-                }
-                when (interpolation) {
-                    // "bilinear", "variable-number-gradients", "patterned-pixel-grouping", "adaptive-homogeneity-directed", "none", "none-unscaled", "none-uncropped"
-                    "bilinear" -> {
-                        command.add("-q")
-                        command.add("0")
-                    }
-                    "variable-number-gradients" -> {
-                        command.add("-q")
-                        command.add("1")
-                    }
-                    "patterned-pixel-grouping" -> {
-                        command.add("-q")
-                        command.add("2")
-                    }
-                    "adaptive-homogeneity-directed" -> {
-                        command.add("-q")
-                        command.add("3")
-                    }
-                    "none" -> command.add("-d")
-                    "none-unscaled" -> command.add("-D")
-                    "none-uncropped" -> command.add("-E")
-                    else -> throw java.lang.IllegalArgumentException("Unknown interpolation: $interpolation")
-                }
-                if (medianPasses > 0) {
-                    command.add("-m")
-                    command.add(medianPasses.toString())
-                }
-                when (bits) {
-                    "16" -> command.add("-6")
-                    else -> {}
-                }
-                command.add("-b")
-                command.add(brightness.toString())
-                command.add(file.path)
-
-                println("Command: $command")
-
-                processBuilder.command(command)
-                //processBuilder.directory(file.parentFile)
-
-                val process = processBuilder.start()
-
-                Executors.newSingleThreadExecutor().submit(StreamGobbler(process.errorStream, System.out::println))
-                val exitCode = process.waitFor()
-                println("Exit code: $exitCode")
-            }
-
-            multi {
-                val dcraw: String by arguments
-                val aspectRatio: Boolean by arguments
-                val rotate: String by arguments
-                val whitebalance: String by arguments
-                val multipliers: Optional<List<Double>> by arguments
-                val colorspace: String by arguments
-                val interpolation: String by arguments
-                val medianPasses: Int by arguments
-                val bits: String by arguments
-                val brightness: Double by arguments
-
-                for (inputFile in inputFiles) {
-                    println("Converting $inputFile")
-                    dcraw(dcraw, aspectRatio, rotate, whitebalance, multipliers, colorspace, interpolation, medianPasses, bits, brightness, inputFile)
-                    println()
-                }
-
-                null
-            }
-        }
-
     private fun scriptRemoveOutliers(): Script =
         kimage(0.1) {
             name = "remove-outliers"
@@ -832,7 +497,7 @@ object TestScript {
                         The default `high` value is calculated from the image using the `kappa` factor.
                         """
                 }
-                string("method") {
+                string("replace") {
                     description = """
                         The method to replace the outlier values.
                         - `global-median` replaces outlier values with the global median of the current channel.
@@ -843,10 +508,11 @@ object TestScript {
                     allowed = listOf("global-median", "local-median")
                     default = "global-median"
                 }
-                int("local-radius") {
+                int("localRadius") {
                     description = """
-                        The radius used in the `method` `local-median` to replace an outlier value. 
+                        The radius used in the replace method `local-median` to replace an outlier value. 
                         """
+                    enabledWhen = Reference("replace").isEqual("local-median")
                     min = 1
                     default = 10
                 }
@@ -856,7 +522,7 @@ object TestScript {
                 val kappa: Double by arguments
                 var low: Optional<Double> by arguments
                 var high: Optional<Double> by arguments
-                val method: String by arguments
+                val replace: String by arguments
                 val localRadius: Int by arguments
 
                 val badpixels: MutableSet<Pair<Int, Int>> = mutableSetOf()
@@ -893,10 +559,10 @@ object TestScript {
                             } else {
                                 badpixels.add(Pair(column, row))
                                 outlierCount++
-                                val replacedValue = when (method) {
+                                val replacedValue = when (replace) {
                                     "global-median" -> globalMedian
                                     "local-median" -> matrix.medianAround(row, column, localRadius)
-                                    else -> throw java.lang.IllegalArgumentException("Unknown method: $method")
+                                    else -> throw java.lang.IllegalArgumentException("Unknown replace method: $replace")
                                 }
                                 badpixelMatrix[row, column] = replacedValue
                                 replacedValue
@@ -1058,6 +724,7 @@ object TestScript {
                         The X coordinate of the center to check for alignment.
                         The default value is calculated from the base image.
                         """
+                    hint = Hint.ImageX
                     min = 0
                 }
                 optionalInt("centerY") {
@@ -1065,6 +732,7 @@ object TestScript {
                         The Y coordinate of the center to check for alignment.
                         The default value is calculated from the base image.
                         """
+                    hint = Hint.ImageY
                     min = 0
                 }
                 double("errorThreshold") {
@@ -1087,6 +755,7 @@ object TestScript {
                 }
                 string("prefixBad") {
                     description = "The prefix of the badly aligned output files."
+                    enabledWhen = Reference("saveBad").isEqual(true)
                     default = "badaligned"
                 }
             }
@@ -1276,15 +945,16 @@ object TestScript {
             arguments {
                 string("method") {
                     description = """
-                        Method used to calculate the stacked image.
+                        Method used to calculate the stacked image.                        
                         """
-                    allowed = listOf("median", "average", "max", "min", "sigma-clip-median", "sigma-clip-average", "sigma-winsorize-median", "sigma-winsorize-average", "winsorized-sigma-clip-median", "winsorized-sigma-clip-average", "weighted-average", "all")
+                    allowed = listOf("median", "average", "max", "min", "sigma-clip-median", "sigma-clip-average", "sigma-winsorize-median", "sigma-winsorize-average", "winsorized-sigma-clip-median", "winsorized-sigma-clip-average", "all")
                     default = "sigma-clip-median"
                 }
                 double("kappa") {
                     description = """
                         The kappa factor is used in sigma-clipping to define how far from the center the outliers are allowed to be.
                         """
+                    enabledWhen = Reference("method").isEqual("sigma-clip-median", "sigma-clip-average", "sigma-winsorize-median", "sigma-winsorize-average", "winsorized-sigma-clip-median", "winsorized-sigma-clip-average", "all")
                     min = 0.0
                     default = 2.0
                 }
@@ -1292,6 +962,7 @@ object TestScript {
                     description = """
                         The number of iterations used in sigma-clipping to remove outliers.
                         """
+                    enabledWhen = Reference("method").isEqual("sigma-clip-median", "sigma-clip-average", "winsorized-sigma-clip-median", "winsorized-sigma-clip-average", "all")
                     min = 0
                     default = 10
                 }
@@ -1364,12 +1035,6 @@ object TestScript {
                         "winsorized-sigma-clip-average" -> { array ->
                             val clippedLength = array.huberWinsorizedSigmaClipInplace(kappa = kappa.toFloat(), iterations, histogram = sigmaClipHistogram)
                             array.average(0, clippedLength)
-                        }
-                        "weighted-average" -> { array ->
-                            array.weightedAverage({ i, value ->
-                                val wellExposed = exp(-(value - 0.5f).pow(2)/0.08f)
-                                wellExposed.pow(1)
-                            })
                         }
                         else -> throw IllegalArgumentException("Unknown method: " + method)
                     }
@@ -2359,7 +2024,7 @@ object TestScript {
                 println("Raw Arguments:")
                 for (rawArgument in rawArguments) {
                     val key: String = rawArgument.key
-                    val value: String = rawArgument.value
+                    val value: Any = rawArgument.value
                     println("  ${key} = ${value}")
                 }
                 println()

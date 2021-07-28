@@ -11,7 +11,7 @@ import javax.imageio.ImageIO
 import kotlin.math.*
 
 kimage(0.1) {
-    name = "convert-raw"
+    name = "convert-raw-pure"
     title = "Convert an image from pure raw format into tiff"
     description = """
                 Convert a raw image with minimal transformations into a tiff image.

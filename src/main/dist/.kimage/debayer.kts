@@ -25,22 +25,6 @@ kimage(0.1) {
             allowed = listOf("rggb", "bggr", "gbrg", "grbg")
             default = "rggb"
         }
-        string ("whitebalance") {
-            allowed = listOf("custom", "global-median", "global-average", "highlight-median", "local-median", "local-average")
-            default = "custom"
-        }
-        optionalInt("localX") {
-            hint = Hint.ImageX
-        }
-        optionalInt("localY") {
-            hint = Hint.ImageY
-        }
-        int("localRadius") {
-            default = 10
-        }
-        double("highlight") {
-            default = 0.8
-        }
         optionalDouble("red") {
         }
         optionalDouble("green") {
@@ -51,32 +35,15 @@ kimage(0.1) {
             allowed = listOf("superpixel", "none", "nearest", "bilinear")
             default = "bilinear"
         }
-        boolean("stretch") {
-            default = false
-        }
-        double("stretchLow") {
-            default = 0.001
-        }
-        double("stretchHigh") {
-            default = 0.999
-        }
     }
 
     single {
         val badpixels: Optional<File> by arguments
         val pattern: String by arguments
-        var whitebalance: String by arguments
-        var localX: Optional<Int> by arguments
-        var localY: Optional<Int> by arguments
-        val localRadius: Int by arguments
-        val highlight: Double by arguments
         var red: Optional<Double> by arguments
         var green: Optional<Double> by arguments
         var blue: Optional<Double> by arguments
         val interpolation: String by arguments
-        val stretch: Boolean by arguments
-        val stretchLow: Double by arguments
-        val stretchHigh: Double by arguments
 
         val badpixelCoords = if (badpixels.isPresent()) {
             badpixels.get().readLines()
@@ -169,72 +136,14 @@ kimage(0.1) {
             }
         }
 
-        if (!localX.isPresent) {
-            localX = Optional.of(inputImage.width / 2)
+        if (red.isPresent) {
+            red = Optional.of(1.0 / red.get())
         }
-        if (!localY.isPresent) {
-            localY = Optional.of(inputImage.height/ 2)
+        if (green.isPresent) {
+            green = Optional.of(1.0 / green.get())
         }
-
-        when (whitebalance) {
-            "custom" -> {
-                if (red.isPresent) {
-                    red = Optional.of(1.0 / red.get())
-                }
-                if (green.isPresent) {
-                    green = Optional.of(1.0 / green.get())
-                }
-                if (blue.isPresent) {
-                    blue = Optional.of(1.0 / blue.get())
-                }
-            }
-            "global-median" -> {
-                red = Optional.of(mosaicRedMatrix.median())
-                green = Optional.of((mosaicGreen1Matrix.median() + mosaicGreen2Matrix.median()) / 2)
-                blue = Optional.of(mosaicBlueMatrix.median())
-            }
-            "global-average" -> {
-                red = Optional.of(mosaicRedMatrix.average())
-                green = Optional.of((mosaicGreen1Matrix.average() + mosaicGreen2Matrix.average()) / 2)
-                blue = Optional.of(mosaicBlueMatrix.average())
-            }
-            "highlight-median" -> {
-                val histogram = Histogram()
-                histogram.add(mosaicGrayMatrix)
-                val highlightValue = histogram.estimatePercentile(highlight)
-
-                val redValues = mutableListOf<Double>()
-                val greenValues = mutableListOf<Double>()
-                val blueValues = mutableListOf<Double>()
-                for (row in 0 until mosaicGrayMatrix.rows) {
-                    for (column in 0 until mosaicGrayMatrix.columns) {
-                        if (mosaicGrayMatrix[row, column] >= highlightValue) {
-                            redValues += mosaicRedMatrix[row, column]
-                            greenValues += mosaicGreen1Matrix[row, column]
-                            greenValues += mosaicGreen2Matrix[row, column]
-                            blueValues += mosaicBlueMatrix[row, column]
-                        }
-                    }
-                }
-                red = Optional.of(redValues.median())
-                green = Optional.of(greenValues.median())
-                blue = Optional.of(blueValues.median())
-            }
-            "local-median" -> {
-                val halfLocalX = localX.get() / 2
-                val halfLocalY = localY.get() / 2
-                red = Optional.of(mosaicRedMatrix.cropCenter(localRadius, halfLocalY, halfLocalX, false).median())
-                green = Optional.of((mosaicGreen1Matrix.cropCenter(localRadius, halfLocalY, halfLocalX, false).median() + mosaicGreen1Matrix.cropCenter(localRadius, halfLocalY, halfLocalX, false).median()) / 2)
-                blue = Optional.of(mosaicBlueMatrix.cropCenter(localRadius, halfLocalY, halfLocalX, false).median())
-            }
-            "local-average" -> {
-                val halfLocalX = localX.get() / 2
-                val halfLocalY = localY.get() / 2
-                red = Optional.of(mosaicRedMatrix.cropCenter(localRadius, halfLocalY, halfLocalX, false).average())
-                green = Optional.of((mosaicGreen1Matrix.cropCenter(localRadius, halfLocalY, halfLocalX, false).median() + mosaicGreen1Matrix.cropCenter(localRadius, halfLocalY, halfLocalX, false).average()) / 2)
-                blue = Optional.of(mosaicBlueMatrix.cropCenter(localRadius, halfLocalY, halfLocalX, false).average())
-            }
-            else -> throw IllegalArgumentException("Unknown whitebalance: $whitebalance")
+        if (blue.isPresent) {
+            blue = Optional.of(1.0 / blue.get())
         }
 
         if (!red.isPresent()) {
@@ -250,6 +159,7 @@ kimage(0.1) {
         println("  red =   $red")
         println("  green = $green")
         println("  blue =  $blue")
+        println()
 
         val maxFactor = max(red.get(), max(green.get(), blue.get()))
         var redFactor = maxFactor / red.get()
@@ -264,36 +174,6 @@ kimage(0.1) {
         var redOffset = 0.0
         var greenOffset = 0.0
         var blueOffset = 0.0
-
-        if (stretch) {
-            val histogram = Histogram()
-            histogram.add(mosaic)
-            if (verboseMode) {
-                histogram.print()
-            }
-
-            val minValue = histogram.estimatePercentile(stretchLow)
-            val maxValue = histogram.estimatePercentile(stretchHigh)
-            val range = maxValue - minValue
-            println("Stretch min = $minValue")
-            println("Stretch max = $maxValue")
-
-            redFactor /= range
-            redOffset = minValue
-            greenFactor /= range
-            greenOffset = minValue
-            blueFactor /= range
-            blueOffset = minValue
-
-            println("Stretched Whitebalance:")
-            println("  red =   $redFactor")
-            println("  green = $greenFactor")
-            println("  blue =  $blueFactor")
-            println("  redOffset   = $redOffset")
-            println("  greenOffset = $greenOffset")
-            println("  blueOffset  =  $blueOffset")
-            println()
-        }
 
         mosaicRedMatrix.onEach { v -> (v - redOffset) * redFactor  }
         mosaicGreen1Matrix.onEach { v -> (v - greenOffset) * greenFactor  }

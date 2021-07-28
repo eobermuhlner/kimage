@@ -41,6 +41,7 @@ kimage(0.1) {
             description = """
                         The kappa factor is used in sigma-clipping to define how far from the center the outliers are allowed to be.
                         """
+            enabledWhen = Reference("method").isEqual("sigma-clip-median", "sigma-clip-average", "sigma-winsorize-median", "sigma-winsorize-average", "winsorized-sigma-clip-median", "winsorized-sigma-clip-average", "all")
             min = 0.0
             default = 2.0
         }
@@ -48,6 +49,7 @@ kimage(0.1) {
             description = """
                         The number of iterations used in sigma-clipping to remove outliers.
                         """
+            enabledWhen = Reference("method").isEqual("sigma-clip-median", "sigma-clip-average", "winsorized-sigma-clip-median", "winsorized-sigma-clip-average", "all")
             min = 0
             default = 10
         }

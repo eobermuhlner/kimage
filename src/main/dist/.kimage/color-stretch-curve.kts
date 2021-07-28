@@ -36,18 +36,22 @@ kimage(0.1) {
         }
         double("custom1X") {
             hint = Hint.ColorCurveX
+            enabledWhen = Reference("curve").isEqual("custom1", "custom2", "all")
             default = 0.3
         }
         double("custom1Y") {
             hint = Hint.ColorCurveY
+            enabledWhen = Reference("curve").isEqual("custom1", "custom2", "all")
             default = 0.01
         }
         double("custom2X") {
             hint = Hint.ColorCurveX
+            enabledWhen = Reference("curve").isEqual("custom2", "all")
             default = 0.7
         }
         double("custom2Y") {
             hint = Hint.ColorCurveY
+            enabledWhen = Reference("curve").isEqual("custom2", "all")
             default = 0.99
         }
     }

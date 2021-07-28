@@ -34,7 +34,7 @@ kimage(0.1) {
                         The default `high` value is calculated from the image using the `kappa` factor.
                         """
         }
-        string("method") {
+        string("replace") {
             description = """
                         The method to replace the outlier values.
                         - `global-median` replaces outlier values with the global median of the current channel.
@@ -47,8 +47,9 @@ kimage(0.1) {
         }
         int("localRadius") {
             description = """
-                        The radius used in the method `local-median` to replace an outlier value. 
+                        The radius used in the replace method `local-median` to replace an outlier value. 
                         """
+            enabledWhen = Reference("replace").isEqual("local-median")
             min = 1
             default = 10
         }
@@ -58,7 +59,7 @@ kimage(0.1) {
         val kappa: Double by arguments
         var low: Optional<Double> by arguments
         var high: Optional<Double> by arguments
-        val method: String by arguments
+        val replace: String by arguments
         val localRadius: Int by arguments
 
         val badpixels: MutableSet<Pair<Int, Int>> = mutableSetOf()
@@ -95,10 +96,10 @@ kimage(0.1) {
                     } else {
                         badpixels.add(Pair(column, row))
                         outlierCount++
-                        val replacedValue = when (method) {
+                        val replacedValue = when (replace) {
                             "global-median" -> globalMedian
                             "local-median" -> matrix.medianAround(row, column, localRadius)
-                            else -> throw java.lang.IllegalArgumentException("Unknown method: $method")
+                            else -> throw java.lang.IllegalArgumentException("Unknown replace method: $replace")
                         }
                         badpixelMatrix[row, column] = replacedValue
                         replacedValue

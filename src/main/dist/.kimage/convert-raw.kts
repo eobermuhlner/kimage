@@ -34,6 +34,7 @@ kimage(0.1) {
         optionalList("multipliers") {
             min = 4
             max = 4
+            enabledWhen = Reference("whitebalance").isEqual("custom")
             double {
             }
         }

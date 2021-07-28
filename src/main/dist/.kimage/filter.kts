@@ -17,6 +17,7 @@ kimage(0.1) {
             allowed = listOf("blur", "median", "average", "sharpen", "unsharpMask", "edgeDetectionStrong", "edgeDetectionCross", "edgeDetectionDiagonal")
         }
         int("radius") {
+            enabledWhen = Reference("filter").isEqual("blur", "median", "average")
             min = 1
             default = 3
         }
