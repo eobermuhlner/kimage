@@ -14,6 +14,7 @@ import javafx.application.Application
 import javafx.application.Platform
 import javafx.beans.property.*
 import javafx.collections.FXCollections
+import javafx.collections.MapChangeListener
 import javafx.css.PseudoClass
 import javafx.event.EventHandler
 import javafx.geometry.Insets
@@ -70,6 +71,7 @@ class KImageApplication : Application() {
     private var currentInputImage: Image? = null
 
     private val argumentStrings = mutableMapOf<String, String>()
+    private val argumentsProperty = SimpleMapProperty<String, Any>(FXCollections.observableHashMap())
 
     private var previewScript: ScriptV0_1? = null
     private var previewCommand: String? = null
@@ -822,6 +824,7 @@ class KImageApplication : Application() {
                                 isSelected = it
                             }
                             selectedProperty().addListener { _, _, value ->
+                                argumentsProperty[argument.name] = value
                                 argumentStrings[argument.name] = value.toString()
                             }
                         }
@@ -830,6 +833,7 @@ class KImageApplication : Application() {
                         hbox {
                             val argProperty = remember(SimpleStringProperty())
                             argProperty.addListener { _, _, value ->
+                                argumentsProperty[argument.name] = value
                                 argumentStrings[argument.name] = value.toString()
                             }
                             children += textfield {
@@ -839,6 +843,7 @@ class KImageApplication : Application() {
                                 }
                                 textProperty().bindBidirectional(argProperty)
                                 setupValidation(this, textProperty(), argument, argProperty)
+                                setupEnabledWhen(argument, this.disableProperty())
                             }
                             setupHints(argument, argProperty)
                             argument.default?.let {
@@ -850,6 +855,7 @@ class KImageApplication : Application() {
                         hbox {
                             val argProperty = remember(SimpleStringProperty())
                             argProperty.addListener { _, _, value ->
+                                argumentsProperty[argument.name] = value
                                 argumentStrings[argument.name] = value.toString()
                             }
                             children += textfield {
@@ -857,6 +863,7 @@ class KImageApplication : Application() {
                                 textFormatter = textFormatter(argument.default, argument.min, argument.max)
                                 textProperty().bindBidirectional(argProperty)
                                 setupValidation(this, textProperty(), argument, argProperty)
+                                setupEnabledWhen(argument, this.disableProperty())
                             }
                             setupHints(argument, argProperty)
                             argument.default?.let {
@@ -865,6 +872,11 @@ class KImageApplication : Application() {
                         }
                     }
                     is ScriptStringArg -> {
+                        val argProperty = remember(SimpleStringProperty())
+                        argProperty.addListener { _, _, value ->
+                            argumentsProperty[argument.name] = value
+                            argumentStrings[argument.name] = value.toString()
+                        }
                         if (argument.allowed.isNotEmpty()) {
                             val allowed2 = mutableListOf<String>()
                             if (argument is ScriptOptionalStringArg) {
@@ -873,17 +885,18 @@ class KImageApplication : Application() {
                             allowed2.addAll(argument.allowed)
                             combobox(allowed2) {
                                 tooltip = Tooltip(argument.tooltip())
-                                value = argument.default
-                                selectionModel.selectedItemProperty().addListener { _, _, value ->
-                                    argumentStrings[argument.name] = value
+                                valueProperty().bindBidirectional(argProperty)
+//                                selectionModel.selectedItemProperty().addListener { _, _, value ->
+//                                    argumentsProperty[argument.name] = value
+//                                    argumentStrings[argument.name] = value
+//                                }
+                                setupEnabledWhen(argument, this.disableProperty())
+                                argument.default?.let {
+                                    argProperty.set(it)
                                 }
                             }
                         } else {
                             hbox {
-                                val argProperty = remember(SimpleStringProperty())
-                                argProperty.addListener { _, _, value ->
-                                    argumentStrings[argument.name] = value.toString()
-                                }
                                 children += textfield {
                                     tooltip = Tooltip(argument.tooltip())
                                     argument.regex?.let {
@@ -896,6 +909,7 @@ class KImageApplication : Application() {
                                     }
                                     textProperty().bindBidirectional(argProperty)
                                     setupValidation(this, textProperty(), argument, argProperty)
+                                    setupEnabledWhen(argument, this.disableProperty())
                                 }
                                 setupHints(argument, argProperty)
                                 argument.default?.let {
@@ -909,10 +923,12 @@ class KImageApplication : Application() {
                             val argProperty = remember(SimpleStringProperty())
                             argProperty.addListener { _, _, value ->
                                 if (value.isNullOrEmpty()) {
+                                    argumentsProperty.remove(argument.name)
                                     argumentStrings.remove(argument.name)
                                 } else {
-                                    argumentStrings[argument.name] =
-                                        File(inputDirectoryProperty.get(), value).toString()
+                                    val file = File(inputDirectoryProperty.get(), value)
+                                    argumentsProperty[argument.name] = file
+                                    argumentStrings[argument.name] = file.toString()
                                 }
                             }
                             children += textfield(argProperty) {
@@ -920,6 +936,7 @@ class KImageApplication : Application() {
                                 tooltip = Tooltip(argument.tooltip())
                                 text = argument.default?.toString()
                                 setupValidation(this, textProperty(), argument, argProperty)
+                                setupEnabledWhen(argument, this.disableProperty())
                             }
                             children += button(FontIcon()) {
                                 if (argument.isDirectory == true) {
@@ -954,16 +971,19 @@ class KImageApplication : Application() {
                             val argProperty = remember(SimpleStringProperty())
                             argProperty.addListener { _, _, value ->
                                 if (value.isNullOrEmpty()) {
+                                    argumentsProperty.remove(argument.name)
                                     argumentStrings.remove(argument.name)
                                 } else {
-                                    argumentStrings[argument.name] =
-                                        File(inputDirectoryProperty.get(), value).toString()
+                                    val file = File(inputDirectoryProperty.get(), value)
+                                    argumentsProperty[argument.name] = file
+                                    argumentStrings[argument.name] = file.toString()
                                 }
                             }
                             children += textfield(argProperty) {
                                 tooltip = Tooltip(argument.tooltip())
                                 text = argument.default?.toString()
                                 setupValidation(this, textProperty(), argument, argProperty)
+                                setupEnabledWhen(argument, this.disableProperty())
                             }
                             children += button(FontIcon()) {
                                 id = "file-icon"
@@ -985,12 +1005,14 @@ class KImageApplication : Application() {
                         hbox {
                             val argProperty = remember(SimpleStringProperty())
                             argProperty.addListener { _, _, value ->
+                                argumentsProperty[argument.name] = value
                                 argumentStrings[argument.name] = value.toString()
                             }
                             children += textfield(argProperty) {
                                 tooltip = Tooltip(argument.tooltip())
                                 textProperty().bindBidirectional(argProperty)
                                 setupValidation(this, textProperty(), argument, argProperty)
+                                setupEnabledWhen(argument, this.disableProperty())
                             }
                             setupHints(argument, argProperty)
                         }
@@ -1016,6 +1038,7 @@ class KImageApplication : Application() {
                     onAction = EventHandler {
                         argProperty.set(zoomCenterXProperty.get().toString())
                     }
+                    setupEnabledWhen(argument, this.disableProperty())
                 }
             }
             Hint.ImageY -> {
@@ -1023,9 +1046,11 @@ class KImageApplication : Application() {
                     onAction = EventHandler {
                         argProperty.set(zoomCenterYProperty.get().toString())
                     }
+                    setupEnabledWhen(argument, this.disableProperty())
                 }
             }
             else -> {
+                // do nothing
             }
         }
     }
@@ -1035,6 +1060,28 @@ class KImageApplication : Application() {
             node.pseudoClassStateChanged(INVALID, !argument.isValid(value?.toString()?:""))
         }
         node.pseudoClassStateChanged(INVALID, !argument.isValid(argProperty.get()?:""))
+    }
+
+    private fun Reference.evaluate(value: Any): Boolean {
+        return when (this) {
+            is ReferenceIsEqual -> value in values
+            else -> false
+        }
+    }
+
+    private fun setupEnabledWhen(argument: ScriptArg, disableProperty: BooleanProperty) {
+        val enabledWhen = argument.enabledWhen ?: return
+
+        argumentsProperty.addListener(MapChangeListener { change ->
+            if (change.key == enabledWhen.name) {
+                disableProperty.set(!enabledWhen.evaluate(change.valueAdded))
+            }
+        })
+
+        val value = argumentsProperty[enabledWhen.name]
+        if (value != null) {
+            disableProperty.set(!enabledWhen.evaluate(value))
+        }
     }
 
     private fun markdownToHtml(markdown: String): String {

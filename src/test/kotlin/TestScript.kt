@@ -64,26 +64,33 @@ object TestScript {
                 """
             arguments {
                 string ("whitebalance") {
-                    allowed = listOf("custom", "global-median", "global-average", "highlight-median", "local-median", "local-average")
+                    allowed = listOf("custom", "global", "highlight", "local")
                     default = "custom"
                 }
                 optionalInt("localX") {
                     hint = Hint.ImageX
+                    enabledWhen = Reference("whitebalance").isEqual("local")
                 }
                 optionalInt("localY") {
                     hint = Hint.ImageY
+                    enabledWhen = Reference("whitebalance").isEqual("local")
                 }
                 int("localRadius") {
                     default = 10
+                    enabledWhen = Reference("whitebalance").isEqual("local")
                 }
                 double("highlight") {
                     default = 0.8
+                    enabledWhen = Reference("whitebalance").isEqual("highlight")
                 }
                 optionalDouble("red") {
+                    enabledWhen = Reference("whitebalance").isEqual("custom")
                 }
                 optionalDouble("green") {
+                    enabledWhen = Reference("whitebalance").isEqual("custom")
                 }
                 optionalDouble("blue") {
+                    enabledWhen = Reference("whitebalance").isEqual("custom")
                 }
             }
 
@@ -120,17 +127,12 @@ object TestScript {
                             blue = Optional.of(1.0 / blue.get())
                         }
                     }
-                    "global-median" -> {
+                    "global" -> {
                         red = Optional.of(redMatrix.median())
                         green = Optional.of(greenMatrix.median())
                         blue = Optional.of(blueMatrix.median())
                     }
-                    "global-average" -> {
-                        red = Optional.of(redMatrix.average())
-                        green = Optional.of(greenMatrix.average())
-                        blue = Optional.of(blueMatrix.average())
-                    }
-                    "highlight-median" -> {
+                    "highlight" -> {
                         val grayMatrix = inputImage[Channel.Gray]
                         val histogram = Histogram()
                         histogram.add(grayMatrix)
@@ -152,19 +154,12 @@ object TestScript {
                         green = Optional.of(greenValues.median())
                         blue = Optional.of(blueValues.median())
                     }
-                    "local-median" -> {
+                    "local" -> {
                         val halfLocalX = localX.get() / 2
                         val halfLocalY = localY.get() / 2
                         red = Optional.of(redMatrix.cropCenter(localRadius, halfLocalY, halfLocalX, false).median())
                         green = Optional.of(greenMatrix.cropCenter(localRadius, halfLocalY, halfLocalX, false).median())
                         blue = Optional.of(blueMatrix.cropCenter(localRadius, halfLocalY, halfLocalX, false).median())
-                    }
-                    "local-average" -> {
-                        val halfLocalX = localX.get() / 2
-                        val halfLocalY = localY.get() / 2
-                        red = Optional.of(redMatrix.cropCenter(localRadius, halfLocalY, halfLocalX, false).average())
-                        green = Optional.of(greenMatrix.cropCenter(localRadius, halfLocalY, halfLocalX, false).median())
-                        blue = Optional.of(blueMatrix.cropCenter(localRadius, halfLocalY, halfLocalX, false).average())
                     }
                     else -> throw IllegalArgumentException("Unknown whitebalance: $whitebalance")
                 }

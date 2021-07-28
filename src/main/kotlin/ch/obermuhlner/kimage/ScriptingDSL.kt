@@ -366,11 +366,18 @@ enum class Hint {
     ColorCurveY
 }
 
+open class Reference(val name: String) {
+    fun isEqual(vararg values: Any): Reference = ReferenceIsEqual(name, *values)
+}
+
+class ReferenceIsEqual(name: String, vararg val values: Any): Reference(name)
+
 @KotlinDSL
 sealed class ScriptArg(val type: String, val mandatory: Boolean) {
     var name: String = ""
     var description = ""
     var hint: Hint? = null
+    var enabledWhen: Reference? = null
 
     abstract val hasDefault: Boolean
 
