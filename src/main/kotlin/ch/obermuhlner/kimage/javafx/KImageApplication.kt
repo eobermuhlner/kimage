@@ -414,6 +414,9 @@ class KImageApplication : Application() {
                 column<String>("Name", { file -> ReadOnlyStringWrapper(file?.name) }) {
                     this.prefWidth = 200.0
                 }
+                column<String>("Type", { file -> ReadOnlyStringWrapper(file.extension) }) {
+                    this.prefWidth = 60.0
+                }
                 column<Number>("Size", { file -> ReadOnlyLongWrapper(Files.size(file.toPath())) }) {
                     this.prefWidth = 100.0
                 }
@@ -591,12 +594,17 @@ class KImageApplication : Application() {
                 column<Node>("", { file ->
                     ReadOnlyObjectWrapper<Node>(if (file.isDirectory) FontIcon("mdi2f-folder-outline") else label(""))
                 }) {
-                    this.prefWidth = 50.0
+                    this.prefWidth = 25.0
                 }
                 column<String>("Name", { file ->
                     ReadOnlyStringWrapper(file.name)
                 }) {
                     this.prefWidth = 200.0
+                }
+                column<String>("Type", { file ->
+                    ReadOnlyStringWrapper(file.extension)
+                }) {
+                    this.prefWidth = 60.0
                 }
                 column<String>("Size", { file ->
                     ReadOnlyStringWrapper(if (file.isDirectory) "" else Files.size(file.toPath()).toString())
@@ -619,8 +627,8 @@ class KImageApplication : Application() {
             imageView.image = dummyImage
             updateZoom()
         } else {
-            try {
-                runWithProgressDialog("Load Image", "Loading image $selectedFile", 200) {
+            runWithProgressDialog("Load Image", "Loading image $selectedFile", 200) {
+                try {
                     val image = ImageReader.read(selectedFile)
                     if (updateCurrentInputImage) {
                         currentInputImage = image
@@ -633,15 +641,16 @@ class KImageApplication : Application() {
                             updateZoom()
                         }
                     }
+                } catch (ex: Exception) {
+                    // ignore
                 }
-            } catch (ex: Exception) {
-                // ignore
             }
         }
     }
 
     private fun showCommandEditor(command: String) {
         commandArgumentEditor.children.clear()
+        argumentsProperty.clear()
 
         val verboseModeProperty = SimpleBooleanProperty(false)
         val debugModeProperty = SimpleBooleanProperty(false)
@@ -1081,13 +1090,11 @@ class KImageApplication : Application() {
     private fun runWithProgressDialog(title: String, message: String, sleepMillis: Long, function: () -> Unit) {
         var progressDialog: ProgressDialog? = null
         var finished = false
-        var exception: Throwable? = null
 
         Thread {
             try {
                 function()
             } catch (ex: Throwable) {
-                exception = ex
                 ex.printStackTrace()
             } finally {
                 synchronized(this) {
