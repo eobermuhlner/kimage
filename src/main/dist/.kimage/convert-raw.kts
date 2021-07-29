@@ -18,20 +18,53 @@ kimage(0.1) {
                 """
     arguments {
         string("dcraw") {
+            description = """
+               The `dcraw` executable.
+               
+               If the executable is not in the `PATH` then the absolute path is required to run it.
+            """
             default = "dcraw"
         }
         string("rotate") {
+            description = """
+               The angle to rotate the image.
+               - `auto` will use the information in the image rotate. 
+               
+              This corresponds to the `-t` option in the `dcraw` command line tool.
+            """
             allowed = listOf("0", "90", "180", "270", "auto")
             default = "auto"
         }
         boolean("aspectRatio") {
+            description = """
+               
+              This corresponds to the `-j` option in the `dcraw` command line tool.
+            """
             default = true
         }
         string("whitebalance") {
+            description = """
+              The whitebalance setting used to adjust the colors.
+              
+              - `camera` will use the whitebalance settings measured by the camera (if available)
+              - `image` will calculate the whitebalance from the image
+              - `custom` will use the provided custom multipliers
+              - `fixed` will use fixed default white balance multipliers.
+              
+              The `camera` whitebalance corresponds to the `-w` option in the `dcraw` command line tool.
+              The `image` whitebalance corresponds to the `-a` option in the `dcraw` command line tool.
+              The `custom` whitebalance corresponds to the `-r` option in the `dcraw` command line tool.
+              The `fixed` whitebalance corresponds to the `-W` option in the `dcraw` command line tool.
+            """
             allowed = listOf("camera", "image", "custom", "fixed")
             default = "camera"
         }
         optionalList("multipliers") {
+            description = """
+              The four multipliers used for `custom` whitebalance mode.
+              
+              Corresponds to the `-r` option in the `dcraw` command line tool.
+              """
             min = 4
             max = 4
             enabledWhen = Reference("whitebalance").isEqual("custom")
@@ -39,17 +72,55 @@ kimage(0.1) {
             }
         }
         string("colorspace") {
+            description = """
+                The colorspace to be used for the output image.
+                """
             allowed = listOf("raw", "sRGB", "AdobeRGB", "WideGamutRGB", "KodakProPhotoRGB", "XYZ", "ACES", "embed")
             default = "sRGB"
         }
         string("interpolation") {
-            allowed = listOf("bilinear", "variable-number-gradients", "patterned-pixel-grouping", "adaptive-homogeneity-directed", "none", "none-unscaled", "none-uncropped")
-            default = "adaptive-homogeneity-directed"
+            description = """
+                The demosaicing interpolation method to use.
+                
+                - `bilinear`: Bilinear interpolation between neighboring pixels of the same color.
+                
+                  Corresponds to the `-q 0` option in the `dcraw` command line tool.
+                - `VNG`: Variable Number Gradients
+                
+                  Corresponds to the `-q 1` option in the `dcraw` command line tool.
+                - `PPG`: Patterned Pixel Grouping
+                
+                  Corresponds to the `-q 2` option in the `dcraw` command line tool.
+                - `AHD`: Adaptive Homogeneity Directed
+                
+                  Corresponds to the `-q 3` option in the `dcraw` command line tool.
+                - `none`: No interpolation, with automatic scaling to fill the value range.
+                
+                  Corresponds to the `-d` option in the `dcraw` command line tool.
+                - `none-unscaled`: No interpolation, no scaling.
+                
+                  Corresponds to the `-D` option in the `dcraw` command line tool.
+                - `none-uncropped`: No interpolation, no scaling, no cropping.
+                
+                  Corresponds to the `-E` option in the `dcraw` command line tool.
+                """
+            allowed = listOf("bilinear", "VNG", "PPG", "AHD", "none", "none-unscaled", "none-uncropped")
+            default = "AHD"
         }
         int("medianPasses") {
+            description = """
+                The number of 3x3 median passes to post-process the output image.
+                
+                Corresponds to the `-m` option in the `dcraw` command line tool.
+                """
             default = 0
         }
         string("bits") {
+            description = """
+                The number of bits used to store a single value in the image.                
+                
+                The 16 bit mode corresponds to the `-6` option in the `dcraw` command line tool.
+                """
             allowed = listOf("8", "16")
             default = "16"
         }
@@ -166,15 +237,15 @@ kimage(0.1) {
                 command.add("-q")
                 command.add("0")
             }
-            "variable-number-gradients" -> {
+            "VNG" -> {
                 command.add("-q")
                 command.add("1")
             }
-            "patterned-pixel-grouping" -> {
+            "PPG" -> {
                 command.add("-q")
                 command.add("2")
             }
-            "adaptive-homogeneity-directed" -> {
+            "AHD" -> {
                 command.add("-q")
                 command.add("3")
             }
