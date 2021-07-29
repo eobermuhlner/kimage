@@ -17,24 +17,52 @@ kimage(0.1) {
                 """
     arguments {
         double("low") {
-            default = 0.001
+            description = """
+                Low percentile that will be stretched to 0.
+                Values below this percentile will be clipped at 1.
+                """
+            unit = "% percentile"
+            default = 0.1
         }
         double("high") {
-            default = 0.999
+            description = """
+                High percentile that will be stretched to 1.
+                Values above this percentile will be clipped at 1.
+                """
+            unit = "% percentile"
+            default = 99.9
+        }
+        string("channel") {
+            description = """
+                Channel used to measure the values to be stretched.
+                """
+            allowed = listOf("RGB", "Red", "Green", "Blue", "Luminance", "Gray")
+            default = "RGB"
         }
     }
 
     single {
-        val kappa: Double by arguments
-        var low: Double by arguments
-        var high: Double by arguments
+        val low: Double by arguments
+        val high: Double by arguments
+        val channel: String by arguments
 
-        val measureMatrix = inputImage[Channel.Luminance]
+        val channels = when (channel) {
+            "Gray" -> listOf(Channel.Gray)
+            "Luminance" -> listOf(Channel.Luminance)
+            "Red" -> listOf(Channel.Red)
+            "Green" -> listOf(Channel.Green)
+            "Blue" -> listOf(Channel.Blue)
+            "RGB" -> listOf(Channel.Red, Channel.Green, Channel.Blue)
+            else -> throw IllegalArgumentException("Unknown channel: $channel")
+        }
 
         val histogram = Histogram()
-        histogram.add(measureMatrix)
-        val lowValue = histogram.estimatePercentile(low)
-        val highValue = histogram.estimatePercentile(high)
+        for (measureChannel in channels) {
+            histogram.add(inputImage[measureChannel])
+        }
+
+        val lowValue = histogram.estimatePercentile(low / 100.0)
+        val highValue = histogram.estimatePercentile(high / 100.0)
 
         val range = highValue - lowValue
 
@@ -44,10 +72,10 @@ kimage(0.1) {
         }
 
         val outputMatrices = mutableMapOf<Channel, Matrix>()
-        for (channel in inputImage.channels) {
-            println("Processing channel: $channel")
+        for (processChannel in inputImage.channels) {
+            println("Processing channel: $processChannel")
 
-            val matrix = inputImage[channel]
+            val matrix = inputImage[processChannel]
 
             val m = matrix.create()
             for (row in 0 until matrix.rows) {
@@ -57,7 +85,7 @@ kimage(0.1) {
                 }
             }
 
-            outputMatrices[channel] = m
+            outputMatrices[processChannel] = m
         }
 
         MatrixImage(inputImage.width, inputImage.height, inputImage.channels) { channel, _, _ -> outputMatrices[channel]!! }
