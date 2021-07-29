@@ -376,6 +376,7 @@ class ReferenceIsEqual(name: String, vararg val values: Any): Reference(name)
 sealed class ScriptArg(val type: String, val mandatory: Boolean) {
     var name: String = ""
     var description = ""
+    var unit: String? = null
     var hint: Hint? = null
     var enabledWhen: Reference? = null
 
@@ -392,7 +393,7 @@ sealed class ScriptArg(val type: String, val mandatory: Boolean) {
         }
     }
 
-    fun tooltip(): String = if (description.isNullOrBlank()) name else description
+    fun tooltip(): String = if (description.isNullOrBlank()) name else description.trimIndent()
 }
 
 @KotlinDSL

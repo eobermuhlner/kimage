@@ -837,7 +837,7 @@ class KImageApplication : Application() {
                         }
                     }
                     is ScriptIntArg -> {
-                        hbox {
+                        hbox(SPACING) {
                             val argProperty = remember(SimpleStringProperty())
                             argProperty.addListener { _, _, value ->
                                 argumentsProperty[argument.name] = value
@@ -851,6 +851,9 @@ class KImageApplication : Application() {
                                 setupValidation(this, textProperty(), argument, argProperty)
                                 setupEnabledWhen(argument, this.disableProperty())
                             }
+                            argument.unit?.let {
+                                children += label(it)
+                            }
                             setupHints(argument, argProperty)
                             argument.default?.let {
                                 argProperty.set(it.toString())
@@ -858,7 +861,7 @@ class KImageApplication : Application() {
                         }
                     }
                     is ScriptDoubleArg -> {
-                        hbox {
+                        hbox(SPACING) {
                             val argProperty = remember(SimpleStringProperty())
                             argProperty.addListener { _, _, value ->
                                 argumentsProperty[argument.name] = value
@@ -869,6 +872,9 @@ class KImageApplication : Application() {
                                 textProperty().bindBidirectional(argProperty)
                                 setupValidation(this, textProperty(), argument, argProperty)
                                 setupEnabledWhen(argument, this.disableProperty())
+                            }
+                            argument.unit?.let {
+                                children += label(it)
                             }
                             setupHints(argument, argProperty)
                             argument.default?.let {
@@ -887,16 +893,21 @@ class KImageApplication : Application() {
                                 allowed2.add("")
                             }
                             allowed2.addAll(argument.allowed)
-                            combobox(allowed2) {
-                                tooltip = Tooltip(argument.tooltip())
-                                valueProperty().bindBidirectional(argProperty)
-                                setupEnabledWhen(argument, this.disableProperty())
-                                argument.default?.let {
-                                    argProperty.set(it)
+                            hbox(SPACING) {
+                                children += combobox(allowed2) {
+                                    tooltip = Tooltip(argument.tooltip())
+                                    valueProperty().bindBidirectional(argProperty)
+                                    setupEnabledWhen(argument, this.disableProperty())
+                                    argument.default?.let {
+                                        argProperty.set(it)
+                                    }
+                                }
+                                argument.unit?.let {
+                                    children += label(it)
                                 }
                             }
                         } else {
-                            hbox {
+                            hbox(SPACING) {
                                 children += textfield {
                                     tooltip = Tooltip(argument.tooltip())
                                     argument.regex?.let {
@@ -911,6 +922,9 @@ class KImageApplication : Application() {
                                     setupValidation(this, textProperty(), argument, argProperty)
                                     setupEnabledWhen(argument, this.disableProperty())
                                 }
+                                argument.unit?.let {
+                                    children += label(it)
+                                }
                                 setupHints(argument, argProperty)
                                 argument.default?.let {
                                     argProperty.set(it)
@@ -919,7 +933,7 @@ class KImageApplication : Application() {
                         }
                     }
                     is ScriptFileArg -> {
-                        hbox {
+                        hbox(SPACING) {
                             val argProperty = remember(SimpleStringProperty())
                             argProperty.addListener { _, _, value ->
                                 if (value.isNullOrEmpty()) {
@@ -962,10 +976,13 @@ class KImageApplication : Application() {
                                     argProperty.set(it.toString())
                                 }
                             }
+                            argument.unit?.let {
+                                children += label(it)
+                            }
                         }
                     }
                     is ScriptImageArg -> {
-                        hbox {
+                        hbox(SPACING) {
                             val argProperty = remember(SimpleStringProperty())
                             argProperty.addListener { _, _, value ->
                                 if (value.isNullOrEmpty()) {
@@ -991,6 +1008,9 @@ class KImageApplication : Application() {
                                     }
                                 }
                             }
+                            argument.unit?.let {
+                                children += label(it)
+                            }
                             setupHints(argument, argProperty)
                             argument.default?.let {
                                 argProperty.set(it.toString())
@@ -1008,6 +1028,9 @@ class KImageApplication : Application() {
                                 textProperty().bindBidirectional(argProperty)
                                 setupValidation(this, textProperty(), argument, argProperty)
                                 setupEnabledWhen(argument, this.disableProperty())
+                            }
+                            argument.unit?.let {
+                                children += label(it)
                             }
                             setupHints(argument, argProperty)
                         }
