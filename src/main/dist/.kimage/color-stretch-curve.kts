@@ -35,21 +35,33 @@ kimage(0.1) {
             default = "s-curve"
         }
         double("custom1X") {
+            description = """
+                First X value in the custom curve.
+                """
             hint = Hint.ColorCurveX
             enabledWhen = Reference("curve").isEqual("custom1", "custom2", "all")
             default = 0.3
         }
         double("custom1Y") {
+            description = """
+                First Y value in the custom curve.
+                """
             hint = Hint.ColorCurveY
             enabledWhen = Reference("curve").isEqual("custom1", "custom2", "all")
             default = 0.01
         }
         double("custom2X") {
+            description = """
+                Second X value in the custom curve.
+                """
             hint = Hint.ColorCurveX
             enabledWhen = Reference("curve").isEqual("custom2", "all")
             default = 0.7
         }
         double("custom2Y") {
+            description = """
+                Second Y value in the custom curve.
+                """
             hint = Hint.ColorCurveY
             enabledWhen = Reference("curve").isEqual("custom2", "all")
             default = 0.99
