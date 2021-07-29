@@ -12,26 +12,50 @@ kimage(0.1) {
     name = "crop"
     title = "Crop an image"
     description = """
-                Crop an image according the specified arguments.
+                Crop an image.
                 """
     arguments {
         optionalInt("x") {
+            description = """
+                The x coordinate of the top/left corner to crop.
+                
+                Together with the top/left `x`/`y` coordinates you can specify either
+                - absolute bottom/right `x2`/`y2` coordinates
+                - relative `width`/`height`
+                """
             hint = Hint.ImageX
         }
         optionalInt("y") {
+            description = """
+                The y coordinate of the top/left corner to crop.
+                
+                Together with the top/left `x`/`y` coordinates you can specify either
+                - absolute bottom/right `x2`/`y2` coordinates
+                - relative `width`/`height`
+                """
             hint = Hint.ImageY
         }
         optionalInt("x2") {
+            description = """
+                The absolute x coordinate of the bottom/right corner to crop.
+                """
             hint = Hint.ImageX
         }
         optionalInt("y2") {
+            description = """
+                The absolute y coordinate of the bottom/right corner to crop.
+                """
             hint = Hint.ImageY
         }
         optionalInt("width") {
+            description = """
+                The relative width of the rectangle to crop.
+                """
         }
         optionalInt("height") {
-        }
-        optionalInt("radius") {
+            description = """
+                The relative height of the rectangle to crop.
+                """
         }
     }
 
@@ -42,24 +66,8 @@ kimage(0.1) {
         var y2: Optional<Int> by arguments
         var width: Optional<Int> by arguments
         var height: Optional<Int> by arguments
-        var radius: Optional<Int> by arguments
 
-        if (radius.isPresent) {
-            if (!x.isPresent) {
-                x = Optional.of(inputImage.width / 2)
-            }
-            if (!y.isPresent) {
-                y = Optional.of(inputImage.width / 2)
-            }
-
-            println("Arguments:")
-            println("  x = ${x.get()}")
-            println("  y = ${y.get()}")
-            println("  radius = ${radius.get()}")
-            println()
-
-            inputImage.cropCenter(radius.get(), x.get(), y.get())
-        } else if (x2.isPresent && y2.isPresent){
+        if (x2.isPresent && y2.isPresent){
             if (!x.isPresent) {
                 x = Optional.of(0)
             }
