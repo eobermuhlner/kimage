@@ -14,18 +14,32 @@ kimage(0.1) {
     title = "Stack multiple images with different exposures into a single HDR image"
     description = """
                 Calculates for every pixel the values with the best exposure and merges them into a single HDR image.
+                
+                See https://mericam.github.io/papers/exposure_fusion_reduced.pdf
                 """
     arguments {
         int("saturationBlurRadius") {
+            description = """
+                The gaussian blur radius used on the `Saturation` channel to minimize artifacts.
+                """
             default = 3
         }
         double("contrastWeight") {
+            description = """
+                The weight of the calculated contrast in the HDR algorithm.
+                """
             default = 0.2
         }
         double("saturationWeight") {
+            description = """
+                The weight of the calculated saturation in the HDR algorithm.
+                """
             default = 0.1
         }
         double("exposureWeight") {
+            description = """
+                The weight of the calculated best-exposure in the HDR algorithm.
+                """
             default = 1.0
         }
     }

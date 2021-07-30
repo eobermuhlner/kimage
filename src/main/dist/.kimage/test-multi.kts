@@ -12,15 +12,27 @@ import java.nio.file.*
 import java.util.*
 import kotlin.math.*
 
+// This is a kimage script using version 0.1 of kimage
 kimage(0.1) {
+    // The name of this script.
+    // Should correspond to the filename + extension '.kts' and should be unique.
     name = "test-multi"
+    // The title of this script.
+    // Should be a short single sentense that can be used as title in the documentation or a dialog.
     title = "Test script to show how to process multiple images in a kimage script"
+    // The description of this script.
+    // Should be as long and detailed as possible for the users.
     description = """
                 Example script as starting point for developers.
                 """
+    // The list of arguments for this script
     arguments {
+        // Every argument has a type (boolean, int, double, string, list, record) and a unique name
         boolean("center") {
+            // The description of this argument.
+            // Should be as long and detailed as possible for the users.
             description = "Center images to fit the first image."
+            // Optionally specify a default value
             default = false
         }
     }

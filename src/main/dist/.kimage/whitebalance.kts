@@ -19,32 +19,71 @@ kimage(0.1) {
                 """
     arguments {
         string ("whitebalance") {
+            description = """
+                The whitebalancing algorithm.
+                
+                - `custom` specifies the concrete multipliers for `red`, `green` and `blue` channel.
+                - `global` uses the median of the entire input image to determine the gray value.
+                - `highlight` uses the median of the highlighted pixels of the entire input image to determine the gray value.
+                   Use `highlight` to specify the percentile of the pixels that should be used
+                - `local` uses the median of a region centered at `localX`/`localY` with a radius of `localRadius` pixels.
+                """
             allowed = listOf("custom", "global", "highlight", "local")
-            default = "custom"
+            default = "highlight"
         }
         optionalInt("localX") {
+            description = """
+                The center on the x axis of the local area to determine the gray value for white balancing.
+                """
             hint = Hint.ImageX
             enabledWhen = Reference("whitebalance").isEqual("local")
         }
         optionalInt("localY") {
+            description = """
+                The center on the y axis of the local area to determine the gray value for white balancing.
+                """
             hint = Hint.ImageY
             enabledWhen = Reference("whitebalance").isEqual("local")
         }
         int("localRadius") {
-            default = 10
+            description = """
+                The radius of the local area to determine the gray value for white balancing.
+                """
             enabledWhen = Reference("whitebalance").isEqual("local")
+            default = 10
         }
         double("highlight") {
-            default = 0.8
+            description = """
+                The percentile of the hightlights to determine the gray value for white balancing.
+                """
+            unit = "% percentile"
             enabledWhen = Reference("whitebalance").isEqual("highlight")
+            default = 80.0
+        }
+        string("highlightChannel") {
+            description = """
+                The channel to measure the highlights to determine the gray value for white balancing.
+                """
+            enabledWhen = Reference("whitebalance").isEqual("highlight")
+            allowed = listOf("red", "green", "blue", "gray", "luminance")
+            default = "gray"
         }
         optionalDouble("red") {
+            description = """
+                The red value for custom white balancing.
+                """
             enabledWhen = Reference("whitebalance").isEqual("custom")
         }
         optionalDouble("green") {
+            description = """
+                The green value for custom white balancing.
+                """
             enabledWhen = Reference("whitebalance").isEqual("custom")
         }
         optionalDouble("blue") {
+            description = """
+                The blue  value for custom white balancing.
+                """
             enabledWhen = Reference("whitebalance").isEqual("custom")
         }
     }
@@ -55,6 +94,7 @@ kimage(0.1) {
         var localY: Optional<Int> by arguments
         val localRadius: Int by arguments
         val highlight: Double by arguments
+        val highlightChannel: String by arguments
         var red: Optional<Double> by arguments
         var green: Optional<Double> by arguments
         var blue: Optional<Double> by arguments
@@ -88,17 +128,25 @@ kimage(0.1) {
                 blue = Optional.of(blueMatrix.median())
             }
             "highlight" -> {
-                val grayMatrix = inputImage[Channel.Gray]
+                val channel = when (highlightChannel) {
+                    "red" -> Channel.Red
+                    "green" -> Channel.Green
+                    "blue" -> Channel.Blue
+                    "gray" -> Channel.Gray
+                    "luminance" -> Channel.Luminance
+                    else -> throw IllegalArgumentException("Unknown channel: $highlightChannel")
+                }
+                val hightlightMatrix = inputImage[channel]
                 val histogram = Histogram()
-                histogram.add(grayMatrix)
-                val highlightValue = histogram.estimatePercentile(highlight)
+                histogram.add(hightlightMatrix)
+                val highlightValue = histogram.estimatePercentile(highlight / 100.0)
 
                 val redValues = mutableListOf<Double>()
                 val greenValues = mutableListOf<Double>()
                 val blueValues = mutableListOf<Double>()
-                for (row in 0 until grayMatrix.rows) {
-                    for (column in 0 until grayMatrix.columns) {
-                        if (grayMatrix[row, column] >= highlightValue) {
+                for (row in 0 until hightlightMatrix.rows) {
+                    for (column in 0 until hightlightMatrix.columns) {
+                        if (hightlightMatrix[row, column] >= highlightValue) {
                             redValues += redMatrix[row, column]
                             greenValues += greenMatrix[row, column]
                             blueValues += blueMatrix[row, column]

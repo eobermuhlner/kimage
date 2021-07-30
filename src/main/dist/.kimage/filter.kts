@@ -14,9 +14,24 @@ kimage(0.1) {
                 """
     arguments {
         string("filter") {
+            description = """
+                The filter algorithm.
+                
+                - `blur` uses a gaussian blur filter of the specified `radius`
+                - `median` uses a median filter of the specified `radius`
+                - `average` uses an average filter of the specified `radius`
+                - `sharpen` uses a 3x3 sharpen mask
+                - `unsharpMask` uses a 3x3 unsharp mask
+                - `edgeDetectionStrong` detects edges along the horizontal/vertial axes and both diagonals using a 3x3 kernel
+                - `edgeDetectionCross` detects edges along the horizontal/vertial axes using a 3x3 kernel
+                - `edgeDetectionDiagonal` detects edges along both diagonals using a 3x3 kernel
+                """
             allowed = listOf("blur", "median", "average", "sharpen", "unsharpMask", "edgeDetectionStrong", "edgeDetectionCross", "edgeDetectionDiagonal")
         }
         int("radius") {
+            description = """
+                The radius in pixels for the `blur`, `median` and `average` filters.
+                """
             enabledWhen = Reference("filter").isEqual("blur", "median", "average")
             min = 1
             default = 3

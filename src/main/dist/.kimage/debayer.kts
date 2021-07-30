@@ -19,19 +19,59 @@ kimage(0.1) {
                 """
     arguments {
         optionalFile("badpixels") {
+            description = """
+                The list of bad pixels (stuck, dead and hot pixels) that should be ignored during debayering.
+                
+                The badpixels file is a text file compatible with the format defined by `dcraw`.
+                The format consists of space separated x and y coordinates per line.
+                Everything after the second value is ignored.
+                Lines starting with `#` will be ignored.
+                
+                Example:
+                ```
+                # This line will be ignored
+                 345   807 this is a comment
+                1447  2308
+                ```
+                """
             isFile = true
         }
         string("pattern") {
+            description = """
+                The color pattern of the Bayer 2x2 mosaic tile. 
+                """
             allowed = listOf("rggb", "bggr", "gbrg", "grbg")
             default = "rggb"
         }
         optionalDouble("red") {
+            description = """
+                The factor used to multiply with the red values.
+                """
         }
         optionalDouble("green") {
+            description = """
+                The factor used to multiply with the green values.
+                """
         }
         optionalDouble("blue") {
+            description = """
+                The factor used to multiply with the blue values.
+                """
         }
         string("interpolation") {
+            description = """
+                The interpolation method used to debayer the mosaic image.
+                
+                - `superpixel` merges the 2x2 Bayer mosaic tile into a single pixel.
+                  It has no practically artifacts and no chromatic errors.
+                  The output image will have half the width and height of the input image.
+                - `none` does not interpolate the 2x2 Bayer mosaic tile but simply colors each pixel with the appropriate color.
+                  This is useful to visually analyze the mosaic image.
+                - `nearest` is the simplest and fastest interpolation algorithm.
+                  It has strong artifacts.
+                - `bilinear` is a fast algorithm that bilinearly interpolates the neighboring pixels of each color.
+                  It tends to smooth edges and create chromatic artifacts around them.
+                """
             allowed = listOf("superpixel", "none", "nearest", "bilinear")
             default = "bilinear"
         }

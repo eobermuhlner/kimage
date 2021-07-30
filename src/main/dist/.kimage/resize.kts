@@ -17,16 +17,59 @@ kimage(0.1) {
                 """
     arguments {
         optionalDouble("factor") {
+            description = """                
+                The factor along both x and y axes by which the input image should be scaled.
+                - Values > 1 enlarge the image
+                - Values < 1 shrink the image
+                
+                If the axes should be scaled by different factors, use `factorX` and `factorY` instead.
+                If the absolute target width and height are known, use `width` and `height` instead.
+                """
         }
         optionalDouble("factorX") {
+            description = """
+                The factor along the x axis by which the input image should be scaled.
+                - Values > 1 enlarge the image
+                - Values < 1 shrink the image
+                
+                Usually used together with `factorY`.
+                If both axes are scaled by the same factor, use `factor` instead.
+                If the absolute target width is known, use `width` instead.
+                """
         }
         optionalDouble("factorY") {
+            description = """
+                The factor along the y axis by which the input image should be scaled.
+                - Values > 1 enlarge the image
+                - Values < 1 shrink the image
+                
+                Usually used together with `factorY`.
+                If both axes are scaled by the same factor, use `factor` instead.
+                If the absolute target height is known, use `height` instead.
+                """
         }
         optionalInt("width") {
+            description = """
+                The absolute target width of the output image.
+                
+                If you want to scale by a relative factor use `factorX` or `factor` instead. 
+                """
         }
         optionalInt("height") {
+            description = """
+                The absolute target height of the output image.
+                
+                If you want to scale by a relative factor use `factorY` or `factor` instead. 
+                """
         }
         string("method") {
+            description = """
+                The interpolation method used to scale pixels.
+                
+                - `nearest` is the fastest and simplest algorithm.
+                - `bilinear` is a fast algorithm that tends to smooth edges.
+                - `bicubic` is a slower algorithm that usually produces good results.
+                """
             allowed = listOf("nearest", "bilinear", "bicubic")
             default = "bicubic"
         }
