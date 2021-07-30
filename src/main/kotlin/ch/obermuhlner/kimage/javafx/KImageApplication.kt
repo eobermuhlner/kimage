@@ -1092,7 +1092,9 @@ class KImageApplication : Application() {
 
         argumentsProperty.addListener(MapChangeListener { change ->
             if (change.key == enabledWhen.name) {
-                disableProperty.set(!enabledWhen.evaluate(change.valueAdded))
+                if (change.wasAdded()) {
+                    disableProperty.set(!enabledWhen.evaluate(change.valueAdded))
+                }
             }
         })
 
