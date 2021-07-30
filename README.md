@@ -562,9 +562,9 @@ If no `flat` image is specified it will not be used in the calibration process.
 
 ---
 
-## Script: `color-stretch`
+## Script: `color-stretch-curve`
 
-    kimage [OPTIONS] color-stretch
+    kimage [OPTIONS] color-stretch-curve
         [--arg brightness=DOUBLE]
         [--arg curve=STRING]
         [--arg custom1X=DOUBLE]
@@ -573,9 +573,11 @@ If no `flat` image is specified it will not be used in the calibration process.
         [--arg custom2Y=DOUBLE]
         [FILES]
 
-### Stretch the colors of an image to fill the entire value range
+### Stretch the colors non-linearly to fill the entire value range
 
-The colors are first brightened and then a curve is applied.
+The colors are first brightened using a power function and then a curve is applied.
+
+The idea for this script is based on https://clarkvision.com/articles/astrophotography-rnc-color-stretch/
 
 #### Argument: `brightness`
 
@@ -615,20 +617,72 @@ The curve shape used to modify the contrast.
 - Type: double
 - Default value: 0.3
 
+First X value in the custom curve.
+
 #### Argument: `custom1Y`
 
 - Type: double
 - Default value: 0.01
+
+First Y value in the custom curve.
 
 #### Argument: `custom2X`
 
 - Type: double
 - Default value: 0.7
 
+Second X value in the custom curve.
+
 #### Argument: `custom2Y`
 
 - Type: double
 - Default value: 0.99
+
+Second Y value in the custom curve.
+
+---
+
+## Script: `color-stretch-linear`
+
+    kimage [OPTIONS] color-stretch-linear
+        [--arg low=DOUBLE]
+        [--arg high=DOUBLE]
+        [--arg channel=STRING]
+        [FILES]
+
+### Linear stretching of colors
+
+Stretch the pixel values linearly so that the entire color range is used.
+
+#### Argument: `low`
+
+- Type: double
+- Default value: 0.1
+
+Low percentile that will be stretched to 0.
+Values below this percentile will be clipped at 1.
+
+#### Argument: `high`
+
+- Type: double
+- Default value: 99.9
+
+High percentile that will be stretched to 1.
+Values above this percentile will be clipped at 1.
+
+#### Argument: `channel`
+
+- Type: string
+- Allowed values:
+  - `RGB`
+  - `Red`
+  - `Green`
+  - `Blue`
+  - `Luminance`
+  - `Gray`
+- Default value: `RGB`
+
+Channel used to measure the values to be stretched.
 
 ---
 
@@ -658,6 +712,8 @@ Controls whether the old extension should be replaced with the new extension.
 - Mandatory: yes
 - Allowed values:
   - `bmp`
+  - `fit`
+  - `fits`
   - `gif`
   - `jpeg`
   - `jpg`
@@ -670,6 +726,220 @@ The extension to save the converted image file.
 
 ---
 
+## Script: `convert-raw`
+
+    kimage [OPTIONS] convert-raw
+        [--arg dcraw=STRING]
+        [--arg rotate=STRING]
+        [--arg aspectRatio=BOOLEAN]
+        [--arg whitebalance=STRING]
+        [--arg multipliers=LIST]
+        [--arg colorspace=STRING]
+        [--arg interpolation=STRING]
+        [--arg medianPasses=INT]
+        [--arg bits=STRING]
+        [--arg brightness=DOUBLE]
+        [FILES]
+
+### Convert an image from raw format into tiff
+
+Convert an image from raw format into tiff.
+
+#### Argument: `dcraw`
+
+- Type: string
+- Default value: `dcraw`
+
+The `dcraw` executable.
+
+If the executable is not in the `PATH` then the absolute path is required to run it.
+
+#### Argument: `rotate`
+
+- Type: string
+- Allowed values:
+  - `0`
+  - `90`
+  - `180`
+  - `270`
+  - `auto`
+- Default value: `auto`
+
+The angle to rotate the image.
+- `auto` will use the information in the image rotate.
+
+This corresponds to the `-t` option in the `dcraw` command line tool.
+
+#### Argument: `aspectRatio`
+
+- Type: boolean
+
+
+This corresponds to the `-j` option in the `dcraw` command line tool.
+
+#### Argument: `whitebalance`
+
+- Type: string
+- Allowed values:
+  - `camera`
+  - `image`
+  - `custom`
+  - `fixed`
+- Default value: `camera`
+
+The whitebalance setting used to adjust the colors.
+
+- `camera` will use the whitebalance settings measured by the camera (if available)
+- `image` will calculate the whitebalance from the image
+- `custom` will use the provided custom multipliers
+- `fixed` will use fixed default white balance multipliers.
+
+The `camera` whitebalance corresponds to the `-w` option in the `dcraw` command line tool.
+The `image` whitebalance corresponds to the `-a` option in the `dcraw` command line tool.
+The `custom` whitebalance corresponds to the `-r` option in the `dcraw` command line tool.
+The `fixed` whitebalance corresponds to the `-W` option in the `dcraw` command line tool.
+
+#### Argument: `multipliers`
+
+- Type: list
+- List Elements:
+  - Type: double
+
+- Minimum length: 4
+- Maximum length: 4
+
+The four multipliers used for `custom` whitebalance mode.
+
+Corresponds to the `-r` option in the `dcraw` command line tool.
+
+#### Argument: `colorspace`
+
+- Type: string
+- Allowed values:
+  - `raw`
+  - `sRGB`
+  - `AdobeRGB`
+  - `WideGamutRGB`
+  - `KodakProPhotoRGB`
+  - `XYZ`
+  - `ACES`
+  - `embed`
+- Default value: `sRGB`
+
+The colorspace to be used for the output image.
+
+#### Argument: `interpolation`
+
+- Type: string
+- Allowed values:
+  - `bilinear`
+  - `VNG`
+  - `PPG`
+  - `AHD`
+  - `none`
+  - `none-unscaled`
+  - `none-uncropped`
+- Default value: `AHD`
+
+The demosaicing interpolation method to use.
+
+- `bilinear`: Bilinear interpolation between neighboring pixels of the same color.
+
+  Corresponds to the `-q 0` option in the `dcraw` command line tool.
+- `VNG`: Variable Number Gradients
+
+  Corresponds to the `-q 1` option in the `dcraw` command line tool.
+- `PPG`: Patterned Pixel Grouping
+
+  Corresponds to the `-q 2` option in the `dcraw` command line tool.
+- `AHD`: Adaptive Homogeneity Directed
+
+  Corresponds to the `-q 3` option in the `dcraw` command line tool.
+- `none`: No interpolation, with automatic scaling to fill the value range.
+
+  Corresponds to the `-d` option in the `dcraw` command line tool.
+- `none-unscaled`: No interpolation, no scaling.
+
+  Corresponds to the `-D` option in the `dcraw` command line tool.
+- `none-uncropped`: No interpolation, no scaling, no cropping.
+
+  Corresponds to the `-E` option in the `dcraw` command line tool.
+
+#### Argument: `medianPasses`
+
+- Type: int
+- Default value: 0
+
+The number of 3x3 median passes to post-process the output image.
+
+Corresponds to the `-m` option in the `dcraw` command line tool.
+
+#### Argument: `bits`
+
+- Type: string
+- Allowed values:
+  - `8`
+  - `16`
+- Default value: `16`
+
+The number of bits used to store a single value in the image.
+
+The 16 bit mode corresponds to the `-6` option in the `dcraw` command line tool.
+
+#### Argument: `brightness`
+
+- Type: double
+- Default value: 1.0
+
+---
+
+## Script: `convert-raw-pure`
+
+    kimage [OPTIONS] convert-raw-pure
+        [--arg dcraw=STRING]
+        [--arg option=STRING]
+        [FILES]
+
+### Convert an image from pure raw format into tiff
+
+Convert a raw image with minimal transformations into a tiff image.
+
+#### Argument: `dcraw`
+
+- Type: string
+- Default value: `dcraw`
+
+The `dcraw` executable.
+
+If the executable is not in the `PATH` then the absolute path is required to run it.
+
+#### Argument: `option`
+
+- Type: string
+- Allowed values:
+  - `scaled`
+  - `unscaled`
+  - `uncropped`
+  - `none`
+  - `none-unscaled`
+  - `none-uncropped`
+- Default value: `unscaled`
+
+Specifies the transformation options to use.
+No demosaicing interpolation will be used.
+
+- `scaled`, `none`: No interpolation, with automatic scaling to fill the value range.
+
+  Corresponds to the `-d` option in the `dcraw` command line tool.
+- `unscaled`, `none-unscaled`: No interpolation, no scaling.
+
+  Corresponds to the `-D` option in the `dcraw` command line tool.
+- `uncropped`, `none-uncropped`: No interpolation, no scaling, no cropping.
+
+  Corresponds to the `-E` option in the `dcraw` command line tool.
+
+---
+
 ## Script: `crop`
 
     kimage [OPTIONS] crop
@@ -679,40 +949,190 @@ The extension to save the converted image file.
         [--arg y2=INT]
         [--arg width=INT]
         [--arg height=INT]
-        [--arg radius=INT]
         [FILES]
 
 ### Crop an image
 
-Crop an image according the specified arguments.
+Crop an image.
 
 #### Argument: `x`
 
 - Type: int
 
+The x coordinate of the top/left corner to crop.
+
+Together with the top/left `x`/`y` coordinates you can specify either
+- absolute bottom/right `x2`/`y2` coordinates
+- relative `width`/`height`
+
 #### Argument: `y`
 
 - Type: int
+
+The y coordinate of the top/left corner to crop.
+
+Together with the top/left `x`/`y` coordinates you can specify either
+- absolute bottom/right `x2`/`y2` coordinates
+- relative `width`/`height`
 
 #### Argument: `x2`
 
 - Type: int
 
+The absolute x coordinate of the bottom/right corner to crop.
+
 #### Argument: `y2`
 
 - Type: int
+
+The absolute y coordinate of the bottom/right corner to crop.
 
 #### Argument: `width`
 
 - Type: int
 
+The relative width of the rectangle to crop.
+
 #### Argument: `height`
 
 - Type: int
 
+The relative height of the rectangle to crop.
+
+---
+
+Warning: Script file name 'crop-center' does not match name declared in script 'crop'
+## Script: `crop`
+
+    kimage [OPTIONS] crop
+        [--arg x=INT]
+        [--arg y=INT]
+        [--arg radius=INT]
+        [--arg radiusX=INT]
+        [--arg radiusY=INT]
+        [FILES]
+
+### Crop a centered image
+
+Crop a centered image according the specified arguments.
+
+#### Argument: `x`
+
+- Type: int
+
+The center x coordinate to crop.
+
+#### Argument: `y`
+
+- Type: int
+
+The center y coordinate to crop.
+
 #### Argument: `radius`
 
 - Type: int
+
+The radius of the square (both x and y axis) to crop.
+
+#### Argument: `radiusX`
+
+- Type: int
+
+The radius along the x axis to crop.
+
+#### Argument: `radiusY`
+
+- Type: int
+
+The radius along the y axis to crop.
+
+---
+
+## Script: `debayer`
+
+    kimage [OPTIONS] debayer
+        [--arg badpixels=FILE]
+        [--arg pattern=STRING]
+        [--arg red=DOUBLE]
+        [--arg green=DOUBLE]
+        [--arg blue=DOUBLE]
+        [--arg interpolation=STRING]
+        [FILES]
+
+### Debayer a raw image into a color image
+
+Debayer the mosaic of a raw image into a color image.
+
+#### Argument: `badpixels`
+
+- Type: file
+- Must be file: true
+
+The list of bad pixels (stuck, dead and hot pixels) that should be ignored during debayering.
+
+The badpixels file is a text file compatible with the format defined by `dcraw`.
+The format consists of space separated x and y coordinates per line.
+Everything after the second value is ignored.
+Lines starting with `#` will be ignored.
+
+Example:
+```
+# This line will be ignored
+ 345   807 this is a comment
+1447  2308
+```
+
+#### Argument: `pattern`
+
+- Type: string
+- Allowed values:
+  - `rggb`
+  - `bggr`
+  - `gbrg`
+  - `grbg`
+- Default value: `rggb`
+
+The color pattern of the Bayer 2x2 mosaic tile.
+
+#### Argument: `red`
+
+- Type: double
+
+The factor used to multiply with the red values.
+
+#### Argument: `green`
+
+- Type: double
+
+The factor used to multiply with the green values.
+
+#### Argument: `blue`
+
+- Type: double
+
+The factor used to multiply with the blue values.
+
+#### Argument: `interpolation`
+
+- Type: string
+- Allowed values:
+  - `superpixel`
+  - `none`
+  - `nearest`
+  - `bilinear`
+- Default value: `bilinear`
+
+The interpolation method used to debayer the mosaic image.
+
+- `superpixel` merges the 2x2 Bayer mosaic tile into a single pixel.
+  It has no practically artifacts and no chromatic errors.
+  The output image will have half the width and height of the input image.
+- `none` does not interpolate the 2x2 Bayer mosaic tile but simply colors each pixel with the appropriate color.
+  This is useful to visually analyze the mosaic image.
+- `nearest` is the simplest and fastest interpolation algorithm.
+  It has strong artifacts.
+- `bilinear` is a fast algorithm that bilinearly interpolates the neighboring pixels of each color.
+  It tends to smooth edges and create chromatic artifacts around them.
 
 ---
 
@@ -783,11 +1203,24 @@ Filter an image according the specified arguments.
   - `edgeDetectionCross`
   - `edgeDetectionDiagonal`
 
+The filter algorithm.
+
+- `blur` uses a gaussian blur filter of the specified `radius`
+- `median` uses a median filter of the specified `radius`
+- `average` uses an average filter of the specified `radius`
+- `sharpen` uses a 3x3 sharpen mask
+- `unsharpMask` uses a 3x3 unsharp mask
+- `edgeDetectionStrong` detects edges along the horizontal/vertial axes and both diagonals using a 3x3 kernel
+- `edgeDetectionCross` detects edges along the horizontal/vertial axes using a 3x3 kernel
+- `edgeDetectionDiagonal` detects edges along both diagonals using a 3x3 kernel
+
 #### Argument: `radius`
 
 - Type: int
-- Minimum value: 0
+- Minimum value: 1
 - Default value: 3
+
+The radius in pixels for the `blur`, `median` and `average` filters.
 
 ---
 
@@ -804,25 +1237,35 @@ Filter an image according the specified arguments.
 
 Calculates for every pixel the values with the best exposure and merges them into a single HDR image.
 
+See https://mericam.github.io/papers/exposure_fusion_reduced.pdf
+
 #### Argument: `saturationBlurRadius`
 
 - Type: int
 - Default value: 3
+
+The gaussian blur radius used on the `Saturation` channel to minimize artifacts.
 
 #### Argument: `contrastWeight`
 
 - Type: double
 - Default value: 0.2
 
+The weight of the calculated contrast in the HDR algorithm.
+
 #### Argument: `saturationWeight`
 
 - Type: double
 - Default value: 0.1
 
+The weight of the calculated saturation in the HDR algorithm.
+
 #### Argument: `exposureWeight`
 
 - Type: double
 - Default value: 1.0
+
+The weight of the calculated best-exposure in the HDR algorithm.
 
 ---
 
@@ -961,12 +1404,72 @@ If the `blurFilterPercent` is 0.0 then the blur filter size is calculated automa
 
 ---
 
+## Script: `remove-outliers`
+
+    kimage [OPTIONS] remove-outliers
+        [--arg kappa=DOUBLE]
+        [--arg low=DOUBLE]
+        [--arg high=DOUBLE]
+        [--arg replace=STRING]
+        [--arg localRadius=INT]
+        [FILES]
+
+### Remove outliers
+
+Rotate image 90 degrees left.
+
+#### Argument: `kappa`
+
+- Type: double
+- Default value: 10.0
+
+The kappa factor is used in sigma-clipping of sample values to determine the outlier values.
+
+#### Argument: `low`
+
+- Type: double
+
+The low threshold to remove outliers below.
+The default `low` value is calculated from the image using the `kappa` factor.
+
+#### Argument: `high`
+
+- Type: double
+
+The high threshold to remove outliers below.
+The default `high` value is calculated from the image using the `kappa` factor.
+
+#### Argument: `replace`
+
+- Type: string
+- Allowed values:
+  - `global-median`
+  - `local-median`
+- Default value: `global-median`
+
+The method to replace the outlier values.
+- `global-median` replaces outlier values with the global median of the current channel.
+  All outliers will be replaced with the same value.
+- `local-median` replaces outlier values with the local median of the current channel
+  using the `local-radius`.
+
+#### Argument: `localRadius`
+
+- Type: int
+- Minimum value: 1
+- Default value: 10
+
+The radius used in the replace method `local-median` to replace an outlier value.
+
+---
+
 ## Script: `remove-vignette`
 
     kimage [OPTIONS] remove-vignette
         [--arg centerX=INT]
         [--arg centerY=INT]
-        [--arg mode=STRING]
+        [--arg channel=STRING]
+        [--arg model=STRING]
         [--arg kappa=DOUBLE]
         [FILES]
 
@@ -988,7 +1491,7 @@ The default value is the center of the image.
 The Y coordinate of the center of the vignette effect.
 The default value is the center of the image.
 
-#### Argument: `mode`
+#### Argument: `channel`
 
 - Type: string
 - Allowed values:
@@ -1001,7 +1504,18 @@ The default value is the center of the image.
 - Default value: `rgb`
 
 Controls which channels are used to calculate the vignette effect.
-The `rgb` mode calculates the effect on the three color channels separately.
+The `rgb` channel calculates the effect on the three color channels separately.
+
+#### Argument: `model`
+
+- Type: string
+- Allowed values:
+  - `gauss`
+  - `polynomial`
+  - `auto`
+- Default value: `auto`
+
+The mathematical model use to calculate the vignette effect.
 
 #### Argument: `kappa`
 
@@ -1031,21 +1545,52 @@ Resize an image according the specified arguments.
 
 - Type: double
 
+The factor along both x and y axes by which the input image should be scaled.
+- Values > 1 enlarge the image
+- Values < 1 shrink the image
+
+If the axes should be scaled by different factors, use `factorX` and `factorY` instead.
+If the absolute target width and height are known, use `width` and `height` instead.
+
 #### Argument: `factorX`
 
 - Type: double
+
+The factor along the x axis by which the input image should be scaled.
+- Values > 1 enlarge the image
+- Values < 1 shrink the image
+
+Usually used together with `factorY`.
+If both axes are scaled by the same factor, use `factor` instead.
+If the absolute target width is known, use `width` instead.
 
 #### Argument: `factorY`
 
 - Type: double
 
+The factor along the y axis by which the input image should be scaled.
+- Values > 1 enlarge the image
+- Values < 1 shrink the image
+
+Usually used together with `factorY`.
+If both axes are scaled by the same factor, use `factor` instead.
+If the absolute target height is known, use `height` instead.
+
 #### Argument: `width`
 
 - Type: int
 
+The absolute target width of the output image.
+
+If you want to scale by a relative factor use `factorX` or `factor` instead.
+
 #### Argument: `height`
 
 - Type: int
+
+The absolute target height of the output image.
+
+If you want to scale by a relative factor use `factorY` or `factor` instead.
 
 #### Argument: `method`
 
@@ -1055,6 +1600,34 @@ Resize an image according the specified arguments.
   - `bilinear`
   - `bicubic`
 - Default value: `bicubic`
+
+The interpolation method used to scale pixels.
+
+- `nearest` is the fastest and simplest algorithm.
+- `bilinear` is a fast algorithm that tends to smooth edges.
+- `bicubic` is a slower algorithm that usually produces good results.
+
+---
+
+## Script: `rotate-left`
+
+    kimage [OPTIONS] rotate-left
+        [FILES]
+
+### Rotate image 90 degrees left
+
+Rotate image 90 degrees left.
+
+---
+
+## Script: `rotate-right`
+
+    kimage [OPTIONS] rotate-right
+        [FILES]
+
+### Rotate image 90 degrees right
+
+Rotate image 90 degrees right.
 
 ---
 
@@ -1148,251 +1721,131 @@ This implementation is faster and uses less memory than using the generic script
 ## Script: `test-multi`
 
     kimage [OPTIONS] test-multi
-        [--arg intArg=INT]
-        [--arg optionalIntArg=INT]
-        [--arg doubleArg=DOUBLE]
-        [--arg booleanArg=BOOLEAN]
-        [--arg stringArg=STRING]
-        [--arg allowedStringArg=STRING]
-        [--arg regexStringArg=STRING]
-        --arg fileArg=FILE
-        --arg dirArg=FILE
-        [--arg dirWithDefaultArg=FILE]
-        [--arg optionalFileArg=FILE]
-        [--arg listOfIntArg=LIST]
-        [--arg optionalListOfIntArg=LIST]
-        [--arg recordArg=RECORD]
-        [--arg optionalRecordArg=RECORD]
+        [--arg center=BOOLEAN]
         [FILES]
 
-### Test script to show how to handle multiple images in a kimage script
+### Test script to show how to process multiple images in a kimage script
 
 Example script as starting point for developers.
 
-#### Argument: `intArg`
-
-- Type: int
-- Minimum value: 0
-- Maximum value: 100
-- Default value: 0
-
-Example argument for an int value.
-
-#### Argument: `optionalIntArg`
-
-- Type: int
-- Minimum value: 0
-- Maximum value: 100
-
-Example argument for an optional int value.
-
-#### Argument: `doubleArg`
-
-- Type: double
-- Minimum value: 0.0
-- Maximum value: 100.0
-- Default value: 50.0
-
-Example argument for a double value.
-
-#### Argument: `booleanArg`
+#### Argument: `center`
 
 - Type: boolean
 
-Example argument for a boolean value.
-
-#### Argument: `stringArg`
-
-- Type: string
-- Default value: `undefined`
-
-Example argument for a string value.
-
-#### Argument: `allowedStringArg`
-
-- Type: string
-- Allowed values:
-  - `red`
-  - `green`
-  - `blue`
-- Default value: `red`
-
-Example argument for a string value with some allowed strings.
-
-#### Argument: `regexStringArg`
-
-- Type: string
-- Must match regular expression: `a+`
-- Default value: `aaa`
-
-Example argument for a string value with regular expression.
-
-#### Argument: `fileArg`
-
-- Type: file
-- Mandatory: yes
-- Must be file: true
-
-Example argument for a file.
-
-#### Argument: `dirArg`
-
-- Type: file
-- Mandatory: yes
-- Must be directory: true
-
-Example argument for a directory.
-
-#### Argument: `dirWithDefaultArg`
-
-- Type: file
-- Must be directory: true
-- Default path: `.`
-
-Example argument for a directory with default.
-
-#### Argument: `optionalFileArg`
-
-- Type: file
-- Must be file: true
-
-Example argument for an optional file.
-
-#### Argument: `listOfIntArg`
-
-- Type: list
-- List Elements:
-  - Type: int
-  - Minimum value: 0
-  - Maximum value: 9
-
-- Minimum length: 1
-- Default values: [1, 2, 3]
-
-Example argument for a list of integer values.
-
-#### Argument: `optionalListOfIntArg`
-
-- Type: list
-- List Elements:
-  - Type: int
-  - Minimum value: 0
-  - Maximum value: 9
-
-- Minimum length: 1
-
-Example argument for an optional list of integer values.
-
-#### Argument: `recordArg`
-
-- Type: record
-- Record Elements:
-  - Name: `recordInt`
-  - Type: int
-  - Default value: 2
-
-  - Name: `recordString`
-  - Type: string
-  - Default value: `hello`
-
-  - Name: `recordDouble`
-  - Type: double
-  - Default value: 3.14
-
-
-Example argument for a record containing different values.
-
-#### Argument: `optionalRecordArg`
-
-- Type: record
-- Record Elements:
-  - Name: `optionalRecordInt`
-  - Type: int
-
-  - Name: `optionalRecordString`
-  - Type: string
-
-  - Name: `optionalRecordDouble`
-  - Type: double
-
-
-Example argument for an optional record containing different values.
+Center images to fit the first image.
 
 ---
 
 ## Script: `test-single`
 
     kimage [OPTIONS] test-single
-        [--arg intArg=INT]
-        [--arg optionalIntArg=INT]
-        [--arg doubleArg=DOUBLE]
-        [--arg booleanArg=BOOLEAN]
-        [--arg stringArg=STRING]
-        [--arg allowedStringArg=STRING]
-        [--arg regexStringArg=STRING]
+        [--arg saveOutput=BOOLEAN]
         [FILES]
 
-### Test script to show how to handle single images in a kimage script
+### Test script to show how to process single images in a kimage script
 
 Example script as starting point for developers.
 
-#### Argument: `intArg`
-
-- Type: int
-- Minimum value: 0
-- Maximum value: 100
-- Default value: 0
-
-Example argument for an int value.
-
-#### Argument: `optionalIntArg`
-
-- Type: int
-- Minimum value: 0
-- Maximum value: 100
-
-Example argument for an optional int value.
-
-#### Argument: `doubleArg`
-
-- Type: double
-- Minimum value: 0.0
-- Maximum value: 100.0
-- Default value: 50.0
-
-Example argument for a double value.
-
-#### Argument: `booleanArg`
+#### Argument: `saveOutput`
 
 - Type: boolean
 
-Example argument for a boolean value.
+Save input image as output image.
 
-#### Argument: `stringArg`
+---
+
+## Script: `whitebalance`
+
+    kimage [OPTIONS] whitebalance
+        [--arg whitebalance=STRING]
+        [--arg localX=INT]
+        [--arg localY=INT]
+        [--arg localRadius=INT]
+        [--arg highlight=DOUBLE]
+        [--arg highlightChannel=STRING]
+        [--arg red=DOUBLE]
+        [--arg green=DOUBLE]
+        [--arg blue=DOUBLE]
+        [FILES]
+
+### Correct the whitebalance of an image
+
+Correct the whitebalance of an image.
+
+#### Argument: `whitebalance`
 
 - Type: string
-- Default value: `undefined`
+- Allowed values:
+  - `custom`
+  - `global`
+  - `highlight`
+  - `local`
+- Default value: `custom`
 
-Example argument for a string value.
+The whitebalancing algorithm.
 
-#### Argument: `allowedStringArg`
+- `custom` specifies the concrete multipliers for `red`, `green` and `blue` channel.
+- `global` uses the median of the entire input image to determine the gray value.
+- `highlight` uses the median of the highlighted pixels of the entire input image to determine the gray value.
+  Use `highlight` to specify the percentile of the pixels that should be used
+- `local` uses the median of a region centered at `localX`/`localY` with a radius of `localRadius` pixels.
+
+#### Argument: `localX`
+
+- Type: int
+
+The center on the x axis of the local area to determine the gray value for white balancing.
+
+#### Argument: `localY`
+
+- Type: int
+
+The center on the y axis of the local area to determine the gray value for white balancing.
+
+#### Argument: `localRadius`
+
+- Type: int
+- Default value: 10
+
+The radius of the local area to determine the gray value for white balancing.
+
+#### Argument: `highlight`
+
+- Type: double
+- Default value: 80.0
+
+The percentile of the hightlights to determine the gray value for white balancing.
+
+#### Argument: `highlightChannel`
 
 - Type: string
 - Allowed values:
   - `red`
   - `green`
   - `blue`
-- Default value: `red`
+  - `gray`
+  - `luminance`
+- Default value: `gray`
 
-Example argument for a string value with some allowed strings.
+The channel to measure the highlights to determine the gray value for white balancing.
 
-#### Argument: `regexStringArg`
+#### Argument: `red`
 
-- Type: string
-- Must match regular expression: `a+`
-- Default value: `aaa`
+- Type: double
 
-Example argument for a string value with regular expression.
+The red value for custom white balancing.
+
+#### Argument: `green`
+
+- Type: double
+
+The green value for custom white balancing.
+
+#### Argument: `blue`
+
+- Type: double
+
+The blue  value for custom white balancing.
 
 ---
 
