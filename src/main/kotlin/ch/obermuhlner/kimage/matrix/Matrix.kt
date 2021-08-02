@@ -397,5 +397,9 @@ interface Matrix : Iterable<Double> {
             }
             return m
         }
+
+        fun matrixOf(rows: Int, columns: Int, init: (row: Int, column: Int) -> Double): Matrix {
+            return DoubleMatrix(rows, columns, init)
+        }
     }
 }
