@@ -6,7 +6,6 @@ import ch.obermuhlner.kimage.image.*
 import ch.obermuhlner.kimage.io.*
 import ch.obermuhlner.kimage.math.*
 import ch.obermuhlner.kimage.matrix.*
-import ch.obermuhlner.util.StreamGobbler
 import org.apache.commons.math3.fitting.*
 import org.apache.commons.math3.fitting.PolynomialCurveFitter
 import org.apache.commons.math3.fitting.WeightedObservedPoints
@@ -14,7 +13,6 @@ import org.apache.commons.math3.fitting.WeightedObservedPoints
 import java.io.*
 import java.nio.file.*
 import java.util.*
-import java.util.concurrent.Executors
 import kotlin.math.*
 
 object TestScript {
@@ -57,6 +55,56 @@ object TestScript {
         runScript(scriptDeconvolute(), mapOf(), "images/gauss3_animal.png")
     }
 
+    private fun scriptSamplePSF(): Script =
+        kimage(0.1) {
+            name = "sample-psf"
+            title = "Create PSF from image sample"
+            description = """
+                Create a PSF (Point Spread Function) from an image sample.
+                The output image can be used in deconvolution as PSF.
+                """
+            arguments {
+                optionalInt("sampleX") {
+                    hint = Hint.ImageX
+                }
+                optionalInt("sampleY") {
+                    hint = Hint.ImageY
+                }
+                int("medianRadius") {
+                    default = 1
+                }
+                int("radius") {
+                    default = 10
+                }
+            }
+
+            single {
+                val sampleX: Optional<Int> by arguments
+                val sampleY: Optional<Int> by arguments
+                val medianRadius: Int by arguments
+                val radius: Int by arguments
+
+                var m = inputImage[Channel.Gray].cropCenter(radius, sampleX.get(), sampleY.get())
+                m = m.medianFilter(medianRadius)
+                val minValue = m.min()
+                val maxValue = m.max()
+                m = (m elementMinus minValue) / (maxValue - minValue)
+
+                m.onEach { y, x, value ->
+                    val dx = (x - radius).toDouble()
+                    val dy = (y - radius).toDouble()
+                    val r = sqrt(dx*dx + dy*dy) / radius
+                    value * (1.0 - smootherstep(0.7, 0.9, r))
+                }
+
+                MatrixImage(radius*2+1, radius*2+1,
+                    Channel.Red to m,
+                    Channel.Green to m,
+                    Channel.Blue to m)
+            }
+        }
+
+
     private fun scriptDeconvolute(): Script =
         kimage(0.1) {
             name = "deconvolute"
@@ -70,7 +118,7 @@ object TestScript {
                     default = "lucy"
                 }
                 string("psf") {
-                    allowed = listOf("gauss3x3", "gauss5x5", "gauss", "moffat", "sample")
+                    allowed = listOf("gauss3x3", "gauss5x5", "gauss7x7", "gauss", "moffat", "image", "sample")
                     default = "gauss3x3"
                 }
                 optionalInt("sampleX") {
@@ -101,6 +149,10 @@ object TestScript {
                     enabledWhen = Reference("psf").isEqual("gauss", "moffat")
                     default = 2.0
                 }
+                file("psfImage") {
+                    enabledWhen = Reference("psf").isEqual("image")
+                    isFile = true
+                }
                 int("radius") {
                     enabledWhen = Reference("psf").isEqual("sample", "gauss", "moffat")
                     default = 3
@@ -120,6 +172,7 @@ object TestScript {
                 val beta: Double by arguments
                 val sigmaX: Double by arguments
                 val sigmaY: Double by arguments
+                val psfImage: File by arguments
                 val radius: Int by arguments
                 val iterations: Int by arguments
 
@@ -166,14 +219,18 @@ object TestScript {
                 }
 
                 val outputMatrices: MutableMap<Channel, Matrix> = mutableMapOf()
+                val psfKernelMatrices: MutableMap<Channel, Matrix> = mutableMapOf()
                 for (channel in inputImage.channels) {
                     println("Processing channel: $channel")
                     val psfKernel = when (psf) {
                         "gauss3x3" -> KernelFilter.GaussianBlur3
                         "gauss5x5" -> KernelFilter.GaussianBlur5
+                        "gauss7x7" -> KernelFilter.GaussianBlur7
                         "sample" -> {
-                            val m = inputImage[channel].cropCenter(radius, sampleX.get(), sampleY.get())
-                            m / m.sum()
+                            val m = inputImage[channel].cropCenter(radius, sampleX.get(), sampleY.get()).medianFilter(1)
+                            val minValue = m.min()
+                            val maxValue = m.max()
+                            (m elementMinus minValue) / (maxValue - minValue)
                         }
                         "gauss" -> {
                             DoubleMatrix(radius*2+1, radius*2+1) { y, x ->
@@ -185,12 +242,29 @@ object TestScript {
                                 moffat((x - radius).toDouble(), (y - radius).toDouble(), background, amplitude, beta, sigmaX, sigmaY)
                             }
                         }
+                        "image" -> {
+                            ImageReader.read(psfImage)[Channel.Gray]
+                        }
                         else -> throw IllegalArgumentException("Unknown psf: $psf")
                     }
+
+                    if (verboseMode) {
+                        println("PSF matrix:")
+                        println(psfKernel.contentToString(true))
+                    }
+                    psfKernelMatrices[channel] = psfKernel
 
                     outputMatrices[channel] = inputImage[channel].deconvolute(psfKernel, iterations)
                 }
                 println()
+
+                if (debugMode) {
+                    val m = psfKernelMatrices.iterator().next().value
+                    val psfImage = MatrixImage(m.columns, m.rows, psfKernelMatrices.keys.toList()) { channel, _, _ -> psfKernelMatrices[channel]!! }
+                    val psfFile = inputFile.prefixName("psf_")
+                    println("Saving $psfFile for manual analysis")
+                    ImageWriter.write(psfImage, psfFile)
+                }
 
                 MatrixImage(inputImage.width, inputImage.height, inputImage.channels) { channel, _, _ -> outputMatrices[channel]!! }
             }
