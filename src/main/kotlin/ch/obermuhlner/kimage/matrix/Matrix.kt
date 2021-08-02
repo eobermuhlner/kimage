@@ -143,6 +143,12 @@ interface Matrix : Iterable<Double> {
         }
     }
 
+    infix fun elementTimes(other: Matrix): Matrix {
+        return copy().onEach { row, column, value ->
+            value * other[row, column]
+        }
+    }
+
     infix fun elementDiv(other: Matrix): Matrix {
         return copy().onEach { row, column, value ->
             value / other[row, column]
