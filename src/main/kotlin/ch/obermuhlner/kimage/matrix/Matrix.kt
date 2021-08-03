@@ -4,40 +4,38 @@ import ch.obermuhlner.kimage.math.clamp
 import kotlin.math.abs
 
 interface Matrix : Iterable<Double> {
-    val rows: Int
-    val columns: Int
+    val width: Int
+    val height: Int
 
     val size: Int
-        get() = rows * columns
+        get() = width * height
 
-    fun create(createRows: Int = rows, createColumns: Int = columns): Matrix
+    fun create(createWidth: Int = width, createHeight: Int = height): Matrix
 
     operator fun get(index: Int): Double
     operator fun set(index: Int, value: Double)
 
-    operator fun get(row: Int, column: Int): Double {
-        val index = boundedColumn(column) + boundedRow(row) * columns
+    operator fun get(x: Int, y: Int): Double {
+        val index = boundedX(x) + boundedY(y) * width
         return this[index]
     }
-    operator fun set(row: Int, column: Int, value: Double) {
-        val index = boundedColumn(column) + boundedRow(row) * columns
+    operator fun set(x: Int, y: Int, value: Double) {
+        val index = boundedX(x) + boundedY(y) * width
         this[index] = value
     }
 
-    fun set(other: Matrix, offsetRow: Int = 0, offsetColumn: Int = 0) {
-        //checkSameSize(this, other)
-
-        for (row in 0 until rows) {
-            for (column in 0 until columns) {
-                this[row+offsetRow, column+offsetColumn] = other[row, column]
+    fun set(other: Matrix, offsetX: Int = 0, offsetY: Int = 0) {
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                this[x+offsetX, y+offsetY] = other[x, y]
             }
         }
     }
 
-    fun isInside(row: Int, column: Int) = row in 0 until rows && column in 0 until columns
+    fun isInside(x: Int, y: Int) = y in 0 until height && x in 0 until width
 
-    fun boundedColumn(column: Int) = clamp(column, 0, columns - 1)
-    fun boundedRow(row: Int) = clamp(row, 0, rows - 1)
+    fun boundedX(x: Int) = clamp(x, 0, width - 1)
+    fun boundedY(y: Int) = clamp(y, 0, height - 1)
 
     override operator fun iterator(): Iterator<Double> {
         return object : Iterator<Double> {
@@ -51,9 +49,9 @@ interface Matrix : Iterable<Double> {
         checkSameSize(this, other)
 
         val m = create()
-        for (row in 0 until rows) {
-            for (column in 0 until columns) {
-                m[row, column] = this[row, column] + other[row, column]
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                m[x, y] = this[x, y] + other[x, y]
             }
         }
         return m
@@ -62,9 +60,9 @@ interface Matrix : Iterable<Double> {
     operator fun plusAssign(other: Matrix) {
         checkSameSize(this, other)
 
-        for (row in 0 until rows) {
-            for (column in 0 until columns) {
-                this[row, column] += other[row, column]
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                this[x, y] += other[x, y]
             }
         }
     }
@@ -73,9 +71,9 @@ interface Matrix : Iterable<Double> {
         checkSameSize(this, other)
 
         val m = create()
-        for (row in 0 until rows) {
-            for (column in 0 until columns) {
-                m[row, column] = this[row, column] - other[row, column]
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                m[x, y] = this[x, y] - other[x, y]
             }
         }
         return m
@@ -84,112 +82,104 @@ interface Matrix : Iterable<Double> {
     operator fun minusAssign(other: Matrix) {
         checkSameSize(this, other)
 
-        for (row in 0 until rows) {
-            for (column in 0 until columns) {
-                this[row, column] -= other[row, column]
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                this[x, y] -= other[x, y]
             }
         }
     }
 
     operator fun times(other: Matrix): Matrix {
-        checkColumnsOtherRows(this, other)
+        checkWidthOtherHeight(this, other)
 
-        val m = create(this.rows, other.columns)
-        for (row in 0 until rows) {
-            for (otherColumn in 0 until other.columns) {
+        val m = create(other.width, this.height)
+        for (y in 0 until height) {
+            for (otherX in 0 until other.width) {
                 var sum = 0.0
-                for (column in 0 until columns) {
-                    sum += this[row, column] * other[column, otherColumn]
+                for (x in 0 until width) {
+                    sum += this[x, y] * other[otherX, x]
                 }
-                m[row, otherColumn] = sum
+                m[otherX, y] = sum
             }
         }
         return m
     }
 
-    operator fun times(value: Double): Matrix {
+    operator fun times(other: Double): Matrix {
         val m = create()
-        for (row in 0 until rows) {
-            for (column in 0 until columns) {
-                m[row, column] = this[row, column] * value
-            }
+        m.onEach { value ->
+            value * other
         }
         return m
     }
 
-    operator fun timesAssign(value: Double) {
-        for (row in 0 until rows) {
-            for (column in 0 until columns) {
-                this[row, column] *= value
-            }
+    operator fun timesAssign(other: Double) {
+        onEach { value ->
+            value * other
         }
     }
 
-    operator fun div(value: Double): Matrix {
+    operator fun div(other: Double): Matrix {
         val m = create()
-        for (row in 0 until rows) {
-            for (column in 0 until columns) {
-                m[row, column] = this[row, column] / value
-            }
+        m.onEach { value ->
+            value / other
         }
         return m
     }
 
-    operator fun divAssign(value: Double) {
-        for (row in 0 until rows) {
-            for (column in 0 until columns) {
-                this[row, column] /= value
-            }
+    operator fun divAssign(other: Double) {
+        onEach { value ->
+            value / other
         }
     }
 
     infix fun elementPlus(other: Double): Matrix {
-        return copy().onEach { row, column, value ->
+        return copy().onEach { value ->
             value + other
         }
     }
 
     infix fun elementMinus(other: Double): Matrix {
-        return copy().onEach { row, column, value ->
+        return copy().onEach { value ->
             value - other
         }
     }
 
     infix fun elementTimes(other: Matrix): Matrix {
-        return copy().onEach { row, column, value ->
-            value * other[row, column]
+        return copy().onEach { x, y, value ->
+            value * other[x, y]
         }
     }
 
     infix fun elementDiv(other: Matrix): Matrix {
-        return copy().onEach { row, column, value ->
-            value / other[row, column]
+        return copy().onEach { x, y, value ->
+            value / other[x, y]
         }
     }
 
     fun convolute(kernel: Matrix): Matrix {
         val m = create()
-        for (row in 0 until rows) {
-            for (column in 0 until columns) {
+        for (y in 0 until height) {
+            for (x in 0 until width) {
                 var value = 0.0
-                for (kernelRow in 0 until kernel.rows) {
-                    for (kernelColumn in 0 until kernel.columns) {
-                        val pixel = this[row - kernel.rows/2 + kernelRow, column - kernel.columns/2 + kernelColumn]
-                        value += pixel * kernel[kernelRow, kernelColumn]
+                for (kernelY in 0 until kernel.height) {
+                    for (kernelX in 0 until kernel.width) {
+                        val pixel = this[x - kernel.width/2 + kernelX, y - kernel.height/2 + kernelY]
+                        value += pixel * kernel[kernelX, kernelY]
                     }
                 }
-                m[row, column] = value
+                m[x, y] = value
             }
         }
         return m
     }
 
     fun transpose(): Matrix {
-        val m = create(columns, rows)
+        val m = create(height, width)
 
-        for (row in 0 until rows) {
-            for (column in 0 until columns) {
-                m[row, column] = this[column, row]
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                m[x, y] = this[y, x]
             }
         }
 
@@ -199,94 +189,93 @@ interface Matrix : Iterable<Double> {
     fun invert(): Matrix {
         checkSquare(this)
 
-        val m = create(rows, columns*2)
+        val m = create(width*2, height)
         m.set(this, 0, 0)
-        m.set(m.identity(rows), 0, columns)
+        m.set(m.identity(height), width, 0)
 
         m.gaussianElimination()
 
-        return m.crop(0, columns, rows, columns)
+        return m.crop(width, 0, width, height)
     }
 
     fun gaussianElimination(reducedEchelonForm: Boolean = true) {
-        var pivotRow = 0
-        var pivotColumn = 0
+        var pivotY = 0
+        var pivotX = 0
 
-        while (pivotRow < rows && pivotColumn < columns) {
-            var maxRow = pivotRow
-            for (row in pivotRow + 1 until rows) {
-                if (abs(this[row, pivotColumn]) > this[maxRow, pivotColumn]) {
-                    maxRow = row
+        while (pivotY < height && pivotX < width) {
+            var maxY = pivotY
+            for (y in pivotY + 1 until height) {
+                if (abs(this[pivotX, y]) > this[pivotX, maxY]) {
+                    maxY = y
                 }
             }
-            val pivotCell = this[maxRow, pivotColumn]
+            val pivotCell = this[pivotX, maxY]
             if (pivotCell == 0.0) {
-                pivotColumn++
+                pivotX++
             } else {
-                swapRows(pivotRow, maxRow)
-                val divisor = this[pivotRow, pivotColumn]
-                for (row in pivotRow + 1 until rows) {
-                    val factor = this[row, pivotColumn] / divisor
-                    this[row, pivotColumn] = 0.0
-                    for (column in pivotColumn + 1 until columns) {
-                        val value = this[row, column] - this[pivotRow, column] * factor
-                        this[row, column] =  value
+                swapY(pivotY, maxY)
+                val divisor = this[pivotX, pivotY]
+                for (y in pivotY + 1 until height) {
+                    val factor = this[pivotX, y] / divisor
+                    this[pivotX, y] = 0.0
+                    for (x in pivotX + 1 until width) {
+                        val value = this[x, y] - this[x, pivotY] * factor
+                        this[x, y] = value
                     }
                 }
             }
             if (reducedEchelonForm) {
-                val pivotDivisor = this[pivotRow, pivotColumn]
-                this[pivotRow, pivotColumn] = 1.0
-                for (column in pivotColumn + 1 until columns) {
-                    val value = this[pivotRow, column] / pivotDivisor
-                    set(pivotRow, column, value)
+                val pivotDivisor = this[pivotX, pivotY]
+                this[pivotX, pivotY] = 1.0
+                for (x in pivotX + 1 until width) {
+                    val value = this[x, pivotY] / pivotDivisor
+                    this[x, pivotY] =  value
                 }
-                for (row in 0 until pivotRow) {
-                    val factor = this[row, pivotColumn]
-                    this[row, pivotColumn] = 0.0
-                    for (column in pivotColumn + 1 until columns) {
-                        val value =
-                            this[row, column] - this[pivotRow, column] * factor
-                        this[row, column] = value
+                for (y in 0 until pivotY) {
+                    val factor = this[pivotX, y]
+                    this[pivotX, y] = 0.0
+                    for (x in pivotX + 1 until width) {
+                        val value = this[x, y] - this[x, pivotY] * factor
+                        this[x, y] = value
                     }
                 }
             }
-            pivotColumn++
-            pivotRow++
+            pivotX++
+            pivotY++
         }
     }
 
-    fun swapRows(row1: Int, row2: Int) {
-        checkRow(this, "row1", row1)
-        checkRow(this, "row2", row2)
+    fun swapY(y1: Int, y2: Int) {
+        checkY(this, "y1", y1)
+        checkY(this, "y2", y2)
 
-        if (row1 == row2) {
+        if (y1 == y2) {
             return
         }
-        for (column in 0 until columns) {
-            val tmp = this[row1, column]
-            this[row1, column] = this[row2, column]
-            this[row2, column] = tmp
+        for (x in 0 until width) {
+            val tmp = this[x, y1]
+            this[x, y1] = this[x, y2]
+            this[x, y2] = tmp
         }
     }
 
-    fun swapColumns(column1: Int, column2: Int) {
-        checkColumn(this, "column1", column1)
-        checkColumn(this, "column2", column2)
+    fun swapX(x1: Int, x2: Int) {
+        checkX(this, "x1", x1)
+        checkX(this, "x2", x2)
 
-        if (column1 == column2) {
+        if (x1 == x2) {
             return
         }
-        for (row in 0 until columns) {
-            val tmp = this[row, column1]
-            this[row, column1] = this[row, column2]
-            this[row, column2] = tmp
+        for (y in 0 until width) {
+            val tmp = this[x1, y]
+            this[x1, y] = this[x2, y]
+            this[x2, y] = tmp
         }
     }
 
     fun identity(size: Int): Matrix {
-        return CalculatedMatrix(size, size) { row, column ->
-            if (row == column) 1.0 else 0.0
+        return CalculatedMatrix(size, size) { x, y ->
+            if (x == y) 1.0 else 0.0
         }
     }
 
@@ -303,10 +292,10 @@ interface Matrix : Iterable<Double> {
         return this
     }
 
-    fun onEach(func: (row: Int, column: Int, value: Double) -> Double): Matrix {
-        for (row in 0 until rows) {
-            for (column in 0 until columns) {
-                this[row, column] = func.invoke(row, column, this[row, column])
+    fun onEach(func: (x: Int, y: Int, value: Double) -> Double): Matrix {
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                this[x, y] = func.invoke(x, y, this[x, y])
             }
         }
         return this
@@ -322,87 +311,98 @@ interface Matrix : Iterable<Double> {
         return result
     }
 
-    fun crop(croppedRow: Int, croppedColumn: Int, croppedRows: Int, croppedColumns: Int, strictClipping: Boolean = true): Matrix {
-        return CroppedMatrix(this, croppedRow, croppedColumn, croppedRows, croppedColumns, strictClipping)
+    fun crop(croppedX: Int, croppedY: Int, croppedWidth: Int, croppedHeight: Int, strictClipping: Boolean = true): Matrix {
+        return CroppedMatrix(this, croppedX, croppedY, croppedWidth, croppedHeight, strictClipping)
     }
 
-    fun cropCenter(radius: Int, croppedCenterRow: Int = rows / 2, croppedCenterColumn: Int = columns / 2, strictClipping: Boolean = true): Matrix {
-        return cropCenter(radius, radius, croppedCenterRow, croppedCenterColumn, strictClipping)
+    fun cropCenter(
+        radius: Int,
+        croppedCenterX: Int = width / 2,
+        croppedCenterY: Int = height / 2,
+        strictClipping: Boolean = true
+    ): Matrix {
+        return cropCenter(radius, radius, croppedCenterX, croppedCenterY, strictClipping)
     }
 
-    fun cropCenter(radiusRow: Int, radiusColumn: Int, croppedCenterRow: Int = rows / 2, croppedCenterColumn: Int = columns / 2, strictClipping: Boolean = true): Matrix {
-        return crop(croppedCenterRow - radiusRow, croppedCenterColumn - radiusColumn, radiusRow*2+1, radiusColumn*2+1, strictClipping)
+    fun cropCenter(
+        radiusX: Int,
+        radiusY: Int,
+        croppedCenterX: Int = width / 2,
+        croppedCenterY: Int = height / 2,
+        strictClipping: Boolean = true
+    ): Matrix {
+        return crop(croppedCenterX - radiusX, croppedCenterY - radiusY, radiusX*2+1, radiusY*2+1, strictClipping)
     }
 
 
     companion object {
-        private fun checkRows(rows: Int) {
-            require(rows >= 0) { "rows < 0 : $rows" }
+        private fun checkHeight(height: Int) {
+            require(height >= 0) { "height < 0 : $height" }
         }
 
-        private fun checkColumns(columns: Int) {
-            require(columns >= 0) { "columns < 0 : $columns" }
+        private fun checkWidth(width: Int) {
+            require(width >= 0) { "width < 0 : $width" }
         }
 
         private fun checkSquare(matrix: Matrix) {
-            require(matrix.columns == matrix.rows) {
-                "columns " + matrix.columns.toString() + " != rows " + matrix.rows
+            require(matrix.width == matrix.height) {
+                "width " + matrix.width.toString() + " != height " + matrix.height
             }
         }
 
-        private fun checkRow(matrix: Matrix, row: Int) {
-            checkRow(matrix, "row", row)
+        private fun checkY(matrix: Matrix, y: Int) {
+            checkY(matrix, "y", y)
         }
 
-        private fun checkRow(matrix: Matrix, name: String, row: Int) {
-            checkRow(matrix.rows, name, row)
+        private fun checkY(matrix: Matrix, name: String, y: Int) {
+            checkY(matrix.height, name, y)
         }
 
-        private fun checkRow(rows: Int, row: Int) {
-            checkRow(rows, "row", row)
+        private fun checkY(height: Int, y: Int) {
+            checkY(height, "y", y)
         }
 
-        fun checkRow(rows: Int, name: String, row: Int) {
-            require(row >= 0) { "$name < 0 : $row" }
-            require(row < rows) { "$name >= $rows : $row" }
+        fun checkY(height: Int, name: String, y: Int) {
+            require(y >= 0) { "$name < 0 : $y" }
+            require(y < height) { "$name >= $height : $y" }
         }
 
-        private fun checkColumn(matrix: Matrix, column: Int) {
-            checkColumn(matrix, "column", column)
+        private fun checkX(matrix: Matrix, x: Int) {
+            checkX(matrix, "x", x)
         }
 
-        private fun checkColumn(matrix: Matrix, name: String, column: Int) {
-            require(column >= 0) { "$name < 0 : $column" }
-            require(column < matrix.columns) { name + " >= " + matrix.columns + " : " + column }
+        private fun checkX(matrix: Matrix, name: String, x: Int) {
+            require(x >= 0) { "$name < 0 : $x" }
+            require(x < matrix.width) { name + " >= " + matrix.width + " : " + x }
         }
 
         private fun checkSameSize(matrix: Matrix, other: Matrix) {
-            require(!(matrix.rows != other.rows)) {
-                "rows != other.rows : " + matrix.rows.toString() + " != " + other.rows
+            require(!(matrix.height != other.height)) {
+                "height != other.height : " + matrix.height.toString() + " != " + other.height
             }
-            require(!(matrix.columns != other.columns)) {
-                "columns != other.columns : " + matrix.columns.toString() + " != " + other.columns
-            }
-        }
-
-        private fun checkColumnsOtherRows(matrix: Matrix, other: Matrix) {
-            require(!(matrix.columns != other.rows)) {
-                "columns != other.rows : " + matrix.columns.toString() + " != " + other.rows
+            require(!(matrix.width != other.width)) {
+                "width != other.width : " + matrix.width.toString() + " != " + other.width
             }
         }
 
-        fun matrixOf(rows: Int, columns: Int, vararg values: Double): Matrix {
-            val m = DoubleMatrix(rows, columns)
-            var row = 0
-            var column = 0
+        private fun checkWidthOtherHeight(matrix: Matrix, other: Matrix) {
+            require(!(matrix.width != other.height)) {
+                "width != other.height : " + matrix.width.toString() + " != " + other.height
+            }
+        }
+
+        fun matrixOf( width: Int, height: Int, vararg values: Double): Matrix {
+            val m = DoubleMatrix(width, height)
+            var y = 0
+            var x = 0
 
             for (value in values) {
-                m[row, column] = value
-                column++
-                if (column >= columns) {
-                    column = 0
-                    row++
-                    if (row >= rows) {
+                m[x, y] = value
+                x++
+                if (x >= width) {
+                    x = 0
+                    y++
+                    if (y >= height) {
                         break
                     }
                 }
@@ -410,8 +410,8 @@ interface Matrix : Iterable<Double> {
             return m
         }
 
-        fun matrixOf(rows: Int, columns: Int, init: (row: Int, column: Int) -> Double): Matrix {
-            return DoubleMatrix(rows, columns, init)
+        fun matrixOf(width: Int, height: Int, init: (x: Int, y: Int) -> Double): Matrix {
+            return DoubleMatrix(width, height, init)
         }
     }
 }

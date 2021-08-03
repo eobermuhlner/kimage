@@ -6,31 +6,23 @@ import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.sqrt
 
-fun Matrix.getPixel(x: Int, y: Int) = this[y, x]
-
-fun Matrix.setPixel(x: Int, y: Int, value: Double) {
-    this[y, x] = value
-}
-
-fun Matrix.isPixelInside(x: Int, y: Int) = isInside(y, x)
-
 fun Matrix.contentToString(multiline: Boolean = false): String {
     val str = StringBuilder()
 
     str.append("[")
-    for (row in 0 until rows) {
-        if (row != 0) {
+    for (y in 0 until height) {
+        if (y != 0) {
             str.append(" ")
         }
         str.append("[")
-        for (column in 0 until columns) {
-            if (column != 0) {
+        for (x in 0 until width) {
+            if (x != 0) {
                 str.append(" ,")
             }
-            str.append(this[row, column])
+            str.append(this[x, y])
         }
         str.append("]")
-        if (multiline && row != rows - 1) {
+        if (multiline && y != height - 1) {
             str.appendLine()
         }
     }
@@ -43,13 +35,13 @@ fun Matrix.contentToString(multiline: Boolean = false): String {
 }
 
 fun Matrix.contentEquals(other: Matrix, epsilon: Double = 1E-10): Boolean {
-    if (rows != other.rows || columns != other.columns) {
+    if (height != other.height || width != other.width) {
         return false
     }
 
-    for (row in 0 until rows) {
-        for (column in 0 until columns) {
-            if (abs(this[row, column] - other[row, column]) > epsilon) {
+    for (y in 0 until height) {
+        for (x in 0 until width) {
+            if (abs(this[x, y] - other[x, y]) > epsilon) {
                 return false
             }
         }
@@ -60,20 +52,20 @@ fun Matrix.contentEquals(other: Matrix, epsilon: Double = 1E-10): Boolean {
 
 fun max(m1: Matrix, m2: Matrix): Matrix {
     val m = m1.create()
-    for (row in 0 until m1.rows) {
-        for (column in 0 until m1.columns) {
-            m[row, column] = kotlin.math.max(m1[row, column], m2[row, column])
+    for (y in 0 until m1.height) {
+        for (x in 0 until m1.width) {
+            m[x, y] = kotlin.math.max(m1[x, y], m2[x, y])
         }
     }
     return m
 }
 
 fun Matrix.rotateLeft(): Matrix {
-    val m = create(columns, rows)
+    val m = create(height, width)
 
-    for (row in 0 until rows) {
-        for (column in 0 until columns) {
-            m[rows - row - 1, column] = this[column, row]
+    for (y in 0 until height) {
+        for (x in 0 until width) {
+            m[x, height - y - 1] = this[y, x]
         }
     }
 
@@ -81,11 +73,11 @@ fun Matrix.rotateLeft(): Matrix {
 }
 
 fun Matrix.rotateRight(): Matrix {
-    val m = create(columns, rows)
+    val m = create(height, width)
 
-    for (row in 0 until rows) {
-        for (column in 0 until columns) {
-            m[row, columns - column - 1] = this[column, row]
+    for (y in 0 until height) {
+        for (x in 0 until width) {
+            m[width - x - 1, y] = this[y, x]
         }
     }
 
@@ -112,106 +104,110 @@ fun Matrix.averageError(other: Matrix): Double {
     return sum / size
 }
 
-fun Matrix.scaleBy(scaleRows: Double, scaleColumns: Double, scaling: Scaling = Scaling.Bicubic): Matrix {
-    val newRows = (rows * scaleRows).toInt()
-    val newColumns = (columns * scaleColumns).toInt()
+fun Matrix.scaleBy(scaleWidth: Double, scaleHeight: Double, scaling: Scaling = Scaling.Bicubic): Matrix {
+    val newWidth = (width * scaleWidth).toInt()
+    val newHeight = (height * scaleHeight).toInt()
 
-    return scaleTo(newRows, newColumns, scaling)
+    return scaleTo(newWidth, newHeight, scaling)
 }
 
-fun Matrix.scaleTo(newRows: Int, newColumns: Int, scaling: Scaling = Scaling.Bicubic): Matrix {
+fun Matrix.scaleTo(newWidth: Int, newHeight: Int, scaling: Scaling = Scaling.Bicubic): Matrix {
     return when (scaling) {
-        Scaling.Nearest -> scaleNearestTo(newRows, newColumns)
-        Scaling.Bilinear -> scaleBilinearTo(newRows, newColumns)
-        Scaling.Bicubic -> scaleBicubicTo(newRows, newColumns)
+        Scaling.Nearest -> scaleNearestTo(newWidth, newHeight)
+        Scaling.Bilinear -> scaleBilinearTo(newWidth, newHeight)
+        Scaling.Bicubic -> scaleBicubicTo(newHeight, newWidth)
     }
 }
 
-private fun Matrix.scaleNearestTo(newRows: Int, newColumns: Int): Matrix {
-    val m = create(newRows, newColumns)
-    for (newRow in 0 until newRows) {
-        for (newColumn in 0 until newColumns) {
-            val oldRow = (newRow.toDouble() / newRows * rows).toInt()
-            val oldColumn = (newColumn.toDouble() / newColumns * columns).toInt()
+private fun Matrix.scaleNearestTo(newWidth: Int, newHeight: Int): Matrix {
+    val m = create(newWidth, newHeight)
+    for (newY in 0 until newHeight) {
+        for (newX in 0 until newWidth) {
+            val oldX = (newX.toDouble() / newWidth * width).toInt()
+            val oldY = (newY.toDouble() / newHeight * height).toInt()
 
-            val newValue = this[oldRow, oldColumn]
-            m[newRow, newColumn] = newValue
+            val newValue = this[oldX, oldY]
+            m[newX, newY] = newValue
         }
     }
 
     return m
 }
 
-private fun Matrix.scaleBilinearTo(newRows: Int, newColumns: Int): Matrix {
-    val m = create(newRows, newColumns)
-    for (newRow in 0 until newRows) {
-        for (newColumn in 0 until newColumns) {
-            val oldRow = newRow.toDouble() / newRows * (rows - 1) - 0.5
-            val oldColumn = newColumn.toDouble() / newColumns * (columns - 1) - 0.5
-            val oldRowInt = oldRow.toInt()
-            val oldColumnInt = oldColumn.toInt()
-            val oldRowFract = oldRow - oldRowInt
-            val oldColumnFract = oldColumn - oldColumnInt
+private fun Matrix.scaleBilinearTo(newWidth: Int, newHeight: Int): Matrix {
+    val m = create(newWidth, newHeight)
+    for (newY in 0 until newHeight) {
+        for (newX in 0 until newWidth) {
+            val oldX = newX.toDouble() / newWidth * (width - 1) - 0.5
+            val oldY = newY.toDouble() / newHeight * (height - 1) - 0.5
+            val oldXInt = oldX.toInt()
+            val oldYInt = oldY.toInt()
+            val oldXFract = oldX - oldXInt
+            val oldYFract = oldY - oldYInt
 
-            val v00 = this[oldRowInt, oldColumnInt]
-            val v01 = this[oldRowInt, oldColumnInt + 1]
-            val v10 = this[oldRowInt + 1, oldColumnInt]
-            val v11 = this[oldRowInt + 1, oldColumnInt + 1]
+            val v00 = this[oldXInt, oldYInt]
+            val v01 = this[oldXInt + 1, oldYInt]
+            val v10 = this[oldXInt, oldYInt + 1]
+            val v11 = this[oldXInt + 1, oldYInt + 1]
 
-            val newValue = mixBilinear(v00, v01, v10, v11, oldRowFract, oldColumnFract)
+            val newValue = mixBilinear(v00, v01, v10, v11, oldYFract, oldXFract)
 
-            m[newRow, newColumn] = newValue
+            m[newX, newY] = newValue
         }
     }
 
     return m
 }
 
-private fun Matrix.scaleBicubicTo(newRows: Int, newColumns: Int): Matrix {
-    val m = create(newRows, newColumns)
-    for (newRow in 0 until newRows) {
-        for (newColumn in 0 until newColumns) {
-            val oldRow = newRow.toDouble() / newRows * (rows - 1) - 0.5
-            val oldColumn = newColumn.toDouble() / newColumns * (columns - 1) - 0.5
-            val oldRowInt = oldRow.toInt()
-            val oldColumnInt = oldColumn.toInt()
-            val oldRowFract = oldRow - oldRowInt
-            val oldColumnFract = oldColumn - oldColumnInt
+private fun Matrix.scaleBicubicTo(newHeight: Int, newWidth: Int): Matrix {
+    val m = create(newWidth, newHeight)
+    for (newY in 0 until newHeight) {
+        for (newX in 0 until newWidth) {
+            val oldX = newX.toDouble() / newWidth * (width - 1) - 0.5
+            val oldY = newY.toDouble() / newHeight * (height - 1) - 0.5
+            val oldXInt = oldX.toInt()
+            val oldYInt = oldY.toInt()
+            val oldXFract = oldX - oldXInt
+            val oldYFract = oldY - oldYInt
 
-            val v00 = this[oldRowInt - 1, oldColumnInt - 1]
-            val v10 = this[oldRowInt + 0, oldColumnInt - 1]
-            val v20 = this[oldRowInt + 1, oldColumnInt - 1]
-            val v30 = this[oldRowInt + 2, oldColumnInt - 1]
+            val v00 = this[oldXInt - 1, oldYInt - 1]
+            val v10 = this[oldXInt - 1, oldYInt + 0]
+            val v20 = this[oldXInt - 1, oldYInt + 1]
+            val v30 = this[oldXInt - 1, oldYInt + 2]
 
-            val v01 = this[oldRowInt - 1, oldColumnInt + 0]
-            val v11 = this[oldRowInt + 0, oldColumnInt + 0]
-            val v21 = this[oldRowInt + 1, oldColumnInt + 0]
-            val v31 = this[oldRowInt + 2, oldColumnInt + 0]
+            val v01 = this[oldXInt + 0, oldYInt - 1]
+            val v11 = this[oldXInt + 0, oldYInt + 0]
+            val v21 = this[oldXInt + 0, oldYInt + 1]
+            val v31 = this[oldXInt + 0, oldYInt + 2]
 
-            val v02 = this[oldRowInt - 1, oldColumnInt + 1]
-            val v12 = this[oldRowInt + 0, oldColumnInt + 1]
-            val v22 = this[oldRowInt + 1, oldColumnInt + 1]
-            val v32 = this[oldRowInt + 2, oldColumnInt + 1]
+            val v02 = this[oldXInt + 1, oldYInt - 1]
+            val v12 = this[oldXInt + 1, oldYInt + 0]
+            val v22 = this[oldXInt + 1, oldYInt + 1]
+            val v32 = this[oldXInt + 1, oldYInt + 2]
 
-            val v03 = this[oldRowInt - 1, oldColumnInt + 2]
-            val v13 = this[oldRowInt + 0, oldColumnInt + 2]
-            val v23 = this[oldRowInt + 1, oldColumnInt + 2]
-            val v33 = this[oldRowInt + 2, oldColumnInt + 2]
+            val v03 = this[oldXInt + 2, oldYInt - 1]
+            val v13 = this[oldXInt + 2, oldYInt + 0]
+            val v23 = this[oldXInt + 2, oldYInt + 1]
+            val v33 = this[oldXInt + 2, oldYInt + 2]
 
-            val col0 = mixCubicHermite(v00, v10, v20, v30, oldRowFract)
-            val col1 = mixCubicHermite(v01, v11, v21, v31, oldRowFract)
-            val col2 = mixCubicHermite(v02, v12, v22, v32, oldRowFract)
-            val col3 = mixCubicHermite(v03, v13, v23, v33, oldRowFract)
-            val newValue = mixCubicHermite(col0, col1, col2, col3, oldColumnFract)
+            val col0 = mixCubicHermite(v00, v10, v20, v30, oldYFract)
+            val col1 = mixCubicHermite(v01, v11, v21, v31, oldYFract)
+            val col2 = mixCubicHermite(v02, v12, v22, v32, oldYFract)
+            val col3 = mixCubicHermite(v03, v13, v23, v33, oldYFract)
+            val newValue = mixCubicHermite(col0, col1, col2, col3, oldXFract)
 
-            m[newRow, newColumn] = clamp(newValue, 0.0, 1.0)
+            m[newX, newY] = clamp(newValue, 0.0, 1.0)
         }
     }
 
     return m
 }
 
-fun Matrix.interpolate(fixPoints: List<Pair<Int, Int>>, valueFunc: (Pair<Int, Int>) -> Double = { valueAt(this, it.first, it.second) }, power: Double = estimatePowerForInterpolation(fixPoints.size)): Matrix {
+fun Matrix.interpolate(fixPoints: List<Pair<Int, Int>>, valueFunc: (Pair<Int, Int>) -> Double = { valueAt(
+    this,
+    it.first,
+    it.second
+) }, power: Double = estimatePowerForInterpolation(fixPoints.size)): Matrix {
     val fixValues = fixPoints.map { valueFunc(it) }
     return interpolate(fixPoints, fixValues, power)
 }
@@ -219,35 +215,41 @@ fun Matrix.interpolate(fixPoints: List<Pair<Int, Int>>, valueFunc: (Pair<Int, In
 fun Matrix.interpolate(fixPoints: List<Pair<Int, Int>>, fixValues: List<Double>, power: Double = estimatePowerForInterpolation(fixPoints.size)): Matrix {
     val m = create()
 
-    for (row in 0 until rows) {
-        for (column in 0 until columns) {
-            m[row, column] = interpolate(row, column, fixPoints, fixValues, power)
+    for (y in 0 until height) {
+        for (x in 0 until width) {
+            m[x, y] = interpolate(x, y, fixPoints, fixValues, power)
         }
     }
 
     return m
 }
 
-fun valueAt(matrix: Matrix, row: Int, column: Int): Double {
-    return matrix[row, column]
+fun valueAt(matrix: Matrix, x: Int, y: Int): Double {
+    return matrix[x, y]
 }
 
-fun Matrix.medianAround(row: Int, column: Int, radius: Int = 10): Double {
-    return crop(row - radius, column - radius, radius+radius+1, radius+radius+1).median()
+fun Matrix.medianAround(x: Int, y: Int, radius: Int = 10): Double {
+    return crop(x - radius, y - radius, radius+radius+1, radius+radius+1).median()
 }
 
-private fun interpolate(row: Int, column: Int, fixPoints: List<Pair<Int, Int>>, fixValues: List<Double>, power: Double = estimatePowerForInterpolation(fixPoints.size)): Double {
+private fun interpolate(
+    x: Int,
+    y: Int,
+    fixPoints: List<Pair<Int, Int>>,
+    fixValues: List<Double>,
+    power: Double = estimatePowerForInterpolation(fixPoints.size)
+): Double {
     require(fixPoints.size == fixValues.size)
 
     val distances = DoubleArray(fixPoints.size)
     var totalDistance = 0.0
     for (i in fixPoints.indices) {
-        val fixRow = fixPoints[i].first
-        val fixColumn = fixPoints[i].second
+        val fixX = fixPoints[i].first
+        val fixY = fixPoints[i].second
 
-        val dRow = (row-fixRow).toDouble()
-        val dColumn = (column-fixColumn).toDouble()
-        val distance = sqrt(dRow*dRow + dColumn*dColumn)
+        val dX = (x-fixX).toDouble()
+        val dY = (y-fixY).toDouble()
+        val distance = sqrt(dX*dX + dY*dY)
         distances[i] = distance
         totalDistance += distance
     }

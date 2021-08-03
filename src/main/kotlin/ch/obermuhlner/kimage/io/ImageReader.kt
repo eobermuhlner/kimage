@@ -20,7 +20,11 @@ object ImageReader {
             return readFits(file)
         }
 
-        val image = ImageIO.read(file) ?: throw RuntimeException("Failed to read image: $file")
+        val image = try {
+            ImageIO.read(file)
+        } catch (ex: Exception) {
+            throw RuntimeException("Failed to read image: $file", ex)
+        } ?: throw RuntimeException("Failed to read image: $file")
 
         val color = DoubleArray(3)
         val matrixImage = MatrixImage(image.width, image.height)
@@ -77,43 +81,43 @@ object ImageReader {
 
             val matrices = mutableListOf<Matrix>()
             for (channelIndex in 0 until channels) {
-                val matrix = FloatMatrix(height, width)
+                val matrix = FloatMatrix(width, height)
 
                 matrices += when (hdu.bitPix) {
                     BasicHDU.BITPIX_BYTE -> {
                         val data = hdu.kernel as Array<Array<ByteArray>>
-                        matrix.onEach { row, column, _ ->
-                            scaleFitsValue(data[channelIndex][row][column].toDouble(), hdu)
+                        matrix.onEach { x, y, _ ->
+                            scaleFitsValue(data[channelIndex][y][x].toDouble(), hdu)
                         }
                     }
                     BasicHDU.BITPIX_SHORT -> {
                         val data = hdu.kernel as Array<Array<ShortArray>>
-                        matrix.onEach { row, column, _ ->
-                            scaleFitsValue(data[channelIndex][row][column].toDouble(), hdu)
+                        matrix.onEach { x, y, _ ->
+                            scaleFitsValue(data[channelIndex][y][x].toDouble(), hdu)
                         }
                     }
                     BasicHDU.BITPIX_INT -> {
                         val data = hdu.kernel as Array<Array<IntArray>>
-                        matrix.onEach { row, column, _ ->
-                            scaleFitsValue(data[channelIndex][row][column].toDouble(), hdu)
+                        matrix.onEach { x, y, _ ->
+                            scaleFitsValue(data[channelIndex][y][x].toDouble(), hdu)
                         }
                     }
                     BasicHDU.BITPIX_LONG -> {
                         val data = hdu.kernel as Array<Array<LongArray>>
-                        matrix.onEach { row, column, _ ->
-                            scaleFitsValue(data[channelIndex][row][column].toDouble(), hdu)
+                        matrix.onEach { x, y, _ ->
+                            scaleFitsValue(data[channelIndex][y][x].toDouble(), hdu)
                         }
                     }
                     BasicHDU.BITPIX_FLOAT -> {
                         val data = hdu.kernel as Array<Array<FloatArray>>
-                        matrix.onEach { row, column, _ ->
-                            scaleFitsValue(data[channelIndex][row][column].toDouble(), hdu)
+                        matrix.onEach { x, y, _ ->
+                            scaleFitsValue(data[channelIndex][y][x].toDouble(), hdu)
                         }
                     }
                     BasicHDU.BITPIX_DOUBLE -> {
                         val data = hdu.kernel as Array<Array<DoubleArray>>
-                        matrix.onEach { row, column, _ ->
-                            scaleFitsValue(data[channelIndex][row][column], hdu)
+                        matrix.onEach { x, y, _ ->
+                            scaleFitsValue(data[channelIndex][y][x], hdu)
                         }
                     }
                     else -> throw IllegalArgumentException("Unknown bits per pixel: ${hdu.bitPix}")

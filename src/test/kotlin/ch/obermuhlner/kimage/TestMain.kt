@@ -13,23 +13,23 @@ object TestMain {
     @JvmStatic
     fun main(args: Array<String>) {
 //        exampleFilters("lena512.tiff")
-
-        exampleChannelManipulation("animal.png")
+//
+//        exampleChannelManipulation("animal.png")
 //        exampleFilters("animal.png")
 //
 //        exampleChannelManipulation("lena512.png")
 //        exampleFilters("lena512.png")
-//
-//        exampleImages()
-//        exampleMedianExperiments()
-//
-//        exampleScale("lena512.tiff")
-//
-//        exampleInterpolate("colors.png")
-//        exampleInterpolate("lena512.tiff")
-//
-//        exampleError()
-//        exampleAlign()
+
+        exampleImages()
+        exampleMedianExperiments()
+
+        exampleScale("lena512.tiff")
+
+        exampleInterpolate("colors.png")
+        exampleInterpolate("lena512.tiff")
+
+        exampleError()
+        exampleAlign()
     }
 
     private fun exampleInterpolate(imageName: String) {
@@ -354,7 +354,7 @@ object TestMain {
 
     private fun exampleMedianExperiments() {
         val image = read(File("images/lena512.tiff"))
-        val gimp_median = read(File("images/lena512color_gimp_median3.tiff"))
+        //val gimp_median = read(File("images/lena512color_gimp_median3.tiff"))
 
         example("noise") {
             randomNoise(image, 0.1)
@@ -379,9 +379,9 @@ object TestMain {
         example("delta_image_to_fast_median_rgb") {
             deltaRGB(image, fast_median)
         }
-        example("delta_median_to_gimp_median_rgb") {
-            deltaRGB(median, gimp_median)
-        }
+//        example("delta_median_to_gimp_median_rgb") {
+//            deltaRGB(median, gimp_median)
+//        }
         example("delta_median_to_fast_median_rgb") {
             deltaRGB(median, fast_median)
         }

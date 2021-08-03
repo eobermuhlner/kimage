@@ -60,7 +60,7 @@ fun Image.histogramImage(
         for (x in 0 until histogramWidth) {
             val histY = min(histogramHeight, (histogramHeight.toDouble() * histogram[x] / maxCount).toInt())
             for (y in (histogramHeight-histY) until histogramHeight) {
-                result[channel][y, x] = 1.0
+                result[channel][x, y] = 1.0
             }
         }
     }
@@ -92,8 +92,8 @@ operator fun Image.times(other: Image): Image {
         this.width,
         this.height,
         this.channels) { channel, _, _ ->
-        this[channel].copy().onEach { row, column, value ->
-            value * other[channel][row, column]
+        this[channel].copy().onEach { x, y, value ->
+            value * other[channel][x, y]
         }
     }
 }
@@ -104,8 +104,8 @@ operator fun Image.div(other: Image): Image {
         this.width,
         this.height,
         this.channels) { channel, _, _ ->
-        this[channel].copy().onEach { row, column, value ->
-            value / other[channel][row, column]
+        this[channel].copy().onEach { x, y, value ->
+            value / other[channel][x, y]
         }
     }
 }
@@ -231,28 +231,28 @@ fun Image.scaleTo(newWidth: Int, newHeight: Int, scaling: Scaling = Scaling.Bicu
         newWidth,
         newHeight,
         this.channels) { channel, _, _ ->
-        this[channel].scaleTo(newHeight, newWidth, scaling)
+        this[channel].scaleTo(newWidth, newHeight, scaling)
     }
 }
 
 fun Image.interpolate(fixPoints: List<Pair<Int, Int>>, power: Double = estimatePowerForInterpolation(fixPoints.size)): Image {
-    val fixPointsRowColumn = fixPoints.map { Pair(it.second, it.first) }
+    val fixPointsXY = fixPoints.map { Pair(it.first, it.second) }
     val medianRadius = min(width, height) / max(sqrt(fixPoints.size.toDouble()).toInt()+1, 2)
     return MatrixImage(
         width,
         height,
         this.channels) { channel, _, _ ->
-        this[channel].interpolate(fixPointsRowColumn,  { this[channel].medianAround(it.first, it.second, medianRadius) }, power = power)
+        this[channel].interpolate(fixPointsXY,  { this[channel].medianAround(it.first, it.second, medianRadius) }, power = power)
     }
 }
 
 fun Image.interpolate(fixPoints: List<Pair<Int, Int>>, fixValues: List<Double>, power: Double = estimatePowerForInterpolation(fixPoints.size)): Image {
-    val fixPointsRowColumn = fixPoints.map { Pair(it.second, it.first) }
+    val fixPointsXY = fixPoints.map { Pair(it.first, it.second) }
     return MatrixImage(
         width,
         height,
         this.channels) { channel, _, _ ->
-        this[channel].interpolate(fixPointsRowColumn,  fixValues, power = power)
+        this[channel].interpolate(fixPointsXY,  fixValues, power = power)
     }
 }
 

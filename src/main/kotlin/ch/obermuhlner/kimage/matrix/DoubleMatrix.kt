@@ -1,17 +1,17 @@
 package ch.obermuhlner.kimage.matrix
 
-class DoubleMatrix(override val rows: Int, override val columns: Int) : Matrix {
-    private val data: DoubleArray = DoubleArray(columns * rows)
+class DoubleMatrix(override val width: Int, override val height: Int) : Matrix {
+    private val data: DoubleArray = DoubleArray(width * height)
 
-    constructor(rows: Int, columns: Int, init: (row: Int, column: Int) -> Double): this(rows, columns) {
-        for (row in 0 until rows) {
-            for (column in 0 until columns) {
-                this[row, column] = init(row, column)
+    constructor(width: Int, height: Int, init: (x: Int, y: Int) -> Double): this(width, height) {
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                this[x, y] = init(x, y)
             }
         }
     }
 
-    override fun create(createRows: Int, createColumns: Int): Matrix = DoubleMatrix(createRows, createColumns)
+    override fun create(createWidth: Int, createHeight: Int): Matrix = DoubleMatrix(createWidth, createHeight)
 
     override fun get(index: Int): Double {
         return data[index]
@@ -28,7 +28,7 @@ class DoubleMatrix(override val rows: Int, override val columns: Int) : Matrix {
     override fun equals(other: Any?): Boolean = (other is Matrix) && contentEquals(other)
 
     override fun toString(): String {
-        return "DoubleMatrix($rows, $columns)"
+        return "DoubleMatrix($width, $height)"
     }
 
 }

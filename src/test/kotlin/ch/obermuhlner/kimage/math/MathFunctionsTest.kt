@@ -92,7 +92,7 @@ internal class MathFunctionsTest {
     @Test
     fun testDoubleIterableMin() {
         assertEquals(1f, listOf(1f, 2f, 3f).min(), epsilonFloat)
-        assertEquals(1.0, Matrix.matrixOf(1, 3, 1.0, 2.0, 3.0).min(), epsilonDouble)
+        assertEquals(1.0, Matrix.matrixOf(3, 1, 1.0, 2.0, 3.0).min(), epsilonDouble)
     }
 
     @Test
@@ -110,7 +110,7 @@ internal class MathFunctionsTest {
     @Test
     fun testDoubleIterableMax() {
         assertEquals(3f, listOf(1f, 2f, 3f).max(), epsilonFloat)
-        assertEquals(3.0, Matrix.matrixOf(1, 3, 1.0, 2.0, 3.0).max(), epsilonDouble)
+        assertEquals(3.0, Matrix.matrixOf(3, 1, 1.0, 2.0, 3.0).max(), epsilonDouble)
     }
 
     @Test
@@ -128,7 +128,7 @@ internal class MathFunctionsTest {
     @Test
     fun testDoubleIterableSum() {
         assertEquals(6.0, listOf(1.0, 2.0, 3.0).sum(), epsilonDouble)
-        assertEquals(6.0, Matrix.matrixOf(1, 3, 1.0, 2.0, 3.0).sum(), epsilonDouble)
+        assertEquals(6.0, Matrix.matrixOf(3, 1, 1.0, 2.0, 3.0).sum(), epsilonDouble)
     }
 
     @Test

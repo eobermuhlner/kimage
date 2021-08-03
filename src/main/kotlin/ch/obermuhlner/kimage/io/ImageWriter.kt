@@ -90,9 +90,9 @@ object ImageWriter {
 
     private fun writeFits(image: Image, output: File) {
         val data = Array(3) { channelIndex ->
-            Array(image.height) { row ->
-                FloatArray(image.width) { column ->
-                    image[image.channels[channelIndex]][row, column].toFloat()
+            Array(image.height) { y ->
+                FloatArray(image.width) { x ->
+                    image[image.channels[channelIndex]][x, y].toFloat()
                 }
             }
         }

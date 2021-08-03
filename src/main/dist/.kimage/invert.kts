@@ -20,7 +20,7 @@ kimage(0.1) {
 
     single {
         MatrixImage(inputImage.width, inputImage.height, inputImage.channels) { channel, _, _ ->
-            inputImage[channel].onEach { _, _, value -> 1.0 - value }
+            inputImage[channel].onEach { value -> 1.0 - value }
         }
     }
 }

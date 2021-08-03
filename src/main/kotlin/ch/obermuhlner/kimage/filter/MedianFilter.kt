@@ -13,54 +13,54 @@ class MedianFilter(private val radius: Int, private val shape: Shape = Shape.Squ
             val n = kernelSize * kernelSize
             val values = DoubleArray(n)
 
-            for (row in 0 until source.rows) {
-                for (column in 0 until source.columns) {
-                    val medianValue = median(sourceCopy, row, column, radius, shape, values)
+            for (y in 0 until source.height) {
+                for (x in 0 until source.width) {
+                    val medianValue = median(sourceCopy, x, y, radius, shape, values)
                     if (recursive) {
-                        sourceCopy[row, column] = medianValue
+                        sourceCopy[x, y] = medianValue
                     }
-                    target[row, column] = medianValue
+                    target[x, y] = medianValue
                 }
             }
             return target
         }
 
-        private fun median(matrix: Matrix, row: Int, column: Int, radius: Int, shape: Shape, values: DoubleArray): Double {
+        private fun median(matrix: Matrix, x: Int, y: Int, radius: Int, shape: Shape, values: DoubleArray): Double {
             var n = 0
 
             when (shape) {
                 Shape.Cross -> {
                     for (dr in -radius..radius) {
-                        values[n++] = matrix[row + dr, column]
+                        values[n++] = matrix[x, y + dr]
                     }
                     for (dc in -radius until 0) {
-                        values[n++] = matrix[row, column + dc]
+                        values[n++] = matrix[x + dc, y]
                     }
                     for (dc in 1 .. radius) {
-                        values[n++] = matrix[row, column + dc]
+                        values[n++] = matrix[x + dc, y]
                     }
                 }
                 Shape.DiagonalCross -> {
-                    values[n++] = matrix[row, column]
+                    values[n++] = matrix[x, y]
                     for (r in 1..radius) {
-                        values[n++] = matrix[row + r, column + r]
-                        values[n++] = matrix[row + r, column - r]
-                        values[n++] = matrix[row - r, column + r]
-                        values[n++] = matrix[row - r, column - r]
+                        values[n++] = matrix[x + r, y + r]
+                        values[n++] = matrix[x - r, y + r]
+                        values[n++] = matrix[x + r, y - r]
+                        values[n++] = matrix[x - r, y - r]
                     }
                 }
                 Shape.Star -> {
-                    values[n++] = matrix[row, column]
+                    values[n++] = matrix[x, y]
                     for (r in 1..radius) {
-                        values[n++] = matrix[row + r, column]
-                        values[n++] = matrix[row - r, column]
-                        values[n++] = matrix[row, column + r]
-                        values[n++] = matrix[row, column - r]
+                        values[n++] = matrix[x, y + r]
+                        values[n++] = matrix[x, y - r]
+                        values[n++] = matrix[x + r, y]
+                        values[n++] = matrix[x - r, y]
 
-                        values[n++] = matrix[row + r, column + r]
-                        values[n++] = matrix[row + r, column - r]
-                        values[n++] = matrix[row - r, column + r]
-                        values[n++] = matrix[row - r, column - r]
+                        values[n++] = matrix[x + r, y + r]
+                        values[n++] = matrix[x - r, y + r]
+                        values[n++] = matrix[x + r, y - r]
+                        values[n++] = matrix[x - r, y - r]
                     }
                 }
                 else -> {
@@ -69,7 +69,7 @@ class MedianFilter(private val radius: Int, private val shape: Shape = Shape.Squ
                     for (dr in -verticalRadius .. verticalRadius) {
                         for (dc in -horizontalRadius .. horizontalRadius) {
                             if (shape.isInside(dr, dc, radius)) {
-                                values[n++] = matrix[row + dr, column + dc]
+                                values[n++] = matrix[x + dc, y + dr]
                             }
                         }
                     }

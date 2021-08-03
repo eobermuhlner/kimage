@@ -1,28 +1,32 @@
 package ch.obermuhlner.kimage.matrix
 
-class CalculatedMatrix(override val rows: Int, override val columns: Int, private val calculation: (row: Int, column: Int) -> Double) : Matrix {
+class CalculatedMatrix(
+    override val width: Int,
+    override val height: Int,
+    private val calculation: (x: Int, y: Int) -> Double
+) : Matrix {
 
-    override fun create(createRows: Int, createColumns: Int): Matrix {
-        val m = DoubleMatrix(createRows, createColumns)
+    override fun create(createWidth: Int, createHeight: Int): Matrix {
+        val m = DoubleMatrix(createWidth, createHeight)
         m.set(this)
         return m
     }
 
     override fun get(index: Int): Double {
-        val row = index / columns
-        val column = index - row * columns
-        return get(row, column)
+        val y = index / width
+        val x = index - y * width
+        return get(x, y)
     }
 
     override fun set(index: Int, value: Double) {
         throw IllegalStateException("CalculatedMatrix cannot set values")
     }
 
-    override fun get(row: Int, column: Int): Double {
-        return calculation(row, column)
+    override fun get(x: Int, y: Int): Double {
+        return calculation(x, y)
     }
 
-    override fun set(row: Int, column: Int, value: Double) {
+    override fun set(x: Int, y: Int, value: Double) {
         throw IllegalStateException("CalculatedMatrix cannot set values")
     }
 
@@ -33,7 +37,7 @@ class CalculatedMatrix(override val rows: Int, override val columns: Int, privat
     override fun equals(other: Any?): Boolean = (other is Matrix) && contentEquals(other)
 
     override fun toString(): String {
-        return "CalculatedMatrix($rows, $columns)"
+        return "CalculatedMatrix($width, $height)"
     }
 
     private class CalculatedMatrixIterator(val matrix: CalculatedMatrix): DoubleIterator() {

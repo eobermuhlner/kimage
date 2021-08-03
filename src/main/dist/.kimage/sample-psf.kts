@@ -49,7 +49,7 @@ kimage(0.1) {
         val maxValue = m.max()
         m = (m elementMinus minValue) / (maxValue - minValue)
 
-        m.onEach { y, x, value ->
+        m.onEach { x, y, value ->
             val dx = (x - radius).toDouble()
             val dy = (y - radius).toDouble()
             val r = sqrt(dx*dx + dy*dy) / radius

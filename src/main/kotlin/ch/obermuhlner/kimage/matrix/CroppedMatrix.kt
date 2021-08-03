@@ -1,54 +1,54 @@
 package ch.obermuhlner.kimage.matrix
 
 class CroppedMatrix(
-        private val matrix: Matrix,
-        private val offsetRow: Int,
-        private val offsetColumn: Int,
-        override val rows: Int,
-        override val columns: Int,
-        private val strictClipping: Boolean = true)
-    : Matrix {
+    private val matrix: Matrix,
+    private val offsetX: Int,
+    private val offsetY: Int,
+    override val width: Int,
+    override val height: Int,
+    private val strictClipping: Boolean = true
+) : Matrix {
 
-    override fun create(createRows: Int, createColumns: Int): Matrix {
-        return matrix.create(createRows, createColumns)
+    override fun create(createWidth: Int, createHeight: Int): Matrix {
+        return matrix.create(createWidth, createHeight)
     }
 
     override fun get(index: Int): Double {
-        val row = index / columns
-        val column = index % columns
-        return get(row, column)
+        val y = index / width
+        val x = index % width
+        return get(x, y)
     }
 
     override fun set(index: Int, value: Double) {
-        val row = index / columns
-        val column = index % columns
-        set(row, column, value)
+        val y = index / width
+        val x = index % width
+        set(x, y, value)
     }
 
-    override fun get(row: Int, column: Int): Double {
-        return matrix.get(innerRow(row), innerColumn(column))
+    override fun get(x: Int, y: Int): Double {
+        return matrix[innerX(x), innerY(y)]
     }
 
-    override fun set(row: Int, column: Int, value: Double) {
-        matrix.set(innerRow(row), innerColumn(column), value)
+    override fun set(x: Int, y: Int, value: Double) {
+        matrix[innerX(x), innerY(y)] = value
     }
 
-    private fun innerRow(row: Int) = if (strictClipping) {
-        boundedRow(row) + offsetRow
+    private fun innerY(y: Int) = if (strictClipping) {
+        boundedY(y) + offsetY
     } else {
-        row + offsetRow
+        y + offsetY
     }
 
-    private fun innerColumn(column: Int) = if (strictClipping) {
-        boundedColumn(column) + offsetColumn
+    private fun innerX(x: Int) = if (strictClipping) {
+        boundedX(x) + offsetX
     } else {
-        column + offsetColumn
+        x + offsetX
     }
 
     override fun equals(other: Any?): Boolean = (other is Matrix) && contentEquals(other)
 
     override fun toString(): String {
-        return "CroppedMatrix($rows, $columns, offset=($offsetRow, $offsetColumn), $matrix)"
+        return "CroppedMatrix($width, $height, offset=($offsetX, $offsetY), $matrix)"
     }
 
 }

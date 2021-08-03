@@ -122,7 +122,7 @@ kimage(0.1) {
                 for (y in 0 until inputImage.height) {
                     val points = WeightedObservedPoints()
                     for (x in 0 until inputImage.width) {
-                        val value = matrix.getPixel(x, y)
+                        val value = matrix[x, y]
                         if (value in low..high) {
                             points.add(x.toDouble(), value)
                         }
@@ -154,7 +154,7 @@ kimage(0.1) {
                 for (x in 0 until inputImage.width) {
                     val points = WeightedObservedPoints()
                     for (y in 0 until inputImage.height) {
-                        val value = matrix.getPixel(x, y)
+                        val value = matrix[x, y]
                         if (value in low..high) {
                             points.add(y.toDouble(), value)
                         }
@@ -180,7 +180,7 @@ kimage(0.1) {
             var clippedMaxDistance = 0
             for (y in 0 until inputImage.height) {
                 for (x in 0 until inputImage.width) {
-                    val value = matrix.getPixel(x, y)
+                    val value = matrix[x, y]
                     val dx = (centerX.get() - x).toDouble()
                     val dy = (centerY.get() - y).toDouble()
                     val distance = (sqrt(dx*dx + dy*dy) + 0.5).toInt()
@@ -251,9 +251,9 @@ kimage(0.1) {
                 println()
             }
 
-            val flatMatrix = CalculatedMatrix(inputImage.width, inputImage.height) { row, column ->
-                val dx = (centerX.get() - column).toDouble()
-                val dy = (centerY.get() - row).toDouble()
+            val flatMatrix = CalculatedMatrix(inputImage.width, inputImage.height) { x, y ->
+                val dx = (centerX.get() - x).toDouble()
+                val dy = (centerY.get() - y).toDouble()
                 val distance = sqrt(dx*dx + dy*dy)
                 when (model) {
                     "gauss" -> gaussFunction(distance, gaussFit[0], gaussFit[1], gaussFit[2])

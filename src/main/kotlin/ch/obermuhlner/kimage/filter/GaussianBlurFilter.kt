@@ -41,31 +41,31 @@ class GaussianBlurFilter(private val radius: Int) : MatrixImageFilter({_, source
         private fun boxBlurHorizontal(source: Matrix, target: Matrix, boxRadius: Int) {
             val kernelSize = boxRadius + boxRadius + 1
 
-            for (row in 0 until source.rows) {
-                val first = source[row, 0]
-                val last = source[row, source.columns - 1]
+            for (y in 0 until source.height) {
+                val first = source[0, y]
+                val last = source[source.width - 1, y]
 
                 var leftX = 0
                 var rightX = boxRadius
                 var targetX = 0
 
                 var sum = first * (boxRadius + 1)
-                for (column in 0 until boxRadius) {
-                    sum += source[row, column]
+                for (x in 0 until boxRadius) {
+                    sum += source[x, y]
                 }
-                for (column in 0..boxRadius) {
-                    sum += source[row, rightX++] - first
-                    target[row, targetX++] = sum / kernelSize
+                for (x in 0..boxRadius) {
+                    sum += source[rightX++, y] - first
+                    target[targetX++, y] = sum / kernelSize
                 }
-                for (column in boxRadius + 1 until source.columns - boxRadius) {
-                    sum += source[row, rightX++]
-                    sum -= source[row, leftX++]
-                    target[row, targetX++] = sum / kernelSize
+                for (x in boxRadius + 1 until source.width - boxRadius) {
+                    sum += source[rightX++, y]
+                    sum -= source[leftX++, y]
+                    target[targetX++, y] = sum / kernelSize
                 }
-                for (column in source.columns - boxRadius until source.columns) {
+                for (x in source.width - boxRadius until source.width) {
                     sum += last
-                    sum -= source[row, leftX++]
-                    target[row, targetX++] = sum / kernelSize
+                    sum -= source[leftX++, y]
+                    target[targetX++, y] = sum / kernelSize
                 }
             }
         }
@@ -73,33 +73,33 @@ class GaussianBlurFilter(private val radius: Int) : MatrixImageFilter({_, source
         private fun boxBlurVertical(source: Matrix, target: Matrix, boxRadius: Int) {
             val kernelSize = boxRadius + boxRadius + 1
 
-            for (column in 0 until source.columns) {
-                val first = source[0, column]
-                val last = source[source.rows - 1, column]
+            for (x in 0 until source.width) {
+                val first = source[x, 0]
+                val last = source[x, source.height - 1]
 
                 var leftY = 0
                 var rightY = boxRadius
                 var targetY = 0
 
                 var sum = first * (boxRadius + 1)
-                for (row in 0 until boxRadius) {
-                    sum += source[row, column]
+                for (y in 0 until boxRadius) {
+                    sum += source[x, y]
                 }
-                for (row in 0..boxRadius) {
-                    sum += source[rightY++, column] - first
-                    target[targetY++, column] = sum / kernelSize
+                for (y in 0..boxRadius) {
+                    sum += source[x, rightY++] - first
+                    target[x, targetY++] = sum / kernelSize
                 }
-                for (row in boxRadius + 1 until source.rows - boxRadius) {
-                    sum += source[rightY++, column]
-                    sum -= source[leftY++, column]
+                for (y in boxRadius + 1 until source.height - boxRadius) {
+                    sum += source[x, rightY++]
+                    sum -= source[x, leftY++]
 
-                    target[targetY++, column] = sum / kernelSize
+                    target[x, targetY++] = sum / kernelSize
                 }
-                for (row in source.rows - boxRadius until source.rows) {
+                for (y in source.height - boxRadius until source.height) {
                     sum += last
-                    sum -= source[leftY++, column]
+                    sum -= source[x, leftY++]
 
-                    target[targetY++, column] = sum / kernelSize
+                    target[x, targetY++] = sum / kernelSize
                 }
             }
         }

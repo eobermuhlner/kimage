@@ -88,20 +88,20 @@ kimage(0.1) {
             var outlierCount = 0
             val outputMatrix = matrix.create()
             val badpixelMatrix = matrix.create()
-            for (row in 0 until matrix.rows) {
-                for (column in 0 until matrix.columns) {
-                    val value = matrix[row, column]
-                    outputMatrix[row, column] = if (value in low.get() .. high.get()) {
-                        matrix[row, column]
+            for (y in 0 until matrix.height) {
+                for (x in 0 until matrix.width) {
+                    val value = matrix[x, y]
+                    outputMatrix[x, y] = if (value in low.get() .. high.get()) {
+                        matrix[x, y]
                     } else {
-                        badpixels.add(Pair(column, row))
+                        badpixels.add(Pair(x, y))
                         outlierCount++
                         val replacedValue = when (replace) {
                             "global-median" -> globalMedian
-                            "local-median" -> matrix.medianAround(row, column, localRadius)
+                            "local-median" -> matrix.medianAround(x, y, localRadius)
                             else -> throw java.lang.IllegalArgumentException("Unknown replace method: $replace")
                         }
-                        badpixelMatrix[row, column] = replacedValue
+                        badpixelMatrix[x, y] = replacedValue
                         replacedValue
                     }
                 }

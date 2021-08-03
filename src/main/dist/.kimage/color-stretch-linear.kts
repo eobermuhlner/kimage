@@ -78,10 +78,10 @@ kimage(0.1) {
             val matrix = inputImage[processChannel]
 
             val m = matrix.create()
-            for (row in 0 until matrix.rows) {
-                for (column in 0 until matrix.columns) {
-                    val value = matrix[row, column]
-                    m[row, column] = (value - lowValue) / range
+            for (y in 0 until matrix.height) {
+                for (x in 0 until matrix.width) {
+                    val value = matrix[x, y]
+                    m[x, y] = (value - lowValue) / range
                 }
             }
 

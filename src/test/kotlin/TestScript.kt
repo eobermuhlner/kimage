@@ -90,7 +90,7 @@ object TestScript {
                 val maxValue = m.max()
                 m = (m elementMinus minValue) / (maxValue - minValue)
 
-                m.onEach { y, x, value ->
+                m.onEach { x, y, value ->
                     val dx = (x - radius).toDouble()
                     val dy = (y - radius).toDouble()
                     val r = sqrt(dx*dx + dy*dy) / radius
@@ -149,7 +149,7 @@ object TestScript {
                     enabledWhen = Reference("psf").isEqual("gauss", "moffat")
                     default = 2.0
                 }
-                file("psfImage") {
+                optionalFile("psfImage") {
                     enabledWhen = Reference("psf").isEqual("image")
                     isFile = true
                 }
@@ -172,7 +172,7 @@ object TestScript {
                 val beta: Double by arguments
                 val sigmaX: Double by arguments
                 val sigmaY: Double by arguments
-                val psfImage: File by arguments
+                val psfImage: Optional<File> by arguments
                 val radius: Int by arguments
                 val iterations: Int by arguments
 
@@ -227,23 +227,23 @@ object TestScript {
                         "gauss5x5" -> KernelFilter.GaussianBlur5
                         "gauss7x7" -> KernelFilter.GaussianBlur7
                         "sample" -> {
-                            val m = inputImage[channel].cropCenter(radius, sampleX.get(), sampleY.get()).medianFilter(1)
+                            val m = inputImage[channel].cropCenter(radius, sampleY.get(), sampleX.get()).medianFilter(1)
                             val minValue = m.min()
                             val maxValue = m.max()
                             (m elementMinus minValue) / (maxValue - minValue)
                         }
                         "gauss" -> {
-                            DoubleMatrix(radius*2+1, radius*2+1) { y, x ->
+                            DoubleMatrix(radius*2+1, radius*2+1) { x, y ->
                                 gauss((x - radius).toDouble(), (y - radius).toDouble(), background, amplitude, sigmaX, sigmaY)
                             }
                         }
                         "moffat" -> {
-                            DoubleMatrix(radius*2+1, radius*2+1) { y, x ->
+                            DoubleMatrix(radius*2+1, radius*2+1) { x, y ->
                                 moffat((x - radius).toDouble(), (y - radius).toDouble(), background, amplitude, beta, sigmaX, sigmaY)
                             }
                         }
                         "image" -> {
-                            ImageReader.read(psfImage)[Channel.Gray]
+                            ImageReader.read(psfImage.get())[Channel.Gray]
                         }
                         else -> throw IllegalArgumentException("Unknown psf: $psf")
                     }
@@ -260,10 +260,10 @@ object TestScript {
 
                 if (debugMode) {
                     val m = psfKernelMatrices.iterator().next().value
-                    val psfImage = MatrixImage(m.columns, m.rows, psfKernelMatrices.keys.toList()) { channel, _, _ -> psfKernelMatrices[channel]!! }
+                    val psfKernelImage = MatrixImage(m.width, m.height, psfKernelMatrices.keys.toList()) { channel, _, _ -> psfKernelMatrices[channel]!! }
                     val psfFile = inputFile.prefixName("psf_")
                     println("Saving $psfFile for manual analysis")
-                    ImageWriter.write(psfImage, psfFile)
+                    ImageWriter.write(psfKernelImage, psfFile)
                 }
 
                 MatrixImage(inputImage.width, inputImage.height, inputImage.channels) { channel, _, _ -> outputMatrices[channel]!! }
@@ -356,12 +356,12 @@ object TestScript {
                         val redValues = mutableListOf<Double>()
                         val greenValues = mutableListOf<Double>()
                         val blueValues = mutableListOf<Double>()
-                        for (row in 0 until grayMatrix.rows) {
-                            for (column in 0 until grayMatrix.columns) {
-                                if (grayMatrix[row, column] >= highlightValue) {
-                                    redValues += redMatrix[row, column]
-                                    greenValues += greenMatrix[row, column]
-                                    blueValues += blueMatrix[row, column]
+                        for (y in 0 until grayMatrix.height) {
+                            for (x in 0 until grayMatrix.width) {
+                                if (grayMatrix[x, y] >= highlightValue) {
+                                    redValues += redMatrix[x, y]
+                                    greenValues += greenMatrix[x, y]
+                                    blueValues += blueMatrix[x, y]
                                 }
                             }
                         }
@@ -372,9 +372,9 @@ object TestScript {
                     "local" -> {
                         val halfLocalX = localX.get() / 2
                         val halfLocalY = localY.get() / 2
-                        red = Optional.of(redMatrix.cropCenter(localRadius, halfLocalY, halfLocalX, false).median())
-                        green = Optional.of(greenMatrix.cropCenter(localRadius, halfLocalY, halfLocalX, false).median())
-                        blue = Optional.of(blueMatrix.cropCenter(localRadius, halfLocalY, halfLocalX, false).median())
+                        red = Optional.of(redMatrix.cropCenter(localRadius, halfLocalX, halfLocalY, false).median())
+                        green = Optional.of(greenMatrix.cropCenter(localRadius, halfLocalX, halfLocalY, false).median())
+                        blue = Optional.of(blueMatrix.cropCenter(localRadius, halfLocalX, halfLocalY, false).median())
                     }
                     else -> throw IllegalArgumentException("Unknown whitebalance: $whitebalance")
                 }
@@ -508,36 +508,42 @@ object TestScript {
                     val y = badpixelCoord.second
 
                     val surroundingValues = mutableListOf<Double>()
-                    for (dy in -2 .. +2 step 4) {
-                        for (dx in -2 .. +2 step 4) {
-                            if (mosaic.isPixelInside(x + dx, y + dy) && !badpixelCoords.contains(Pair(x + dx, y + dy))) {
-                                surroundingValues.add(mosaic.getPixel(x + dx, y + dy))
+                    for (dy in -2..+2 step 4) {
+                        for (dx in -2..+2 step 4) {
+                            if (mosaic.isInside(x + dx, y + dy) && !badpixelCoords.contains(
+                                    Pair(
+                                        x + dx,
+                                        y + dy
+                                    )
+                                )
+                            ) {
+                                surroundingValues.add(mosaic[x + dx, y + dy])
                             }
                         }
                     }
 
-                    mosaic.setPixel(x, y, surroundingValues.median())
+                    mosaic[x, y] = surroundingValues.median()
                 }
 
-                val mosaicRedMatrix = DoubleMatrix(mosaic.rows / 2, mosaic.columns / 2)
-                val mosaicGreen1Matrix = DoubleMatrix(mosaic.rows / 2, mosaic.columns / 2)
-                val mosaicGreen2Matrix = DoubleMatrix(mosaic.rows / 2, mosaic.columns / 2)
-                val mosaicBlueMatrix = DoubleMatrix(mosaic.rows / 2, mosaic.columns / 2)
-                val mosaicGrayMatrix = DoubleMatrix(mosaic.rows / 2, mosaic.columns / 2)
+                val mosaicRedMatrix = DoubleMatrix(mosaic.width / 2, mosaic.height / 2)
+                val mosaicGreen1Matrix = DoubleMatrix(mosaic.width / 2, mosaic.height / 2)
+                val mosaicGreen2Matrix = DoubleMatrix(mosaic.width / 2, mosaic.height / 2)
+                val mosaicBlueMatrix = DoubleMatrix(mosaic.width / 2, mosaic.height / 2)
+                val mosaicGrayMatrix = DoubleMatrix(mosaic.width / 2, mosaic.height / 2)
 
                 for (y in 0 until inputImage.height step 2) {
                     for (x in 0 until inputImage.width step 2) {
-                        val r = mosaic.getPixel(x+rX, y+rY)
-                        val g1 = mosaic.getPixel(x+g1X, y+g1Y)
-                        val g2 = mosaic.getPixel(x+g2X, y+g2Y)
-                        val b = mosaic.getPixel(x+bX, y+bY)
+                        val r = mosaic[x+rX, y+rY]
+                        val g1 = mosaic[x+g1X, y+g1Y]
+                        val g2 = mosaic[x+g2X, y+g2Y]
+                        val b = mosaic[x+bX, y+bY]
                         val gray = (r + r + g1 + g2 + b + b) / 6
 
-                        mosaicRedMatrix.setPixel(x/2, y/2, r)
-                        mosaicGreen1Matrix.setPixel(x/2, y/2, g1)
-                        mosaicGreen2Matrix.setPixel(x/2, y/2, g2)
-                        mosaicBlueMatrix.setPixel(x/2, y/2, b)
-                        mosaicGrayMatrix.setPixel(x/2, y/2, gray)
+                        mosaicRedMatrix[x/2, y/2] = r
+                        mosaicGreen1Matrix[x/2, y/2] = g1
+                        mosaicGreen2Matrix[x/2, y/2] = g2
+                        mosaicBlueMatrix[x/2, y/2] = b
+                        mosaicGrayMatrix[x/2, y/2] = gray
                     }
                 }
 
@@ -585,60 +591,60 @@ object TestScript {
                 mosaicGreen2Matrix.onEach { v -> (v - greenOffset) * greenFactor  }
                 mosaicBlueMatrix.onEach { v -> (v - blueOffset) * blueFactor  }
 
-                val redMatrix = Matrix.matrixOf(height, width)
-                val greenMatrix = Matrix.matrixOf(height, width)
-                val blueMatrix = Matrix.matrixOf(height, width)
+                val redMatrix = Matrix.matrixOf(width, height)
+                val greenMatrix = Matrix.matrixOf(width, height)
+                val blueMatrix = Matrix.matrixOf(width, height)
 
                 when (interpolation) {
                     "superpixel" -> {
                         for (y in 0 until height) {
                             for (x in 0 until width) {
-                                val r = mosaicRedMatrix.getPixel(x, y)
-                                val g1 = mosaicGreen1Matrix.getPixel(x, y)
-                                val g2 = mosaicGreen2Matrix.getPixel(x, y)
-                                val b = mosaicBlueMatrix.getPixel(x, y)
+                                val r = mosaicRedMatrix[x, y]
+                                val g1 = mosaicGreen1Matrix[x, y]
+                                val g2 = mosaicGreen2Matrix[x, y]
+                                val b = mosaicBlueMatrix[x, y]
 
-                                redMatrix.setPixel(x, y, r)
-                                greenMatrix.setPixel(x, y, (g1+g2)/2)
-                                blueMatrix.setPixel(x, y, b)
+                                redMatrix[x, y] = r
+                                greenMatrix[x, y] = (g1+g2)/2
+                                blueMatrix[x, y] = b
                             }
                         }
                     }
                     "none" -> {
                         for (y in 0 until height step 2) {
                             for (x in 0 until width step 2) {
-                                val r = mosaicRedMatrix.getPixel(x/2, y/2)
-                                val g1 = mosaicGreen1Matrix.getPixel(x/2, y/2)
-                                val g2 = mosaicGreen2Matrix.getPixel(x/2, y/2)
-                                val b = mosaicBlueMatrix.getPixel(x/2, y/2)
+                                val r = mosaicRedMatrix[x/2, y/2]
+                                val g1 = mosaicGreen1Matrix[x/2, y/2]
+                                val g2 = mosaicGreen2Matrix[x/2, y/2]
+                                val b = mosaicBlueMatrix[x/2, y/2]
 
-                                redMatrix.setPixel(x+rX, y+rY, r)
-                                greenMatrix.setPixel(x+g1X, y+g1Y, g1)
-                                greenMatrix.setPixel(x+g2X, y+g2Y, g2)
-                                blueMatrix.setPixel(x+bX, y+bY, b)
+                                redMatrix[x+rX, y+rY] = r
+                                greenMatrix[x+g1X, y+g1Y] = g1
+                                greenMatrix[x+g2X, y+g2Y] = g2
+                                blueMatrix[x+bX, y+bY] = b
                             }
                         }
                     }
                     "nearest" -> {
                         for (y in 0 until height step 2) {
                             for (x in 0 until width step 2) {
-                                val r = mosaicRedMatrix.getPixel(x/2, y/2)
-                                val g1 = mosaicGreen1Matrix.getPixel(x/2, y/2)
-                                val g2 = mosaicGreen2Matrix.getPixel(x/2, y/2)
-                                val b = mosaicBlueMatrix.getPixel(x/2, y/2)
+                                val r = mosaicRedMatrix[x / 2, y / 2]
+                                val g1 = mosaicGreen1Matrix[x / 2, y / 2]
+                                val g2 = mosaicGreen2Matrix[x / 2, y / 2]
+                                val b = mosaicBlueMatrix[x / 2, y / 2]
 
-                                redMatrix.setPixel(x+0, y+0, r)
-                                redMatrix.setPixel(x+1, y+0, r)
-                                redMatrix.setPixel(x+0, y+1, r)
-                                redMatrix.setPixel(x+1, y+1, r)
-                                blueMatrix.setPixel(x+0, y+0, b)
-                                blueMatrix.setPixel(x+1, y+0, b)
-                                blueMatrix.setPixel(x+0, y+1, b)
-                                blueMatrix.setPixel(x+1, y+1, b)
-                                greenMatrix.setPixel(x+0, y+0, g1)
-                                greenMatrix.setPixel(x+1, y+0, g1)
-                                greenMatrix.setPixel(x+0, y+1, g2)
-                                greenMatrix.setPixel(x+1, y+1, g2)
+                                redMatrix[x + 0, y + 0] = r
+                                redMatrix[x + 1, y + 0] = r
+                                redMatrix[x + 0, y + 1] = r
+                                redMatrix[x + 1, y + 1] = r
+                                blueMatrix[x + 0, y + 0] = b
+                                blueMatrix[x + 1, y + 0] = b
+                                blueMatrix[x + 0, y + 1] = b
+                                blueMatrix[x + 1, y + 1] = b
+                                greenMatrix[x + 0, y + 0] = g1
+                                greenMatrix[x + 1, y + 0] = g1
+                                greenMatrix[x + 0, y + 1] = g2
+                                greenMatrix[x + 1, y + 1] = g2
                             }
                         }
                     }
@@ -652,27 +658,35 @@ object TestScript {
                                 val g: Double
                                 val b: Double
                                 if (dx == rX && dy == rY) {
-                                    r = mosaic.getPixel(x, y)
-                                    g = (mosaic.getPixel(x-1, y) + mosaic.getPixel(x+1, y) + mosaic.getPixel(x, y-1) + mosaic.getPixel(x, y+1)) / 4
-                                    b = (mosaic.getPixel(x-1, y-1) + mosaic.getPixel(x-1, y+1) + mosaic.getPixel(x+1, y-1) + mosaic.getPixel(x+1, y+1)) / 4
+                                    r = mosaic[x, y]
+                                    g = (mosaic[x - 1, y] + mosaic[x + 1, y] + mosaic[x,
+                                            y - 1
+                                    ] + mosaic[x, y + 1]) / 4
+                                    b = (mosaic[x - 1, y - 1] + mosaic[x - 1,
+                                            y + 1
+                                    ] + mosaic[x + 1, y - 1] + mosaic[x + 1, y + 1]) / 4
                                 } else if (dx == bX && dy == bY) {
-                                    r = (mosaic.getPixel(x-1, y-1) + mosaic.getPixel(x-1, y+1) + mosaic.getPixel(x+1, y-1) + mosaic.getPixel(x+1, y+1)) / 4
-                                    g = (mosaic.getPixel(x-1, y) + mosaic.getPixel(x+1, y) + mosaic.getPixel(x, y-1) + mosaic.getPixel(x, y+1)) / 4
-                                    b = mosaic.getPixel(x, y)
+                                    r = (mosaic[x - 1, y - 1] + mosaic[x - 1, y + 1] + mosaic[x + 1,
+                                            y - 1
+                                    ] + mosaic[x + 1, y + 1]) / 4
+                                    g = (mosaic[x - 1, y] + mosaic[x + 1, y] + mosaic[x,
+                                            y - 1
+                                    ] + mosaic[x, y + 1]) / 4
+                                    b = mosaic[x, y]
                                 } else {
-                                    g = mosaic.getPixel(x, y)
-                                    if ((x-1) % 2 == rX) {
-                                        r = (mosaic.getPixel(x-1, y) + mosaic.getPixel(x+1, y)) / 2
-                                        b = (mosaic.getPixel(x, y-1) + mosaic.getPixel(x, y+1)) / 2
+                                    g = mosaic[x, y]
+                                    if ((x - 1) % 2 == rX) {
+                                        r = (mosaic[x - 1, y] + mosaic[x + 1, y]) / 2
+                                        b = (mosaic[x, y - 1] + mosaic[x, y + 1]) / 2
                                     } else {
-                                        r = (mosaic.getPixel(x, y-1) + mosaic.getPixel(x, y+1)) / 2
-                                        b = (mosaic.getPixel(x-1, y) + mosaic.getPixel(x+1, y)) / 2
+                                        r = (mosaic[x, y - 1] + mosaic[x, y + 1]) / 2
+                                        b = (mosaic[x - 1, y] + mosaic[x + 1, y]) / 2
                                     }
                                 }
 
-                                redMatrix.setPixel(x, y, (r - redOffset) * redFactor)
-                                greenMatrix.setPixel(x, y, (g - greenOffset) * greenFactor)
-                                blueMatrix.setPixel(x, y, (b - blueOffset) * blueFactor)
+                                redMatrix[x, y] = (r - redOffset) * redFactor
+                                greenMatrix[x, y] = (g - greenOffset) * greenFactor
+                                blueMatrix[x, y] = (b - blueOffset) * blueFactor
                             }
                         }
                     }
@@ -766,20 +780,20 @@ object TestScript {
                     var outlierCount = 0
                     val outputMatrix = matrix.create()
                     val badpixelMatrix = matrix.create()
-                    for (row in 0 until matrix.rows) {
-                        for (column in 0 until matrix.columns) {
-                            val value = matrix[row, column]
-                            outputMatrix[row, column] = if (value in low.get() .. high.get()) {
-                                matrix[row, column]
+                    for (y in 0 until matrix.height) {
+                        for (x in 0 until matrix.width) {
+                            val value = matrix[x, y]
+                            outputMatrix[x, y] = if (value in low.get()..high.get()) {
+                                matrix[x, y]
                             } else {
-                                badpixels.add(Pair(column, row))
+                                badpixels.add(Pair(x, y))
                                 outlierCount++
                                 val replacedValue = when (replace) {
                                     "global-median" -> globalMedian
-                                    "local-median" -> matrix.medianAround(row, column, localRadius)
+                                    "local-median" -> matrix.medianAround(x, y, localRadius)
                                     else -> throw java.lang.IllegalArgumentException("Unknown replace method: $replace")
                                 }
-                                badpixelMatrix[row, column] = replacedValue
+                                badpixelMatrix[x, y] = replacedValue
                                 replacedValue
                             }
                         }
@@ -1789,7 +1803,7 @@ object TestScript {
                         for (y in 0 until inputImage.height) {
                             val points = WeightedObservedPoints()
                             for (x in 0 until inputImage.width) {
-                                val value = matrix.getPixel(x, y)
+                                val value = matrix[x, y]
                                 if (value in low..high) {
                                     points.add(x.toDouble(), value)
                                 }
@@ -1821,7 +1835,7 @@ object TestScript {
                         for (x in 0 until inputImage.width) {
                             val points = WeightedObservedPoints()
                             for (y in 0 until inputImage.height) {
-                                val value = matrix.getPixel(x, y)
+                                val value = matrix[x, y]
                                 if (value in low..high) {
                                     points.add(y.toDouble(), value)
                                 }
@@ -1847,10 +1861,10 @@ object TestScript {
                     var clippedMaxDistance = 0
                     for (y in 0 until inputImage.height) {
                         for (x in 0 until inputImage.width) {
-                            val value = matrix.getPixel(x, y)
+                            val value = matrix[x, y]
                             val dx = (centerX.get() - x).toDouble()
                             val dy = (centerY.get() - y).toDouble()
-                            val distance = (sqrt(dx*dx + dy*dy) + 0.5).toInt()
+                            val distance = (sqrt(dx * dx + dy * dy) + 0.5).toInt()
                             distanceValues[distance].add(value.toFloat())
                             maxDistance = max(maxDistance, distance)
                             if (value in low..high) {
@@ -1918,9 +1932,9 @@ object TestScript {
                         println()
                     }
 
-                    val flatMatrix = CalculatedMatrix(inputImage.width, inputImage.height) { row, column ->
-                        val dx = (centerX.get() - column).toDouble()
-                        val dy = (centerY.get() - row).toDouble()
+                    val flatMatrix = CalculatedMatrix(inputImage.height, inputImage.width) { x, y ->
+                        val dx = (centerX.get() - x).toDouble()
+                        val dy = (centerY.get() - y).toDouble()
                         val distance = sqrt(dx*dx + dy*dy)
                         when (model) {
                             "gauss" -> gaussFunction(distance, gaussFit[0], gaussFit[1], gaussFit[2])
@@ -2003,10 +2017,10 @@ object TestScript {
                 var clippedMaxDistance = 0
                 for (y in 0 until inputImage.height) {
                     for (x in 0 until inputImage.width) {
-                        val value = matrix.getPixel(x, y)
-                        val dx = (centerX-x).toDouble()
-                        val dy = (centerY-y).toDouble()
-                        val distance = sqrt(dx*dx + dy*dy).toInt()
+                        val value = matrix[x, y]
+                        val dx = (centerX - x).toDouble()
+                        val dy = (centerY - y).toDouble()
+                        val distance = sqrt(dx * dx + dy * dy).toInt()
                         distanceValues[distance].add(value.toFloat())
                         maxDistance = max(maxDistance, distance)
                         if (value in low..high) {
@@ -2062,9 +2076,9 @@ object TestScript {
                     println("  $i, $average, $median, $regression, $gauss, $cauchy")
                 }
 
-                val flatMatrix = CalculatedMatrix(inputImage.width, inputImage.height) { row, column ->
-                    val dx = (centerX-column).toDouble()
-                    val dy = (centerY-row).toDouble()
+                val flatMatrix = CalculatedMatrix(inputImage.height, inputImage.width) { x, y ->
+                    val dx = (centerX-x).toDouble()
+                    val dy = (centerY-y).toDouble()
                     val distance = sqrt(dx*dx + dy*dy).toFloat()
                     polynomialFunction(distance.toFloat()).toDouble()
                     //cauchyFunction(distance)

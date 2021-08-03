@@ -33,7 +33,7 @@ class MatrixImage(
             width: Int,
             height: Int,
             channels: List<Channel>,
-            matrixFunc: (channel: Channel, width: Int, height: Int) -> Matrix = { _, _, _ -> FloatMatrix(height, width) })
+            matrixFunc: (channel: Channel, width: Int, height: Int) -> Matrix = { _, _, _ -> FloatMatrix(width, height) })
             : this(width, height, channels, channels.map { matrixFunc.invoke(it, width, height) })
 
     constructor(image: Image) : this(image.width, image.height) {
@@ -46,11 +46,11 @@ class MatrixImage(
         if (channelIndex < 0) {
             return convertPixelToChannel(x, y, channel)
         }
-        return data[channelIndex][y, x]
+        return data[channelIndex][x, y]
     }
 
     override fun setPixel(x: Int, y: Int, channel: Channel, color: Double) {
-        data[channelIndex(channel)][y, x] = color
+        data[channelIndex(channel)][x, y] = color
     }
 
     override fun getMatrix(channel: Channel): Matrix {

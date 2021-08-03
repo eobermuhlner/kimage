@@ -110,10 +110,10 @@ interface Image {
     operator fun get(channel: Channel): Matrix = getMatrix(channel)
 
     fun getMatrix(channel: Channel): Matrix {
-        val m = DoubleMatrix(height, width)
+        val m = DoubleMatrix(width, height)
         for (y in 0 until height) {
             for (x in 0 until width) {
-                m[y, x] = getPixel(x, y, channel)
+                m[x, y] = getPixel(x, y, channel)
             }
         }
         return m

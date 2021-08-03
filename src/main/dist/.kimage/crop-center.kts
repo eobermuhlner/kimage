@@ -9,7 +9,7 @@ import kotlin.math.*
 
 
 kimage(0.1) {
-    name = "crop"
+    name = "crop-center"
     title = "Crop a centered image"
     description = """
                 Crop a centered image according the specified arguments.

@@ -143,36 +143,36 @@ kimage(0.1) {
             val y = badpixelCoord.second
 
             val surroundingValues = mutableListOf<Double>()
-            for (dy in -2 .. +2 step 4) {
-                for (dx in -2 .. +2 step 4) {
-                    if (mosaic.isPixelInside(x + dx, y + dy) && !badpixelCoords.contains(Pair(x + dx, y + dy))) {
-                        surroundingValues.add(mosaic.getPixel(x + dx, y + dy))
+            for (dy in -2..+2 step 4) {
+                for (dx in -2..+2 step 4) {
+                    if (mosaic.isInside(x + dx, y + dy) && !badpixelCoords.contains(Pair(x + dx, y + dy))) {
+                        surroundingValues.add(mosaic[x + dx, y + dy])
                     }
                 }
             }
 
-            mosaic.setPixel(x, y, surroundingValues.median())
+            mosaic[x, y] = surroundingValues.median()
         }
 
-        val mosaicRedMatrix = DoubleMatrix(mosaic.rows / 2, mosaic.columns / 2)
-        val mosaicGreen1Matrix = DoubleMatrix(mosaic.rows / 2, mosaic.columns / 2)
-        val mosaicGreen2Matrix = DoubleMatrix(mosaic.rows / 2, mosaic.columns / 2)
-        val mosaicBlueMatrix = DoubleMatrix(mosaic.rows / 2, mosaic.columns / 2)
-        val mosaicGrayMatrix = DoubleMatrix(mosaic.rows / 2, mosaic.columns / 2)
+        val mosaicRedMatrix = DoubleMatrix(mosaic.width / 2, mosaic.height / 2)
+        val mosaicGreen1Matrix = DoubleMatrix(mosaic.width / 2, mosaic.height / 2)
+        val mosaicGreen2Matrix = DoubleMatrix(mosaic.width / 2, mosaic.height / 2)
+        val mosaicBlueMatrix = DoubleMatrix(mosaic.width / 2, mosaic.height / 2)
+        val mosaicGrayMatrix = DoubleMatrix(mosaic.width / 2, mosaic.height / 2)
 
         for (y in 0 until inputImage.height step 2) {
             for (x in 0 until inputImage.width step 2) {
-                val r = mosaic.getPixel(x+rX, y+rY)
-                val g1 = mosaic.getPixel(x+g1X, y+g1Y)
-                val g2 = mosaic.getPixel(x+g2X, y+g2Y)
-                val b = mosaic.getPixel(x+bX, y+bY)
+                val r = mosaic[x+rX, y+rY]
+                val g1 = mosaic[x+g1X, y+g1Y]
+                val g2 = mosaic[x+g2X, y+g2Y]
+                val b = mosaic[x+bX, y+bY]
                 val gray = (r + r + g1 + g2 + b + b) / 6
 
-                mosaicRedMatrix.setPixel(x/2, y/2, r)
-                mosaicGreen1Matrix.setPixel(x/2, y/2, g1)
-                mosaicGreen2Matrix.setPixel(x/2, y/2, g2)
-                mosaicBlueMatrix.setPixel(x/2, y/2, b)
-                mosaicGrayMatrix.setPixel(x/2, y/2, gray)
+                mosaicRedMatrix[x/2, y/2] = r
+                mosaicGreen1Matrix[x/2, y/2] = g1
+                mosaicGreen2Matrix[x/2, y/2] = g2
+                mosaicBlueMatrix[x/2, y/2] = b
+                mosaicGrayMatrix[x/2, y/2] = gray
             }
         }
 
@@ -220,60 +220,60 @@ kimage(0.1) {
         mosaicGreen2Matrix.onEach { v -> (v - greenOffset) * greenFactor  }
         mosaicBlueMatrix.onEach { v -> (v - blueOffset) * blueFactor  }
 
-        val redMatrix = Matrix.matrixOf(height, width)
-        val greenMatrix = Matrix.matrixOf(height, width)
-        val blueMatrix = Matrix.matrixOf(height, width)
+        val redMatrix = Matrix.matrixOf(width, height)
+        val greenMatrix = Matrix.matrixOf(width, height)
+        val blueMatrix = Matrix.matrixOf(width, height)
 
         when (interpolation) {
             "superpixel" -> {
                 for (y in 0 until height) {
                     for (x in 0 until width) {
-                        val r = mosaicRedMatrix.getPixel(x, y)
-                        val g1 = mosaicGreen1Matrix.getPixel(x, y)
-                        val g2 = mosaicGreen2Matrix.getPixel(x, y)
-                        val b = mosaicBlueMatrix.getPixel(x, y)
+                        val r = mosaicRedMatrix[x, y]
+                        val g1 = mosaicGreen1Matrix[x, y]
+                        val g2 = mosaicGreen2Matrix[x, y]
+                        val b = mosaicBlueMatrix[x, y]
 
-                        redMatrix.setPixel(x, y, r)
-                        greenMatrix.setPixel(x, y, (g1+g2)/2)
-                        blueMatrix.setPixel(x, y, b)
+                        redMatrix[x, y] = r
+                        greenMatrix[x, y] = (g1+g2)/2
+                        blueMatrix[x, y] = b
                     }
                 }
             }
             "none" -> {
                 for (y in 0 until height step 2) {
                     for (x in 0 until width step 2) {
-                        val r = mosaicRedMatrix.getPixel(x/2, y/2)
-                        val g1 = mosaicGreen1Matrix.getPixel(x/2, y/2)
-                        val g2 = mosaicGreen2Matrix.getPixel(x/2, y/2)
-                        val b = mosaicBlueMatrix.getPixel(x/2, y/2)
+                        val r = mosaicRedMatrix[x/2, y/2]
+                        val g1 = mosaicGreen1Matrix[x/2, y/2]
+                        val g2 = mosaicGreen2Matrix[x/2, y/2]
+                        val b = mosaicBlueMatrix[x/2, y/2]
 
-                        redMatrix.setPixel(x+rX, y+rY, r)
-                        greenMatrix.setPixel(x+g1X, y+g1Y, g1)
-                        greenMatrix.setPixel(x+g2X, y+g2Y, g2)
-                        blueMatrix.setPixel(x+bX, y+bY, b)
+                        redMatrix[x+rX, y+rY] = r
+                        greenMatrix[x+g1X, y+g1Y] = g1
+                        greenMatrix[x+g2X, y+g2Y] = g2
+                        blueMatrix[x+bX, y+bY] = b
                     }
                 }
             }
             "nearest" -> {
                 for (y in 0 until height step 2) {
                     for (x in 0 until width step 2) {
-                        val r = mosaicRedMatrix.getPixel(x/2, y/2)
-                        val g1 = mosaicGreen1Matrix.getPixel(x/2, y/2)
-                        val g2 = mosaicGreen2Matrix.getPixel(x/2, y/2)
-                        val b = mosaicBlueMatrix.getPixel(x/2, y/2)
+                        val r = mosaicRedMatrix[x / 2, y / 2]
+                        val g1 = mosaicGreen1Matrix[x / 2, y / 2]
+                        val g2 = mosaicGreen2Matrix[x / 2, y / 2]
+                        val b = mosaicBlueMatrix[x / 2, y / 2]
 
-                        redMatrix.setPixel(x+0, y+0, r)
-                        redMatrix.setPixel(x+1, y+0, r)
-                        redMatrix.setPixel(x+0, y+1, r)
-                        redMatrix.setPixel(x+1, y+1, r)
-                        blueMatrix.setPixel(x+0, y+0, b)
-                        blueMatrix.setPixel(x+1, y+0, b)
-                        blueMatrix.setPixel(x+0, y+1, b)
-                        blueMatrix.setPixel(x+1, y+1, b)
-                        greenMatrix.setPixel(x+0, y+0, g1)
-                        greenMatrix.setPixel(x+1, y+0, g1)
-                        greenMatrix.setPixel(x+0, y+1, g2)
-                        greenMatrix.setPixel(x+1, y+1, g2)
+                        redMatrix[x + 0, y + 0] = r
+                        redMatrix[x + 1, y + 0] = r
+                        redMatrix[x + 0, y + 1] = r
+                        redMatrix[x + 1, y + 1] = r
+                        blueMatrix[x + 0, y + 0] = b
+                        blueMatrix[x + 1, y + 0] = b
+                        blueMatrix[x + 0, y + 1] = b
+                        blueMatrix[x + 1, y + 1] = b
+                        greenMatrix[x + 0, y + 0] = g1
+                        greenMatrix[x + 1, y + 0] = g1
+                        greenMatrix[x + 0, y + 1] = g2
+                        greenMatrix[x + 1, y + 1] = g2
                     }
                 }
             }
@@ -287,27 +287,35 @@ kimage(0.1) {
                         val g: Double
                         val b: Double
                         if (dx == rX && dy == rY) {
-                            r = mosaic.getPixel(x, y)
-                            g = (mosaic.getPixel(x-1, y) + mosaic.getPixel(x+1, y) + mosaic.getPixel(x, y-1) + mosaic.getPixel(x, y+1)) / 4
-                            b = (mosaic.getPixel(x-1, y-1) + mosaic.getPixel(x-1, y+1) + mosaic.getPixel(x+1, y-1) + mosaic.getPixel(x+1, y+1)) / 4
+                            r = mosaic[x, y]
+                            g = (mosaic[x - 1, y] + mosaic[x + 1, y] + mosaic[x,
+                                    y - 1
+                            ] + mosaic[x, y + 1]) / 4
+                            b = (mosaic[x - 1, y - 1] + mosaic[x - 1,
+                                    y + 1
+                            ] + mosaic[x + 1, y - 1] + mosaic[x + 1, y + 1]) / 4
                         } else if (dx == bX && dy == bY) {
-                            r = (mosaic.getPixel(x-1, y-1) + mosaic.getPixel(x-1, y+1) + mosaic.getPixel(x+1, y-1) + mosaic.getPixel(x+1, y+1)) / 4
-                            g = (mosaic.getPixel(x-1, y) + mosaic.getPixel(x+1, y) + mosaic.getPixel(x, y-1) + mosaic.getPixel(x, y+1)) / 4
-                            b = mosaic.getPixel(x, y)
+                            r = (mosaic[x - 1, y - 1] + mosaic[x - 1, y + 1] + mosaic[x + 1,
+                                    y - 1
+                            ] + mosaic[x + 1, y + 1]) / 4
+                            g = (mosaic[x - 1, y] + mosaic[x + 1, y] + mosaic[x,
+                                    y - 1
+                            ] + mosaic[x, y + 1]) / 4
+                            b = mosaic[x, y]
                         } else {
-                            g = mosaic.getPixel(x, y)
-                            if ((x-1) % 2 == rX) {
-                                r = (mosaic.getPixel(x-1, y) + mosaic.getPixel(x+1, y)) / 2
-                                b = (mosaic.getPixel(x, y-1) + mosaic.getPixel(x, y+1)) / 2
+                            g = mosaic[x, y]
+                            if ((x - 1) % 2 == rX) {
+                                r = (mosaic[x - 1, y] + mosaic[x + 1, y]) / 2
+                                b = (mosaic[x, y - 1] + mosaic[x, y + 1]) / 2
                             } else {
-                                r = (mosaic.getPixel(x, y-1) + mosaic.getPixel(x, y+1)) / 2
-                                b = (mosaic.getPixel(x-1, y) + mosaic.getPixel(x+1, y)) / 2
+                                r = (mosaic[x, y - 1] + mosaic[x, y + 1]) / 2
+                                b = (mosaic[x - 1, y] + mosaic[x + 1, y]) / 2
                             }
                         }
 
-                        redMatrix.setPixel(x, y, (r - redOffset) * redFactor)
-                        greenMatrix.setPixel(x, y, (g - greenOffset) * greenFactor)
-                        blueMatrix.setPixel(x, y, (b - blueOffset) * blueFactor)
+                        redMatrix[x, y] = (r - redOffset) * redFactor
+                        greenMatrix[x, y] = (g - greenOffset) * greenFactor
+                        blueMatrix[x, y] = (b - blueOffset) * blueFactor
                     }
                 }
             }

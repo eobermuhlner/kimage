@@ -1,9 +1,9 @@
 package ch.obermuhlner.kimage.matrix
 
-class FloatMatrix(override val rows: Int, override val columns: Int) : Matrix {
-    private val data: FloatArray = FloatArray(columns * rows)
+class FloatMatrix(override val width: Int, override val height: Int) : Matrix {
+    private val data: FloatArray = FloatArray(width * height)
 
-    override fun create(createRows: Int, createColumns: Int): Matrix = FloatMatrix(createRows, createColumns)
+    override fun create(createWidth: Int, createHeight: Int): Matrix = FloatMatrix(createWidth, createHeight)
 
     override fun get(index: Int): Double {
         return data[index].toDouble()
@@ -16,6 +16,6 @@ class FloatMatrix(override val rows: Int, override val columns: Int) : Matrix {
     override fun equals(other: Any?): Boolean = (other is Matrix) && contentEquals(other)
 
     override fun toString(): String {
-        return "FloatMatrix($rows, $columns)"
+        return "FloatMatrix($width, $height)"
     }
 }

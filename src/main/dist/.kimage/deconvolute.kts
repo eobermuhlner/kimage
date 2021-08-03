@@ -52,7 +52,7 @@ kimage(0.1) {
             enabledWhen = Reference("psf").isEqual("gauss", "moffat")
             default = 2.0
         }
-        file("psfImage") {
+        optionalFile("psfImage") {
             enabledWhen = Reference("psf").isEqual("image")
             isFile = true
         }
@@ -75,7 +75,7 @@ kimage(0.1) {
         val beta: Double by arguments
         val sigmaX: Double by arguments
         val sigmaY: Double by arguments
-        val psfImage: File by arguments
+        val psfImage: Optional<File> by arguments
         val radius: Int by arguments
         val iterations: Int by arguments
 
@@ -130,23 +130,23 @@ kimage(0.1) {
                 "gauss5x5" -> KernelFilter.GaussianBlur5
                 "gauss7x7" -> KernelFilter.GaussianBlur7
                 "sample" -> {
-                    val m = inputImage[channel].cropCenter(radius, sampleX.get(), sampleY.get()).medianFilter(1)
+                    val m = inputImage[channel].cropCenter(radius, sampleY.get(), sampleX.get()).medianFilter(1)
                     val minValue = m.min()
                     val maxValue = m.max()
                     (m elementMinus minValue) / (maxValue - minValue)
                 }
                 "gauss" -> {
-                    DoubleMatrix(radius*2+1, radius*2+1) { y, x ->
+                    DoubleMatrix(radius*2+1, radius*2+1) { x, y ->
                         gauss((x - radius).toDouble(), (y - radius).toDouble(), background, amplitude, sigmaX, sigmaY)
                     }
                 }
                 "moffat" -> {
-                    DoubleMatrix(radius*2+1, radius*2+1) { y, x ->
+                    DoubleMatrix(radius*2+1, radius*2+1) { x, y ->
                         moffat((x - radius).toDouble(), (y - radius).toDouble(), background, amplitude, beta, sigmaX, sigmaY)
                     }
                 }
                 "image" -> {
-                    ImageReader.read(psfImage)[Channel.Gray]
+                    ImageReader.read(psfImage.get())[Channel.Gray]
                 }
                 else -> throw IllegalArgumentException("Unknown psf: $psf")
             }
@@ -162,10 +162,11 @@ kimage(0.1) {
         println()
 
         if (debugMode) {
-            val psfImage = MatrixImage(psfKernelMatrices.width, inputImage.height, inputImage.channels) { channel, _, _ -> psfKernelMatrices[channel]!! }
+            val m = psfKernelMatrices.iterator().next().value
+            val psfKernelImage = MatrixImage(m.width, m.height, psfKernelMatrices.keys.toList()) { channel, _, _ -> psfKernelMatrices[channel]!! }
             val psfFile = inputFile.prefixName("psf_")
             println("Saving $psfFile for manual analysis")
-            ImageWriter.write(psfImage, psfFile)
+            ImageWriter.write(psfKernelImage, psfFile)
         }
 
         MatrixImage(inputImage.width, inputImage.height, inputImage.channels) { channel, _, _ -> outputMatrices[channel]!! }

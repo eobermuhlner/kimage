@@ -206,13 +206,13 @@ fun <S> tableview(items: ObservableList<S>, initializer: TableViewContext<S>.() 
 class TableViewContext<S>(items: ObservableList<S>) : TableView<S>(items) {
     fun <V> column(header: String, initializer: TableColumn<S, V>.() -> Unit): TableColumn<S, V> {
         val tableColumn = TableColumn<S, V>(header).apply(initializer)
-        this.columns.add(tableColumn)
+        columns.add(tableColumn)
         return tableColumn
     }
-    fun <V> column(header: String, valueFunction: Function<S, ObservableValue<V>>,  initializer: TableColumn<S, V>.() -> Unit): TableColumn<S, V> {
+    fun <V> column(header: String, valueFunction: Function<S, ObservableValue<V>>, initializer: TableColumn<S, V>.() -> Unit): TableColumn<S, V> {
         val tableColumn = TableColumn<S, V>(header).apply(initializer)
         tableColumn.setCellValueFactory { cellData -> valueFunction.apply(cellData.value) }
-        this.columns.add(tableColumn)
+        columns.add(tableColumn)
         return tableColumn
     }
 }

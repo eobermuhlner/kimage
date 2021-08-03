@@ -16,8 +16,8 @@ class FastMedianPixelFilter(private val radius: Int, private val medianChannel: 
 
     class Histogram(private val binCount: Int = 256) {
         private val bins = IntArray(binCount)
-        private val sampleRow = IntArray(binCount)
-        private val sampleColumn = IntArray(binCount)
+        private val sampleY = IntArray(binCount)
+        private val sampleX = IntArray(binCount)
         private var n = 0
 
         fun clear() {
@@ -27,27 +27,27 @@ class FastMedianPixelFilter(private val radius: Int, private val medianChannel: 
             n = 0
         }
 
-        fun add(matrix: Matrix, rowStart: Int, columnStart: Int, rows: Int, columns: Int) {
-            for (row in rowStart until rowStart+rows) {
-                for (column in columnStart until columnStart+columns) {
-                    add(matrix[row, column], row, column)
+        fun add(matrix: Matrix, xStart: Int, yStart: Int, width: Int, height: Int) {
+            for (y in yStart until yStart+height) {
+                for (x in xStart until xStart+width) {
+                    add(matrix[x, y], x, y)
                 }
             }
         }
 
-        fun remove(matrix: Matrix, rowStart: Int, columnStart: Int, rows: Int, columns: Int) {
-            for (row in rowStart until rowStart+rows) {
-                for (column in columnStart until columnStart+columns) {
-                    remove(matrix[row, column])
+        fun remove(matrix: Matrix, xStart: Int, yStart: Int, width: Int, height: Int) {
+            for (y in yStart until yStart+height) {
+                for (x in xStart until xStart+width) {
+                    remove(matrix[x, y])
                 }
             }
         }
 
-        fun add(value: Double, row: Int, column: Int) {
+        fun add(value: Double, x: Int, y: Int) {
             val index = clamp((value * binCount).toInt(), 0, binCount - 1)
             bins[index]++
-            sampleRow[index] = row
-            sampleColumn[index] = column
+            sampleX[index] = x
+            sampleY[index] = y
             n++
         }
 
@@ -84,7 +84,7 @@ class FastMedianPixelFilter(private val radius: Int, private val medianChannel: 
             var cumulativeN = 0
             for (i in bins.indices) {
                 if (cumulativeN + bins[i] >= nHalf) {
-                    return Pair(sampleRow[i], sampleColumn[i])
+                    return Pair(sampleX[i], sampleY[i])
                 }
                 cumulativeN += bins[i]
             }
@@ -102,33 +102,33 @@ class FastMedianPixelFilter(private val radius: Int, private val medianChannel: 
 
             histogram.add(matrix, -radius, -radius, kernelSize, kernelSize)
 
-            for (row in 0 until matrix.rows) {
-                val forward = row % 2 == 0
-                val columnRange = if (forward) 0 until matrix.columns else matrix.columns-1 downTo 0
-                for (column in columnRange) {
-                    val medianPixelRowColumn = histogram.estimateMedianPixelIndex()
-                    image.getPixel(medianPixelRowColumn.second, medianPixelRowColumn.first, pixel)
-                    target.setPixel(column, row, pixel)
+            for (y in 0 until matrix.height) {
+                val forward = y % 2 == 0
+                val xRange = if (forward) 0 until matrix.width else matrix.width-1 downTo 0
+                for (x in xRange) {
+                    val medianPixelXY = histogram.estimateMedianPixelIndex()
+                    image.getPixel(medianPixelXY.first, medianPixelXY.second, pixel)
+                    target.setPixel(x, y, pixel)
 
                     if (forward) {
-                        if (column < matrix.columns - 1) {
+                        if (x < matrix.width - 1) {
                             // move right
-                            histogram.remove(matrix, row-radius, column-radius, kernelSize, 1)
-                            histogram.add(matrix, row-radius, column+radius+1, kernelSize, 1)
+                            histogram.remove(matrix, x-radius, y-radius, 1, kernelSize)
+                            histogram.add(matrix, x+radius+1, y-radius, 1, kernelSize)
                         } else {
                             // move down
-                            histogram.remove(matrix, row-radius, column-radius, 1, kernelSize)
-                            histogram.add(matrix, row+radius+1, column-radius, 1, kernelSize)
+                            histogram.remove(matrix, x-radius, y-radius, kernelSize, 1)
+                            histogram.add(matrix, x-radius, y+radius+1, kernelSize, 1)
                         }
                     } else {
-                        if (column > 0) {
+                        if (x > 0) {
                             // move left
-                            histogram.remove(matrix, row-radius, column+radius, kernelSize, 1)
-                            histogram.add(matrix, row-radius, column-radius-1, kernelSize, 1)
+                            histogram.remove(matrix, x+radius, y-radius, 1, kernelSize)
+                            histogram.add(matrix, x-radius-1, y-radius, 1, kernelSize)
                         } else {
                             // move down
-                            histogram.remove(matrix, row-radius, column-radius, 1, kernelSize)
-                            histogram.add(matrix, row+radius+1, column-radius, 1, kernelSize)
+                            histogram.remove(matrix, x-radius, y-radius, kernelSize, 1)
+                            histogram.add(matrix, x-radius, y+radius+1, kernelSize, 1)
                         }
                     }
                 }

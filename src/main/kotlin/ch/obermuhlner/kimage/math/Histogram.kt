@@ -20,18 +20,30 @@ class Histogram(private val binCount: Int = 256) {
         entryCount = 0
     }
 
-    fun add(matrix: Matrix, rowStart: Int = 0, columnStart: Int = 0, rows: Int = matrix.rows - rowStart, columns: Int = matrix.columns - columnStart) {
-        for (row in rowStart until rowStart+rows) {
-            for (column in columnStart until columnStart+columns) {
-                add(matrix[row, column])
+    fun add(
+        matrix: Matrix,
+        xStart: Int = 0,
+        yStart: Int = 0,
+        width: Int = matrix.width - xStart,
+        height: Int = matrix.height - yStart
+    ) {
+        for (y in yStart until yStart+height) {
+            for (x in xStart until xStart+width) {
+                add(matrix[x, y])
             }
         }
     }
 
-    fun remove(matrix: Matrix, rowStart: Int = 0, columnStart: Int = 0, rows: Int = matrix.rows - rowStart, columns: Int = matrix.columns - columnStart) {
-        for (row in rowStart until rowStart+rows) {
-            for (column in columnStart until columnStart+columns) {
-                remove(matrix[row, column])
+    fun remove(
+        matrix: Matrix,
+        xStart: Int = 0,
+        yStart: Int = 0,
+        width: Int = matrix.width - xStart,
+        height: Int = matrix.height - yStart
+    ) {
+        for (y in yStart until yStart+height) {
+            for (x in xStart until xStart+width) {
+                remove(matrix[x, y])
             }
         }
     }

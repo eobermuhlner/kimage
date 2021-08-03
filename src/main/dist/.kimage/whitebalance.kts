@@ -144,12 +144,12 @@ kimage(0.1) {
                 val redValues = mutableListOf<Double>()
                 val greenValues = mutableListOf<Double>()
                 val blueValues = mutableListOf<Double>()
-                for (row in 0 until hightlightMatrix.rows) {
-                    for (column in 0 until hightlightMatrix.columns) {
-                        if (hightlightMatrix[row, column] >= highlightValue) {
-                            redValues += redMatrix[row, column]
-                            greenValues += greenMatrix[row, column]
-                            blueValues += blueMatrix[row, column]
+                for (y in 0 until hightlightMatrix.height) {
+                    for (x in 0 until hightlightMatrix.width) {
+                        if (hightlightMatrix[x, y] >= highlightValue) {
+                            redValues += redMatrix[x, y]
+                            greenValues += greenMatrix[x, y]
+                            blueValues += blueMatrix[x, y]
                         }
                     }
                 }
