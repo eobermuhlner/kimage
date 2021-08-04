@@ -212,12 +212,23 @@ class ScriptV0_1 : Script(0.1) {
         }
         println()
 
-        return if (scriptMulti != null) {
-            executeMulti(inputFiles, arguments, verboseMode, debugMode, outputHandler)
-        } else if (scriptSingle != null) {
-            executeSingle(inputFiles, arguments, verboseMode, debugMode, outputHandler)
-        } else {
-            throw java.lang.RuntimeException("Script has no execution block.")
+        val startMillis = System.currentTimeMillis()
+        return try {
+            when {
+                scriptMulti != null -> {
+                    executeMulti(inputFiles, arguments, verboseMode, debugMode, outputHandler)
+                }
+                scriptSingle != null -> {
+                    executeSingle(inputFiles, arguments, verboseMode, debugMode, outputHandler)
+                }
+                else -> {
+                    throw java.lang.RuntimeException("Script has no execution block.")
+                }
+            }
+        } finally {
+            val endMillis = System.currentTimeMillis()
+            val deltaMillis = endMillis - startMillis
+            println("Processed in $deltaMillis ms")
         }
     }
 
