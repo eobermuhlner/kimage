@@ -166,11 +166,7 @@ fun textFormatter(defaultValue: Double?, min: Double? = null, max: Double? = nul
             if (value != null) {
                 if (min != null && value < min) {
                     false
-                } else if (max != null && value > max) {
-                    false
-                } else {
-                    true
-                }
+                } else !(max != null && value > max)
             }
             true
         }

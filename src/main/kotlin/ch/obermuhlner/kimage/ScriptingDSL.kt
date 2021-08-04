@@ -393,7 +393,7 @@ sealed class ScriptArg(val type: String, val mandatory: Boolean) {
 
     abstract val hasDefault: Boolean
 
-    abstract fun toValue(stringValue: Any?): Any
+    abstract fun toValue(anyValue: Any?): Any
 
     open fun isValid(stringValue: String): Boolean {
         return try {

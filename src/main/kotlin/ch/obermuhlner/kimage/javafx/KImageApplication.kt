@@ -633,7 +633,7 @@ class KImageApplication : Application() {
                     if (updateCurrentInputImage) {
                         currentInputImage = image
                     }
-                    image?.let {
+                    image.let {
                         val writableImage = JavaFXImageUtil.toWritableImage(it)
 
                         Platform.runLater {
