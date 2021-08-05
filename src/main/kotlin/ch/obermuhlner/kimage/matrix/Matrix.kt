@@ -1,6 +1,10 @@
 package ch.obermuhlner.kimage.matrix
 
 import ch.obermuhlner.kimage.math.clamp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlin.math.abs
 
 interface Matrix : Iterable<Double> {
@@ -133,6 +137,12 @@ interface Matrix : Iterable<Double> {
         }
     }
 
+    operator fun minusAssign(other: Double) {
+        onEach { value ->
+            value - other
+        }
+    }
+
     infix fun elementPlus(other: Double): Matrix {
         return copy().onEach { value ->
             value + other
@@ -158,6 +168,10 @@ interface Matrix : Iterable<Double> {
     }
 
     fun convolute(kernel: Matrix): Matrix {
+        if (size * kernel.size >= 10000) {
+            return convoluteParallel(kernel)
+        }
+
         val m = create()
         for (y in 0 until height) {
             for (x in 0 until width) {
@@ -172,6 +186,27 @@ interface Matrix : Iterable<Double> {
             }
         }
         return m
+    }
+
+    fun Matrix.convoluteParallel(kernel: Matrix): Matrix = runBlocking {
+        val m = create()
+        for (y in 0 until height) {
+            launch(Dispatchers.Default) {
+                for (x in 0 until width) {
+                    ensureActive()
+                    var value = 0.0
+                    for (kernelY in 0 until kernel.height) {
+                        for (kernelX in 0 until kernel.width) {
+                            val pixel =
+                                this@convoluteParallel[x - kernel.width / 2 + kernelX, y - kernel.height / 2 + kernelY]
+                            value += pixel * kernel[kernelX, kernelY]
+                        }
+                    }
+                    m[x, y] = value
+                }
+            }
+        }
+        m
     }
 
     fun transpose(): Matrix {
