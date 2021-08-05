@@ -1,6 +1,7 @@
 package ch.obermuhlner.kimage
 
 import ch.obermuhlner.kimage.align.*
+import ch.obermuhlner.kimage.fft.FFT
 import ch.obermuhlner.kimage.filter.*
 import ch.obermuhlner.kimage.image.*
 import ch.obermuhlner.kimage.io.*
@@ -19,17 +20,51 @@ object TestMain {
 //
 //        exampleChannelManipulation("lena512.png")
 //        exampleFilters("lena512.png")
+//
+//        exampleImages()
+//        exampleMedianExperiments()
+//
+//        exampleScale("lena512.tiff")
+//
+//        exampleInterpolate("colors.png")
+//        exampleInterpolate("lena512.tiff")
+//
+//        exampleError()
+//        exampleAlign()
 
-        exampleImages()
-        exampleMedianExperiments()
+        exampleFFT("animal.png")
+    }
 
-        exampleScale("lena512.tiff")
+    private fun exampleFFT(imageName: String) {
+        val image = read(File("images/$imageName"))
+        val matrix = image[Channel.Gray]
+        val (matrixRe, matrixIm) = FFT.fft(FFT.padPowerOfTwo(matrix))
 
-        exampleInterpolate("colors.png")
-        exampleInterpolate("lena512.tiff")
+        val (matrixRestoredRe, matrixRestoredIm) = FFT.fftInverse(matrixRe, matrixIm)
+        val imageRestored = MatrixImage(matrixRestoredRe.width, matrixRestoredRe.height,
+            Channel.Red to matrixRestoredRe,
+            Channel.Green to matrixRestoredRe,
+            Channel.Blue to matrixRestoredRe)
+        ImageWriter.write(imageRestored, File("FFT_restored.png"))
 
-        exampleError()
-        exampleAlign()
+        matrixRe -= matrixRe.min()
+        matrixRe /= matrixRe.max()
+        matrixRe.onEach { v -> Math.log(v + 1.0) }
+
+        matrixIm -= matrixIm.min()
+        matrixIm /= matrixIm.max()
+
+        val imageRe = MatrixImage(matrixRe.width, matrixRe.height,
+            Channel.Red to matrixRe,
+            Channel.Green to matrixRe,
+            Channel.Blue to matrixRe)
+        ImageWriter.write(imageRe, File("FFT_re.png"))
+
+        val imageIm = MatrixImage(matrixIm.width, matrixIm.height,
+            Channel.Red to matrixIm,
+            Channel.Green to matrixIm,
+            Channel.Blue to matrixIm)
+        ImageWriter.write(imageIm, File("FFT_im.png"))
     }
 
     private fun exampleInterpolate(imageName: String) {
