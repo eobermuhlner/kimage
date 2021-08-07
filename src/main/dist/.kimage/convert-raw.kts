@@ -47,7 +47,8 @@ kimage(0.1) {
               The whitebalance setting used to adjust the colors.
               
               - `camera` will use the whitebalance settings measured by the camera (if available)
-              - `image` will calculate the whitebalance from the image
+              - `image` will calculate the whitebalance settings from the image
+              - `local` will calculate the whitebalance settings from a local area of the image
               - `custom` will use the provided custom multipliers
               - `fixed` will use fixed default white balance multipliers.
               
@@ -56,8 +57,20 @@ kimage(0.1) {
               The `custom` whitebalance corresponds to the `-r` option in the `dcraw` command line tool.
               The `fixed` whitebalance corresponds to the `-W` option in the `dcraw` command line tool.
             """
-            allowed = listOf("camera", "image", "custom", "fixed")
+            allowed = listOf("camera", "image", "local", "custom", "fixed")
             default = "camera"
+        }
+        optionalInt("localX") {
+            hint = Hint.ImageX
+            enabledWhen = Reference("whitebalance").isEqual("local")
+        }
+        optionalInt("localY") {
+            hint = Hint.ImageY
+            enabledWhen = Reference("whitebalance").isEqual("local")
+        }
+        optionalInt("localRadius") {
+            enabledWhen = Reference("whitebalance").isEqual("local")
+            default = 10
         }
         optionalList("multipliers") {
             description = """
@@ -142,6 +155,9 @@ kimage(0.1) {
         aspectRatio: Boolean,
         rotate: String,
         whitebalance: String,
+        localX: Optional<Int>,
+        localY: Optional<Int>,
+        localRadius: Optional<Int>,
         multipliers: Optional<List<Double>>,
         colorspace: String,
         interpolation: String,
@@ -179,6 +195,14 @@ kimage(0.1) {
         when (whitebalance) {
             "camera" -> command.add("-w")
             "image" -> command.add("-a")
+            "local" -> {
+                command.add("-A")
+                command.add((localX.get() - localRadius.get()).toString())
+                command.add((localY.get() - localRadius.get()).toString())
+                command.add((localRadius.get() * 2 + 1).toString())
+                command.add((localRadius.get() * 2 + 1).toString())
+
+            }
             "custom" -> {
                 command.add("-r")
                 if (multipliers.isPresent) {
@@ -264,6 +288,10 @@ kimage(0.1) {
         }
         command.add("-b")
         command.add(brightness.toString())
+
+        command.add("-O")
+        command.add(file.prefixName("${name}_").replaceExtension("tif").path)
+
         command.add(file.path)
 
         println("Command: $command")
@@ -283,6 +311,9 @@ kimage(0.1) {
         val aspectRatio: Boolean by arguments
         val rotate: String by arguments
         val whitebalance: String by arguments
+        val localX: Optional<Int> by arguments
+        val localY: Optional<Int> by arguments
+        val localRadius: Optional<Int> by arguments
         val multipliers: Optional<List<Double>> by arguments
         val colorspace: String by arguments
         val interpolation: String by arguments
@@ -292,7 +323,7 @@ kimage(0.1) {
 
         for (inputFile in inputFiles) {
             println("Converting $inputFile")
-            dcraw(dcraw, aspectRatio, rotate, whitebalance, multipliers, colorspace, interpolation, medianPasses, bits, brightness, inputFile)
+            dcraw(dcraw, aspectRatio, rotate, whitebalance, localX, localY, localRadius, multipliers, colorspace, interpolation, medianPasses, bits, brightness, inputFile)
             println()
         }
 
