@@ -158,11 +158,11 @@ kimage(0.1) {
                 blue = Optional.of(blueValues.median())
             }
             "local" -> {
-                val halfLocalX = localX.get() / 2
-                val halfLocalY = localY.get() / 2
-                red = Optional.of(redMatrix.cropCenter(localRadius, halfLocalY, halfLocalX, false).median())
-                green = Optional.of(greenMatrix.cropCenter(localRadius, halfLocalY, halfLocalX, false).median())
-                blue = Optional.of(blueMatrix.cropCenter(localRadius, halfLocalY, halfLocalX, false).median())
+                val centerX = localX.get()
+                val centerY = localY.get()
+                red = Optional.of(redMatrix.cropCenter(localRadius, centerX, centerY, false).median())
+                green = Optional.of(greenMatrix.cropCenter(localRadius, centerX, centerY, false).median())
+                blue = Optional.of(blueMatrix.cropCenter(localRadius, centerX, centerY, false).median())
             }
             else -> throw IllegalArgumentException("Unknown whitebalance: $whitebalance")
         }
