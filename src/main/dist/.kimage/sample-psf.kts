@@ -19,11 +19,9 @@ kimage(0.1) {
     arguments {
         optionalInt("sampleX") {
             hint = Hint.ImageX
-            enabledWhen = Reference("psf").isEqual("sample")
         }
         optionalInt("sampleY") {
             hint = Hint.ImageY
-            enabledWhen = Reference("psf").isEqual("sample")
         }
         int("medianRadius") {
             default = 1
@@ -44,16 +42,46 @@ kimage(0.1) {
         val radius: Int by arguments
 
         var m = inputImage[Channel.Gray].cropCenter(radius, sampleX.get(), sampleY.get())
+
+        if (verboseMode) {
+            println("cropped =")
+            println(m.contentToString(true))
+        }
         m = m.medianFilter(medianRadius)
+        if (verboseMode) {
+            println("median filtered =")
+            println(m.contentToString(true))
+        }
+
         val minValue = m.min()
+        if (verboseMode) {
+            println("min = $minValue")
+        }
+        m -= minValue
+        if (verboseMode) {
+            println("subtracted minValue =")
+            println(m.contentToString(true))
+        }
+
         val maxValue = m.max()
-        m = (m elementMinus minValue) / (maxValue - minValue)
+        if (verboseMode) {
+            println("max = $maxValue")
+        }
+        m = m / m.max()
+        if (verboseMode) {
+            println("divided maxValue =")
+            println(m.contentToString(true))
+        }
 
         m.onEach { x, y, value ->
             val dx = (x - radius).toDouble()
             val dy = (y - radius).toDouble()
             val r = sqrt(dx*dx + dy*dy) / radius
-            value * (1.0 - smootherstep(smoothRadius, 0.9, r))
+            value * (1.0 - smootherstep(smoothRadius, 1.0, r))
+        }
+        if (verboseMode) {
+            println("smoothstepped =")
+            println(m.contentToString(true))
         }
 
         MatrixImage(radius*2+1, radius*2+1,
