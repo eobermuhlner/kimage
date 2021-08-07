@@ -110,7 +110,7 @@ interface Matrix : Iterable<Double> {
     }
 
     operator fun times(other: Double): Matrix {
-        val m = create()
+        val m = copy()
         m.onEach { value ->
             value * other
         }
@@ -124,7 +124,7 @@ interface Matrix : Iterable<Double> {
     }
 
     operator fun div(other: Double): Matrix {
-        val m = create()
+        val m = copy()
         m.onEach { value ->
             value / other
         }
