@@ -8,6 +8,7 @@ import ch.obermuhlner.kimage.matrix.*
 import java.io.*
 import java.util.*
 import kotlin.math.*
+import java.lang.Math.toRadians
 
 kimage(0.1) {
     name = "deconvolute"
@@ -21,16 +22,8 @@ kimage(0.1) {
             default = "lucy"
         }
         string("psf") {
-            allowed = listOf("gauss3x3", "gauss5x5", "gauss7x7", "gauss", "moffat", "image", "sample")
+            allowed = listOf("gauss3x3", "gauss5x5", "gauss7x7", "gauss", "moffat", "image")
             default = "gauss3x3"
-        }
-        optionalInt("sampleX") {
-            hint = Hint.ImageX
-            enabledWhen = Reference("psf").isEqual("sample")
-        }
-        optionalInt("sampleY") {
-            hint = Hint.ImageY
-            enabledWhen = Reference("psf").isEqual("sample")
         }
         double("background") {
             enabledWhen = Reference("psf").isEqual("gauss", "moffat")
@@ -46,11 +39,16 @@ kimage(0.1) {
         }
         double("sigmaX") {
             enabledWhen = Reference("psf").isEqual("gauss", "moffat")
-            default = 2.0
+            default = 1.0
         }
         double("sigmaY") {
             enabledWhen = Reference("psf").isEqual("gauss", "moffat")
-            default = 2.0
+            default = 1.0
+        }
+        double("angle") {
+            enabledWhen = Reference("psf").isEqual("gauss", "moffat")
+            unit = "°"
+            default = 0.0
         }
         optionalFile("psfImage") {
             enabledWhen = Reference("psf").isEqual("image")
@@ -58,26 +56,38 @@ kimage(0.1) {
         }
         int("radius") {
             enabledWhen = Reference("psf").isEqual("sample", "gauss", "moffat")
+            unit = "px"
             default = 3
         }
         int("iterations") {
-            default = 100
+            default = 10
         }
     }
 
     single {
         val method: String by arguments
         val psf: String by arguments
-        val sampleX: Optional<Int> by arguments
-        val sampleY: Optional<Int> by arguments
         val background: Double by arguments
         val amplitude: Double by arguments
         val beta: Double by arguments
         val sigmaX: Double by arguments
         val sigmaY: Double by arguments
+        val angle: Double by arguments
         val psfImage: Optional<File> by arguments
         val radius: Int by arguments
         val iterations: Int by arguments
+
+        fun rotate(x: Double, y: Double, angle: Double): Pair<Double, Double> {
+            if (angle == 0.0) {
+                return Pair(x, y)
+            }
+
+            val sinAngle = sin(toRadians(angle))
+            val cosAngle = cos(toRadians(angle))
+            return Pair(
+                +x * cosAngle + y * sinAngle,
+                -x * sinAngle + y * cosAngle)
+        }
 
         fun gauss(
             x: Double,
@@ -129,20 +139,16 @@ kimage(0.1) {
                 "gauss3x3" -> KernelFilter.GaussianBlur3
                 "gauss5x5" -> KernelFilter.GaussianBlur5
                 "gauss7x7" -> KernelFilter.GaussianBlur7
-                "sample" -> {
-                    val m = inputImage[channel].cropCenter(radius, sampleY.get(), sampleX.get()).medianFilter(1)
-                    val minValue = m.min()
-                    val maxValue = m.max()
-                    (m elementMinus minValue) / (maxValue - minValue)
-                }
                 "gauss" -> {
                     DoubleMatrix(radius*2+1, radius*2+1) { x, y ->
-                        gauss((x - radius).toDouble(), (y - radius).toDouble(), background, amplitude, sigmaX, sigmaY)
+                        val (x2, y2) = rotate((x - radius).toDouble(), (y - radius).toDouble(), angle)
+                        gauss(x2, y2, background, amplitude, sigmaX, sigmaY)
                     }
                 }
                 "moffat" -> {
                     DoubleMatrix(radius*2+1, radius*2+1) { x, y ->
-                        moffat((x - radius).toDouble(), (y - radius).toDouble(), background, amplitude, beta, sigmaX, sigmaY)
+                        val (x2, y2) = rotate((x - radius).toDouble(), (y - radius).toDouble(), angle)
+                        moffat(x2, y2, background, amplitude, beta, sigmaX, sigmaY)
                     }
                 }
                 "image" -> {

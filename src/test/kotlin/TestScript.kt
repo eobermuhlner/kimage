@@ -11,6 +11,7 @@ import org.apache.commons.math3.fitting.PolynomialCurveFitter
 import org.apache.commons.math3.fitting.WeightedObservedPoints
 
 import java.io.*
+import java.lang.Math.toRadians
 import java.nio.file.*
 import java.util.*
 import kotlin.math.*
@@ -52,7 +53,9 @@ object TestScript {
 
         //runScript(scriptDebayer(), mapOf("interpolation" to "bilinear", "whitebalance" to "highlight-median", "localX" to "6036", "localY" to "2389", "localRadius" to "10", "stretch" to "true"), "images/raw/IMG_8922_pure-unscaled.tiff")
 
-        runScript(scriptDeconvolute(), mapOf(), "images/gauss3_animal.png")
+        //runScript(scriptDeconvolute(), mapOf(), "images/gauss3_animal.png")
+
+        runScript(scriptSamplePSF(), mapOf("sampleX" to "20", "sampleY" to "20", "radius" to "3"), "images/gauss3_animal.png")
     }
 
     private fun scriptSamplePSF(): Script =
@@ -73,6 +76,9 @@ object TestScript {
                 int("medianRadius") {
                     default = 1
                 }
+                double("smoothRadius") {
+                    default = 0.5
+                }
                 int("radius") {
                     default = 10
                 }
@@ -82,19 +88,50 @@ object TestScript {
                 val sampleX: Optional<Int> by arguments
                 val sampleY: Optional<Int> by arguments
                 val medianRadius: Int by arguments
+                val smoothRadius: Double by arguments
                 val radius: Int by arguments
 
                 var m = inputImage[Channel.Gray].cropCenter(radius, sampleX.get(), sampleY.get())
+
+                if (verboseMode) {
+                    println("cropped =")
+                    println(m.contentToString(true))
+                }
                 m = m.medianFilter(medianRadius)
+                if (verboseMode) {
+                    println("median filtered =")
+                    println(m.contentToString(true))
+                }
+
                 val minValue = m.min()
+                if (verboseMode) {
+                    println("min = $minValue")
+                }
+                m -= minValue
+                if (verboseMode) {
+                    println("subtracted minValue =")
+                    println(m.contentToString(true))
+                }
+
                 val maxValue = m.max()
-                m = (m elementMinus minValue) / (maxValue - minValue)
+                if (verboseMode) {
+                    println("max = $maxValue")
+                }
+                m = m / m.max()
+                if (verboseMode) {
+                    println("divided maxValue =")
+                    println(m.contentToString(true))
+                }
 
                 m.onEach { x, y, value ->
                     val dx = (x - radius).toDouble()
                     val dy = (y - radius).toDouble()
                     val r = sqrt(dx*dx + dy*dy) / radius
-                    value * (1.0 - smootherstep(0.7, 0.9, r))
+                    value * (1.0 - smootherstep(smoothRadius, 1.0, r))
+                }
+                if (verboseMode) {
+                    println("smoothstepped =")
+                    println(m.contentToString(true))
                 }
 
                 MatrixImage(radius*2+1, radius*2+1,
@@ -118,16 +155,8 @@ object TestScript {
                     default = "lucy"
                 }
                 string("psf") {
-                    allowed = listOf("gauss3x3", "gauss5x5", "gauss7x7", "gauss", "moffat", "image", "sample")
+                    allowed = listOf("gauss3x3", "gauss5x5", "gauss7x7", "gauss", "moffat", "image")
                     default = "gauss3x3"
-                }
-                optionalInt("sampleX") {
-                    hint = Hint.ImageX
-                    enabledWhen = Reference("psf").isEqual("sample")
-                }
-                optionalInt("sampleY") {
-                    hint = Hint.ImageY
-                    enabledWhen = Reference("psf").isEqual("sample")
                 }
                 double("background") {
                     enabledWhen = Reference("psf").isEqual("gauss", "moffat")
@@ -143,11 +172,16 @@ object TestScript {
                 }
                 double("sigmaX") {
                     enabledWhen = Reference("psf").isEqual("gauss", "moffat")
-                    default = 2.0
+                    default = 1.0
                 }
                 double("sigmaY") {
                     enabledWhen = Reference("psf").isEqual("gauss", "moffat")
-                    default = 2.0
+                    default = 1.0
+                }
+                double("angle") {
+                    enabledWhen = Reference("psf").isEqual("gauss", "moffat")
+                    unit = "°"
+                    default = 0.0
                 }
                 optionalFile("psfImage") {
                     enabledWhen = Reference("psf").isEqual("image")
@@ -155,26 +189,38 @@ object TestScript {
                 }
                 int("radius") {
                     enabledWhen = Reference("psf").isEqual("sample", "gauss", "moffat")
+                    unit = "px"
                     default = 3
                 }
                 int("iterations") {
-                    default = 100
+                    default = 10
                 }
             }
 
             single {
                 val method: String by arguments
                 val psf: String by arguments
-                val sampleX: Optional<Int> by arguments
-                val sampleY: Optional<Int> by arguments
                 val background: Double by arguments
                 val amplitude: Double by arguments
                 val beta: Double by arguments
                 val sigmaX: Double by arguments
                 val sigmaY: Double by arguments
+                val angle: Double by arguments
                 val psfImage: Optional<File> by arguments
                 val radius: Int by arguments
                 val iterations: Int by arguments
+
+                fun rotate(x: Double, y: Double, angle: Double): Pair<Double, Double> {
+                    if (angle == 0.0) {
+                        return Pair(x, y)
+                    }
+
+                    val sinAngle = sin(toRadians(angle))
+                    val cosAngle = cos(toRadians(angle))
+                    return Pair(
+                        +x * cosAngle + y * sinAngle,
+                        -x * sinAngle + y * cosAngle)
+                }
 
                 fun gauss(
                     x: Double,
@@ -226,20 +272,16 @@ object TestScript {
                         "gauss3x3" -> KernelFilter.GaussianBlur3
                         "gauss5x5" -> KernelFilter.GaussianBlur5
                         "gauss7x7" -> KernelFilter.GaussianBlur7
-                        "sample" -> {
-                            val m = inputImage[channel].cropCenter(radius, sampleY.get(), sampleX.get()).medianFilter(1)
-                            val minValue = m.min()
-                            val maxValue = m.max()
-                            (m elementMinus minValue) / (maxValue - minValue)
-                        }
                         "gauss" -> {
                             DoubleMatrix(radius*2+1, radius*2+1) { x, y ->
-                                gauss((x - radius).toDouble(), (y - radius).toDouble(), background, amplitude, sigmaX, sigmaY)
+                                val (x2, y2) = rotate((x - radius).toDouble(), (y - radius).toDouble(), angle)
+                                gauss(x2, y2, background, amplitude, sigmaX, sigmaY)
                             }
                         }
                         "moffat" -> {
                             DoubleMatrix(radius*2+1, radius*2+1) { x, y ->
-                                moffat((x - radius).toDouble(), (y - radius).toDouble(), background, amplitude, beta, sigmaX, sigmaY)
+                                val (x2, y2) = rotate((x - radius).toDouble(), (y - radius).toDouble(), angle)
+                                moffat(x2, y2, background, amplitude, beta, sigmaX, sigmaY)
                             }
                         }
                         "image" -> {
