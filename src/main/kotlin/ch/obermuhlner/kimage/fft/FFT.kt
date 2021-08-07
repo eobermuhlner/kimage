@@ -16,40 +16,33 @@ object FFT {
         return matrix.crop(0, 0, p, p)
     }
 
-    fun fft(matrix: Matrix): Pair<Matrix, Matrix> {
-        return fft(matrix, CalculatedMatrix(matrix.width, matrix.height) { _, _ -> 0.0 })
+    fun fft(matrix: ComplexMatrix): ComplexMatrix {
+        return fft(matrix, Complex(0.0, 2.0), 1.0)
     }
 
-    fun fft(matrixRe: Matrix, matrixIm: Matrix): Pair<Matrix, Matrix> {
-        return fft(matrixRe, matrixIm, Complex(0.0, 2.0), 1.0)
+    fun fftInverse(matrix: ComplexMatrix): ComplexMatrix {
+        return fft(matrix, Complex(0.0, -2.0), 2.0)
     }
 
-    fun fftInverse(matrixRe: Matrix, matrixIm: Matrix): Pair<Matrix, Matrix> {
-        return fft(matrixRe, matrixIm, Complex(0.0, -2.0), 2.0)
-    }
-
-    private fun fft(matrixRe: Matrix, matrixIm: Matrix, direction: Complex, scalar: Double): Pair<Matrix, Matrix> {
+    private fun fft(matrix: ComplexMatrix, direction: Complex, scalar: Double): ComplexMatrix {
         val transformed1 = mutableListOf<Array<Complex>>()
-        for (y in 0 until matrixRe.height) {
-            val row = Array(matrixRe.width) { x -> Complex(matrixRe[x, y], matrixIm[x, y]) }
+        for (y in 0 until matrix.height) {
+            val row = Array(matrix.width) { x -> matrix[x, y] }
             val t = fft(row, direction, scalar)
             transformed1.add(t)
         }
 
         val transformed2 = mutableListOf<Array<Complex>>()
-        for (x in 0 until matrixRe.width) {
-            val column = Array(matrixRe.height) { y -> transformed1[y][x] }
+        for (x in 0 until matrix.width) {
+            val column = Array(matrix.height) { y -> transformed1[y][x] }
             val t = fft(column, direction, scalar)
             transformed2.add(t)
         }
 
-        val resultMatrixRe = DoubleMatrix(matrixRe.width, matrixRe.height) { x, y ->
-            transformed2[x][y].re
+        val resultMatrix = ComplexMatrix(matrix.width, matrix.height) { x, y ->
+            transformed2[x][y]
         }
-        val resultMatrixIm = DoubleMatrix(matrixRe.width, matrixRe.height) { x, y ->
-            transformed2[x][y].im
-        }
-        return Pair(resultMatrixRe, resultMatrixIm)
+        return resultMatrix
     }
 
     fun fft(arrayRe: Array<Double>): Pair<Array<Double>, Array<Double>> {
@@ -102,18 +95,119 @@ object FFT {
         }
 }
 
+class ComplexMatrix(
+    val width: Int,
+    val height: Int,
+    init: (index: Int) -> Complex = { Complex(0.0) }
+) {
+    private val data = Array(width * height, init)
+
+    val re: Matrix get() = DoubleMatrix(width, height) { x, y -> this[x, y].re }
+    val im: Matrix get() = DoubleMatrix(width, height) { x, y -> this[x, y].im }
+
+    constructor(width: Int, height: Int, init: (x: Int, y: Int) -> Complex) : this(width, height, { index ->
+        val x = index % width
+        val y = index / width
+        init(x, y)
+    })
+
+    constructor(matrix: Matrix) : this(matrix.width, matrix.height, { index ->
+        Complex(matrix[index])
+    })
+
+    operator fun get(x: Int, y: Int): Complex {
+        return data[x + y* width]
+    }
+    operator fun set(x: Int, y: Int, value: Complex) {
+        data[x + y* width] = value
+    }
+
+    operator fun plus(other: ComplexMatrix): ComplexMatrix {
+        return ComplexMatrix(width, height) { x, y ->
+            this[x, y] + other[x, y]
+        }
+    }
+    operator fun plus(other: Matrix): ComplexMatrix {
+        return ComplexMatrix(width, height) { x, y ->
+            this[x, y] + Complex(other[x, y])
+        }
+    }
+
+    operator fun minus(other: ComplexMatrix): ComplexMatrix {
+        return ComplexMatrix(width, height) { x, y ->
+            this[x, y] - other[x, y]
+        }
+    }
+    operator fun minus(other: Matrix): ComplexMatrix {
+        return ComplexMatrix(width, height) { x, y ->
+            this[x, y] - Complex(other[x, y])
+        }
+    }
+
+    operator fun times(other: ComplexMatrix): ComplexMatrix {
+        return ComplexMatrix(width, height) { x, y ->
+            var sum = Complex(0.0)
+            val thisXY = this[x, y]
+            for (otherX in 0 until other.width) {
+                sum += thisXY * other[otherX, x]
+            }
+            sum
+        }
+    }
+
+    operator fun times(other: Complex): ComplexMatrix {
+        return ComplexMatrix(width, height) { x, y ->
+            this[x, y] * other
+        }
+    }
+    operator fun times(other: Double): ComplexMatrix {
+        return ComplexMatrix(width, height) { x, y ->
+            this[x, y] * other
+        }
+    }
+    operator fun div(other: Complex): ComplexMatrix {
+        return ComplexMatrix(width, height) { x, y ->
+            this[x, y] / other
+        }
+    }
+    operator fun div(other: Double): ComplexMatrix {
+        return ComplexMatrix(width, height) { x, y ->
+            this[x, y] / other
+        }
+    }
+
+    infix fun elementTimes(other: ComplexMatrix): ComplexMatrix {
+        return ComplexMatrix(width, height) { x, y ->
+            this[x, y] * other[x, y]
+        }
+    }
+    infix fun elementDiv(other: ComplexMatrix): ComplexMatrix {
+        return ComplexMatrix(width, height) { x, y ->
+            this[x, y] / other[x, y]
+        }
+    }
+
+    override fun toString(): String = "ComplexMatrix($width, $height)"
+}
+
 class Complex(val re: Double, val im: Double = 0.0) {
-    infix operator fun plus(x: Complex) = Complex(re + x.re, im + x.im)
-    infix operator fun minus(x: Complex) = Complex(re - x.re, im - x.im)
-    infix operator fun times(x: Double) = Complex(re * x, im * x)
-    infix operator fun times(x: Complex) = Complex(re * x.re - im * x.im, re * x.im + im * x.re)
-    infix operator fun div(x: Double) = Complex(re / x, im / x)
+    operator fun plus(x: Complex) = Complex(re + x.re, im + x.im)
+    operator fun minus(x: Complex) = Complex(re - x.re, im - x.im)
+    operator fun times(x: Double) = Complex(re * x, im * x)
+    operator fun times(x: Complex) = Complex(re * x.re - im * x.im, re * x.im + im * x.re)
+    operator fun div(x: Complex) = this * x.reciprocal
+    operator fun div(x: Double) = Complex(re / x, im / x)
+    operator fun unaryMinus() = Complex(-re, -im)
     val exp: Complex by lazy { Complex(cos(im), sin(im)) * (cosh(re) + sinh(re)) }
+    val absSquare: Double by lazy { re*re + im*im }
+    val sqrt: Complex by lazy { Complex(re*re, im*im) }
+    val conjugate: Complex by lazy { Complex(re, -im) }
+    val reciprocal: Complex by lazy { Complex(re / absSquare, -im / absSquare) }
 
     override fun toString() = when {
         im == 0.0 -> "$re"
         re == 0.0 -> "${im}i"
-        im >= 0.0 -> "$re + {$im}i"
-        else -> "$re - {$im}i"
+        im >= 0.0 -> "$re + ${im}i"
+        else -> "$re - ${-im}i"
     }
 }

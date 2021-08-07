@@ -1,6 +1,7 @@
 package ch.obermuhlner.kimage
 
 import ch.obermuhlner.kimage.align.*
+import ch.obermuhlner.kimage.fft.ComplexMatrix
 import ch.obermuhlner.kimage.fft.FFT
 import ch.obermuhlner.kimage.filter.*
 import ch.obermuhlner.kimage.image.*
@@ -38,32 +39,35 @@ object TestMain {
     private fun exampleFFT(imageName: String) {
         val image = read(File("images/$imageName"))
         val matrix = image[Channel.Gray]
-        val (matrixRe, matrixIm) = FFT.fft(FFT.padPowerOfTwo(matrix))
+        val frequencyMatrix = FFT.fft(ComplexMatrix(FFT.padPowerOfTwo(matrix)))
 
-        val (matrixRestoredRe, matrixRestoredIm) = FFT.fftInverse(matrixRe, matrixIm)
+        val matrixRestored = FFT.fftInverse(frequencyMatrix)
+        val matrixRestoredRe = matrixRestored.re
         val imageRestored = MatrixImage(matrixRestoredRe.width, matrixRestoredRe.height,
             Channel.Red to matrixRestoredRe,
             Channel.Green to matrixRestoredRe,
             Channel.Blue to matrixRestoredRe)
         ImageWriter.write(imageRestored, File("FFT_restored.png"))
 
-        matrixRe -= matrixRe.min()
-        matrixRe /= matrixRe.max()
-        matrixRe.onEach { v -> Math.log(v + 1.0) }
+        val frequencyMatrixRe = frequencyMatrix.re
+        val frequencyMatrixIm = frequencyMatrix.im
+        frequencyMatrixRe -= frequencyMatrixRe.min()
+        frequencyMatrixRe /= frequencyMatrixRe.max()
+        frequencyMatrixRe.onEach { v -> Math.log(v + 1.0) }
 
-        matrixIm -= matrixIm.min()
-        matrixIm /= matrixIm.max()
+        frequencyMatrixIm -= frequencyMatrixIm.min()
+        frequencyMatrixIm /= frequencyMatrixIm.max()
 
-        val imageRe = MatrixImage(matrixRe.width, matrixRe.height,
-            Channel.Red to matrixRe,
-            Channel.Green to matrixRe,
-            Channel.Blue to matrixRe)
+        val imageRe = MatrixImage(frequencyMatrixRe.width, frequencyMatrixRe.height,
+            Channel.Red to frequencyMatrixRe,
+            Channel.Green to frequencyMatrixRe,
+            Channel.Blue to frequencyMatrixRe)
         ImageWriter.write(imageRe, File("FFT_re.png"))
 
-        val imageIm = MatrixImage(matrixIm.width, matrixIm.height,
-            Channel.Red to matrixIm,
-            Channel.Green to matrixIm,
-            Channel.Blue to matrixIm)
+        val imageIm = MatrixImage(frequencyMatrixIm.width, frequencyMatrixIm.height,
+            Channel.Red to frequencyMatrixIm,
+            Channel.Green to frequencyMatrixIm,
+            Channel.Blue to frequencyMatrixIm)
         ImageWriter.write(imageIm, File("FFT_im.png"))
     }
 

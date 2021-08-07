@@ -1,5 +1,7 @@
 import ch.obermuhlner.kimage.*
 import ch.obermuhlner.kimage.align.*
+import ch.obermuhlner.kimage.fft.ComplexMatrix
+import ch.obermuhlner.kimage.fft.FFT
 import ch.obermuhlner.kimage.filter.*
 import ch.obermuhlner.kimage.huge.*
 import ch.obermuhlner.kimage.image.*
@@ -10,7 +12,6 @@ import ch.obermuhlner.util.StreamGobbler
 import org.apache.commons.math3.fitting.*
 import org.apache.commons.math3.fitting.PolynomialCurveFitter
 import org.apache.commons.math3.fitting.WeightedObservedPoints
-import org.jetbrains.kotlin.utils.fileUtils.withReplacedExtensionOrNull
 
 import java.io.*
 import java.lang.Math.toRadians
@@ -57,10 +58,11 @@ object TestScript {
         //runScript(scriptDebayer(), mapOf("interpolation" to "bilinear", "whitebalance" to "highlight-median", "localX" to "6036", "localY" to "2389", "localRadius" to "10", "stretch" to "true"), "images/raw/IMG_8922_pure-unscaled.tiff")
 
         //runScript(scriptDeconvolute(), mapOf(), "images/gauss3_animal.png")
+        runScript(scriptDeconvolute(), mapOf("method" to "fft"), "images/gauss3_animal.png")
 
         //runScript(scriptSamplePSF(), mapOf("sampleX" to "20", "sampleY" to "20", "radius" to "3"), "images/gauss3_animal.png")
 
-        runScript(scriptWhitebalance(), mapOf("whitebalance" to "local", "localX" to "1897", "localY" to "3207"), "images/colorchart/debayer_colorchart_cloudy.tiff")
+        //runScript(scriptWhitebalance(), mapOf("whitebalance" to "local", "localX" to "1897", "localY" to "3207"), "images/colorchart/debayer_colorchart_cloudy.tiff")
     }
 
     private fun scriptSamplePSF(): Script =
@@ -156,7 +158,7 @@ object TestScript {
                 """
             arguments {
                 string("method") {
-                    allowed = listOf("lucy")
+                    allowed = listOf("lucy", "fft")
                     default = "lucy"
                 }
                 string("psf") {
@@ -258,7 +260,7 @@ object TestScript {
                     return background + amplitude / (1.0 + ((dx*dx)/sigmaX/sigmaX + (dy*dy)/sigmaY/sigmaY)).pow(beta)
                 }
 
-                fun Matrix.deconvolute(psfKernel: Matrix, steps: Int): Matrix {
+                fun Matrix.deconvoluteLucyRichardson(psfKernel: Matrix, steps: Int): Matrix {
                     val psfTransposed = psfKernel.transpose()
 
                     var approx = this
@@ -267,6 +269,16 @@ object TestScript {
                         approx = approx2
                     }
                     return approx
+                }
+
+                fun Matrix.deconvoluteFFT(psfKernel: Matrix): Matrix {
+                    val paddedMatrix = FFT.padPowerOfTwo(this)
+                    //val paddedKernel = psfKernel.crop((-paddedMatrix.width+psfKernel.width)/2, (-paddedMatrix.height+psfKernel.height)/2, paddedMatrix.width, paddedMatrix.height)
+                    val paddedKernel = psfKernel.crop(0, 0, paddedMatrix.width, paddedMatrix.height)
+                    val frequencyMatrix = FFT.fft(ComplexMatrix(paddedMatrix))
+                    val frequencyKernel = FFT.fft(ComplexMatrix(paddedKernel))
+                    val frequencyDeconvoluted = frequencyMatrix elementDiv frequencyKernel
+                    return FFT.fftInverse(frequencyDeconvoluted).re
                 }
 
                 val outputMatrices: MutableMap<Channel, Matrix> = mutableMapOf()
@@ -301,7 +313,11 @@ object TestScript {
                     }
                     psfKernelMatrices[channel] = psfKernel
 
-                    outputMatrices[channel] = inputImage[channel].deconvolute(psfKernel, iterations)
+                    outputMatrices[channel] = when (method) {
+                        "lucy" -> inputImage[channel].deconvoluteLucyRichardson(psfKernel, iterations)
+                        "fft" -> inputImage[channel].deconvoluteFFT(psfKernel)
+                        else -> throw IllegalArgumentException("Unknown method: $method")
+                    }
                 }
                 println()
 
