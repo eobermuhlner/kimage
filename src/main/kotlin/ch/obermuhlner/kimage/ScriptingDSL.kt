@@ -884,6 +884,29 @@ sealed class AbstractScript {
             println()
         }
     }
+
+    fun runScript(name: String, files: List<File>, vararg arguments: Pair<String, Any>) {
+        runScript(name, files, mutableMapOf(*arguments))
+    }
+
+    fun runScript(name: String, files: List<File>, arguments: Map<String, Any>) {
+        println("Running $name $arguments : $files")
+
+        val script = KImageManager.script(name)
+
+        val outputDirectory = "."
+
+        KImageManager.executeScript(
+            script,
+            arguments,
+            files,
+            false,
+            verboseMode,
+            debugMode,
+            name,
+            outputDirectory
+        )
+    }
 }
 
 @KotlinDSL
