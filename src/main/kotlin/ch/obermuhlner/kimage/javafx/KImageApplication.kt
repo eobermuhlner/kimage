@@ -518,7 +518,12 @@ class KImageApplication : Application() {
                             id = "bold-arrow-left-icon"
                             onAction = EventHandler {
                                 inputFiles.clear()
-                                selectionModel.selectedItems.toList().forEach {
+
+                                val files = selectionModel.selectedItems.toList()
+                                if (files.isNotEmpty()) {
+                                    inputDirectoryProperty.set( files[0].parent)
+                                }
+                                files.forEach {
                                     inputFiles.add(it)
                                 }
                             }
@@ -546,7 +551,6 @@ class KImageApplication : Application() {
                         menuitemSeparator(),
                         menuitem("New Directory", FontIcon()) {
                             id = "new-folder"
-                            tooltip = Tooltip("Create a new directory.")
                             onAction = EventHandler {
                                 val dialog = TextInputDialog()
                                 dialog.title = "Create Directory"
