@@ -29,8 +29,8 @@ interface Matrix : Iterable<Double> {
     }
 
     fun set(other: Matrix, offsetX: Int = 0, offsetY: Int = 0) {
-        for (y in 0 until height) {
-            for (x in 0 until width) {
+        for (y in 0 until other.height) {
+            for (x in 0 until other.width) {
                 this[x+offsetX, y+offsetY] = other[x, y]
             }
         }
