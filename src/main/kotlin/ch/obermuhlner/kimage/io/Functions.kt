@@ -1,6 +1,8 @@
 package ch.obermuhlner.kimage.io
 
 import java.io.File
+import java.nio.file.FileSystems
+import java.nio.file.Path
 
 fun File.prefixName(prefix: String): File {
     return File(this.parent, prefix + this.name)
@@ -17,3 +19,9 @@ fun File.replaceExtension(extension: String): File {
 fun File.suffixExtension(suffix: String): File {
     return File(this.parent, this.name + suffix)
 }
+
+fun File.matchingFiles(pattern: String): List<File> {
+    val pathMatcher = FileSystems.getDefault().getPathMatcher("glob:$pattern")
+    return listFiles { file -> pathMatcher.matches(Path.of(file.name)) }.toList()
+}
+
