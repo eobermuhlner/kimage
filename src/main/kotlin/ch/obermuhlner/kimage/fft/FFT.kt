@@ -187,6 +187,13 @@ class ComplexMatrix(
         }
     }
 
+    fun onEach(func: (Complex) -> Complex): ComplexMatrix {
+        for (index in data.indices) {
+            data[index] = func.invoke(data[index])
+        }
+        return this
+    }
+
     override fun toString(): String = "ComplexMatrix($width, $height)"
 }
 
@@ -210,4 +217,33 @@ class Complex(val re: Double, val im: Double = 0.0) {
         im >= 0.0 -> "$re + ${im}i"
         else -> "$re - ${-im}i"
     }
+}
+
+
+fun ComplexMatrix.contentToString(multiline: Boolean = false): String {
+    val str = StringBuilder()
+
+    str.append("[")
+    for (y in 0 until height) {
+        if (y != 0) {
+            str.append(" ")
+        }
+        str.append("[")
+        for (x in 0 until width) {
+            if (x != 0) {
+                str.append(" ,")
+            }
+            str.append(this[x, y])
+        }
+        str.append("]")
+        if (multiline && y != height - 1) {
+            str.appendLine()
+        }
+    }
+    str.append("]")
+    if (multiline) {
+        str.appendLine()
+    }
+
+    return str.toString()
 }
