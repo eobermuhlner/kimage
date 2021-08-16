@@ -121,7 +121,7 @@ kimage(0.1) {
             badpixelWriter.println(String.format("%6d %6d 0", badpixel.first, badpixel.second))
             if (debugMode) {
                 val badPixelFile = inputFile.prefixName("badpixel_${badpixel.first}_${badpixel.second}_")
-                val badPixelCrop = inputImage.cropCenter(5, badpixel.first, badpixel.second).scaleBy(4.0, 4.0, Scaling.Nearest)
+                val badPixelCrop = inputImage.cropCenter(5, badpixel.first, badpixel.second).scaleBy(4.0, 4.0, 0.0, 0.0, Scaling.Nearest)
                 ImageWriter.write(badPixelCrop, badPixelFile)
             }
         }

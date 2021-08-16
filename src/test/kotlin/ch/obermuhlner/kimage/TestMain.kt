@@ -206,16 +206,28 @@ object TestMain {
 
         for (scaling in Scaling.values()) {
             example("scaled_50%_$scaling", imageName) {
-                image.scaleBy(0.5, 0.5, scaling)
+                image.scaleBy(0.5, 0.5, 0.0, 0.0, scaling)
             }
             example("scaled_200%_$scaling", imageName) {
-                image.scaleBy(2.0, 2.0, scaling)
+                image.scaleBy(2.0, 2.0, 0.0, 0.0, scaling)
             }
             example("scaled_1000%_$scaling", imageName) {
-                image.cropCenter(image.width / 10, image.width / 2, image.height / 2).scaleBy(10.0, 10.0, scaling)
+                image.cropCenter(image.width / 10, image.width / 2, image.height / 2).scaleBy(
+                    10.0,
+                    10.0,
+                    0.0,
+                    0.0,
+                    scaling
+                )
             }
             example("scaled_12345%_$scaling", imageName) {
-                image.cropCenter(image.width / 100, image.width / 2, image.height / 2).scaleBy(123.45, 123.45, scaling)
+                image.cropCenter(image.width / 100, image.width / 2, image.height / 2).scaleBy(
+                    123.45,
+                    123.45,
+                    0.0,
+                    0.0,
+                    scaling
+                )
             }
         }
     }

@@ -104,27 +104,27 @@ fun Matrix.averageError(other: Matrix): Double {
     return sum / size
 }
 
-fun Matrix.scaleBy(scaleWidth: Double, scaleHeight: Double, scaling: Scaling = Scaling.Bicubic): Matrix {
+fun Matrix.scaleBy(scaleWidth: Double, scaleHeight: Double, offsetX: Double = 0.0, offsetY: Double = 0.0, scaling: Scaling = Scaling.Bicubic): Matrix {
     val newWidth = (width * scaleWidth).toInt()
     val newHeight = (height * scaleHeight).toInt()
 
-    return scaleTo(newWidth, newHeight, scaling)
+    return scaleTo(newWidth, newHeight, offsetX, offsetY, scaling)
 }
 
-fun Matrix.scaleTo(newWidth: Int, newHeight: Int, scaling: Scaling = Scaling.Bicubic): Matrix {
+fun Matrix.scaleTo(newWidth: Int, newHeight: Int, offsetX: Double = 0.0, offsetY: Double = 0.0, scaling: Scaling = Scaling.Bicubic): Matrix {
     return when (scaling) {
-        Scaling.Nearest -> scaleNearestTo(newWidth, newHeight)
-        Scaling.Bilinear -> scaleBilinearTo(newWidth, newHeight)
-        Scaling.Bicubic -> scaleBicubicTo(newHeight, newWidth)
+        Scaling.Nearest -> scaleNearestTo(newWidth, newHeight, offsetX, offsetY)
+        Scaling.Bilinear -> scaleBilinearTo(newWidth, newHeight, offsetX, offsetY)
+        Scaling.Bicubic -> scaleBicubicTo(newHeight, newWidth, offsetX, offsetY)
     }
 }
 
-private fun Matrix.scaleNearestTo(newWidth: Int, newHeight: Int): Matrix {
+private fun Matrix.scaleNearestTo(newWidth: Int, newHeight: Int, offsetX: Double = 0.0, offsetY: Double = 0.0): Matrix {
     val m = create(newWidth, newHeight)
     for (newY in 0 until newHeight) {
         for (newX in 0 until newWidth) {
-            val oldX = (newX.toDouble() / newWidth * width).toInt()
-            val oldY = (newY.toDouble() / newHeight * height).toInt()
+            val oldX = (newX.toDouble() / newWidth * width + offsetX).toInt()
+            val oldY = (newY.toDouble() / newHeight * height + offsetY).toInt()
 
             val newValue = this[oldX, oldY]
             m[newX, newY] = newValue
@@ -134,12 +134,12 @@ private fun Matrix.scaleNearestTo(newWidth: Int, newHeight: Int): Matrix {
     return m
 }
 
-private fun Matrix.scaleBilinearTo(newWidth: Int, newHeight: Int): Matrix {
+private fun Matrix.scaleBilinearTo(newWidth: Int, newHeight: Int, offsetX: Double = 0.0, offsetY: Double = 0.0): Matrix {
     val m = create(newWidth, newHeight)
     for (newY in 0 until newHeight) {
         for (newX in 0 until newWidth) {
-            val oldX = newX.toDouble() / newWidth * (width - 1) - 0.5
-            val oldY = newY.toDouble() / newHeight * (height - 1) - 0.5
+            val oldX = newX.toDouble() / newWidth * (width - 1) + offsetX + 0.5
+            val oldY = newY.toDouble() / newHeight * (height - 1) + offsetY + 0.5
             val oldXInt = oldX.toInt()
             val oldYInt = oldY.toInt()
             val oldXFract = oldX - oldXInt
@@ -159,12 +159,12 @@ private fun Matrix.scaleBilinearTo(newWidth: Int, newHeight: Int): Matrix {
     return m
 }
 
-private fun Matrix.scaleBicubicTo(newHeight: Int, newWidth: Int): Matrix {
+private fun Matrix.scaleBicubicTo(newHeight: Int, newWidth: Int, offsetX: Double = 0.0, offsetY: Double = 0.0): Matrix {
     val m = create(newWidth, newHeight)
     for (newY in 0 until newHeight) {
         for (newX in 0 until newWidth) {
-            val oldX = newX.toDouble() / newWidth * (width - 1) - 0.5
-            val oldY = newY.toDouble() / newHeight * (height - 1) - 0.5
+            val oldX = newX.toDouble() / newWidth * (width - 1) + offsetX + 0.5
+            val oldY = newY.toDouble() / newHeight * (height - 1) + offsetY + 0.5
             val oldXInt = oldX.toInt()
             val oldYInt = oldY.toInt()
             val oldXFract = oldX - oldXInt

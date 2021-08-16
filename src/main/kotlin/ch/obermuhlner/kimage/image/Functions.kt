@@ -220,18 +220,30 @@ fun Image.cropCenter(radiusX: Int, radiusY: Int, croppedCenterX: Int = width / 2
     return crop(croppedCenterX - radiusX, croppedCenterY - radiusY, radiusX*2+1, radiusY*2+1, strictClipping)
 }
 
-fun Image.scaleBy(scaleX: Double, scaleY: Double, scaling: Scaling = Scaling.Bicubic): Image {
+fun Image.scaleBy(
+    scaleX: Double,
+    scaleY: Double,
+    offsetX: Double = 0.0,
+    offsetY: Double = 0.0,
+    scaling: Scaling = Scaling.Bicubic
+): Image {
     val newWidth = (width * scaleX).toInt()
     val newHeight = (height * scaleY).toInt()
-    return scaleTo(newWidth, newHeight, scaling)
+    return scaleTo(newWidth, newHeight, offsetX, offsetY, scaling)
 }
 
-fun Image.scaleTo(newWidth: Int, newHeight: Int, scaling: Scaling = Scaling.Bicubic): Image {
+fun Image.scaleTo(
+    newWidth: Int,
+    newHeight: Int,
+    offsetX: Double = 0.0,
+    offsetY: Double = 0.0,
+    scaling: Scaling = Scaling.Bicubic
+): Image {
     return MatrixImage(
         newWidth,
         newHeight,
         this.channels) { channel, _, _ ->
-        this[channel].scaleTo(newWidth, newHeight, scaling)
+        this[channel].scaleTo(newWidth, newHeight, offsetX, offsetY, scaling)
     }
 }
 

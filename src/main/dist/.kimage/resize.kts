@@ -62,6 +62,20 @@ kimage(0.1) {
                 If you want to scale by a relative factor use `factorY` or `factor` instead. 
                 """
         }
+        double("offsetX") {
+            description = """
+                The offset on the x-axis in the input image.
+                May be a sub-pixel value.
+                """
+            default = 0.0
+        }
+        double("offsetY") {
+            description = """
+                The offset on the y-axis in the input image.
+                May be a sub-pixel value.
+                """
+            default = 0.0
+        }
         string("method") {
             description = """
                 The interpolation method used to scale pixels.
@@ -81,6 +95,8 @@ kimage(0.1) {
         var factorY: Optional<Double> by arguments
         var width: Optional<Int> by arguments
         var height: Optional<Int> by arguments
+        val offsetX: Double by arguments
+        val offsetY: Double by arguments
         val method: String by arguments
 
         val scaling = when (method) {
@@ -94,9 +110,11 @@ kimage(0.1) {
             println("Arguments:")
             println("  factor = ${factor.get()}")
             println("  method = $method")
+            println("  offsetX = $offsetX")
+            println("  offsetY = $offsetY")
             println()
 
-            inputImage.scaleBy(factor.get(), factor.get(), scaling)
+            inputImage.scaleBy(factor.get(), factor.get(), offsetX, offsetY, scaling)
         } else if (factorX.isPresent || factorY.isPresent) {
             if (!factorX.isPresent) {
                 factorX = Optional.of(1.0)
@@ -107,10 +125,12 @@ kimage(0.1) {
             println("Arguments:")
             println("  factorX = ${factorX.get()}")
             println("  factorY = ${factorY.get()}")
+            println("  offsetX = $offsetX")
+            println("  offsetY = $offsetY")
             println("  method = $method")
             println()
 
-            inputImage.scaleBy(factorX.get(), factorY.get(), scaling)
+            inputImage.scaleBy(factorX.get(), factorY.get(), offsetX, offsetY, scaling)
         } else {
             if (!width.isPresent) {
                 if (height.isPresent) {
@@ -126,10 +146,12 @@ kimage(0.1) {
             println("Arguments:")
             println("  width = ${width.get()}")
             println("  height = ${height.get()}")
+            println("  offsetX = $offsetX")
+            println("  offsetY = $offsetY")
             println("  method = $method")
             println()
 
-            inputImage.scaleTo(width.get(), height.get(), scaling)
+            inputImage.scaleTo(width.get(), height.get(), offsetX, offsetY, scaling)
         }
     }
 }
