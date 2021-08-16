@@ -1,12 +1,25 @@
 package ch.obermuhlner.kimage.math
 
 import kotlin.NoSuchElementException
-import kotlin.math.abs
-import kotlin.math.sqrt
+import kotlin.math.*
 
 fun Float.finiteOrElse(default: Float = 0f) = if (this.isFinite()) this else default
 
 fun Double.finiteOrElse(default: Double = 0.0) = if (this.isFinite()) this else default
+
+fun Double.decimalExponent(): Int {
+    return floor(log10(abs(this))).toInt()
+}
+
+fun Double.decimalMantissaExponent(): Pair<Double, Int> {
+    val exponent = this.decimalExponent()
+    val mantissa = this / 10.0.pow(exponent.toDouble())
+    return Pair(mantissa, exponent)
+}
+
+fun decimalMantissaExponentToDouble(mantissa: Double, exponent: Int): Double {
+    return mantissa * 10.0.pow(exponent.toDouble())
+}
 
 fun clamp(x: Double, min: Double, max: Double): Double {
     return when {
