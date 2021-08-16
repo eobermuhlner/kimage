@@ -1337,7 +1337,9 @@ object TestScript {
                         val badPixelCrop = inputImage.cropCenter(5, badpixel.first, badpixel.second).scaleBy(
                             4.0,
                             4.0,
-                            offsetX = Scaling.Nearest
+                            0.0,
+                            0.0,
+                            Scaling.Nearest
                         )
                         ImageWriter.write(badPixelCrop, badPixelFile)
                     }
