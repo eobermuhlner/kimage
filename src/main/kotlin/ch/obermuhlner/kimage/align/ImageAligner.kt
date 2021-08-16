@@ -39,9 +39,9 @@ class ImageAligner(
         return Pair(bestX, bestY)
     }
 
-    fun align(base: Image, image: Image, centerX: Int, centerY: Int, maxOffset: Int): Alignment {
+    fun align(base: Image, image: Image, centerX: Int, centerY: Int, maxOffset: Int, subPixelStep: Double = 0.1): Alignment {
         if (base === image) {
-            return Alignment(0, 0, 0.0)
+            return Alignment(0, 0, 0.0, 0.0, 0.0)
         }
 
         val baseCropped0 = base.crop(centerX, centerY, 1, 1, false)
@@ -80,8 +80,33 @@ class ImageAligner(
             }
         }
 
-        return Alignment(bestAlignX, bestAlignY, bestError2)
+        var subPixelAlignX = 0.0
+        var subPixelAlignY = 0.0
+        if (subPixelStep != 0.0) {
+            val crop = image.crop(centerX + bestAlignX - radiusX, centerY + bestAlignY - radiusY, radiusX * 2 + 1, radiusY * 2 + 1, false)
+            var bestError3 = bestError2
+
+            var dy = -1.0 + subPixelStep
+            while (dy < 1.0) {
+                var dx = -1.0 + subPixelStep
+                while (dx < 1.0) {
+                    val subCrop = crop.scaleBy(1.0, 1.0, dx, dy)
+                    val error3 = baseCropped2.averageError(subCrop)
+                    if (error3 < bestError3) {
+                        //println("Error3: $dx, $dy : $error3")
+                        subPixelAlignX = dx
+                        subPixelAlignY = dy
+                        bestError3 = error3
+                    }
+
+                    dx += subPixelStep
+                }
+                dy += subPixelStep
+            }
+        }
+
+        return Alignment(bestAlignX, bestAlignY, subPixelAlignX, subPixelAlignY, bestError2)
     }
 }
 
-data class Alignment(val x: Int, val y: Int, val error: Double)
+data class Alignment(val x: Int, val y: Int, val subPixelX: Double, val subPixelY: Double, val error: Double)

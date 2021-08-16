@@ -65,6 +65,12 @@ kimage(0.1) {
             min = 0.0
             default = 0.001
         }
+        double("subPixelStep") {
+            description = """
+                        """
+            //allowed = listOf(0.5, 0.2, 0.1, 0.05, 0.02, 0.01)
+            default = 0.1
+        }
         string("prefix") {
             description = "The prefix of the aligned output files."
             default = "aligned"
@@ -113,6 +119,7 @@ kimage(0.1) {
         }
 
         val errorThreshold: Double by arguments
+        val subPixelStep: Double by arguments
         val prefix: String by arguments
         val saveBad: Boolean by arguments
         val prefixBad: String by arguments
@@ -143,11 +150,16 @@ kimage(0.1) {
                 image,
                 centerX = centerX.get(),
                 centerY = centerY.get(),
-                maxOffset = searchRadius.get()
+                maxOffset = searchRadius.get(),
+                subPixelStep = subPixelStep
             )
             println("Alignment: $alignment")
 
-            val alignedImage = image.crop(alignment.x, alignment.y, baseImage.width, baseImage.height)
+            val alignedImage = if (alignment.subPixelX != 0.0 || alignment.subPixelY != 0.0) {
+                image.scaleBy(1.0, 1.0, alignment.subPixelX, alignment.subPixelY).crop(alignment.x, alignment.y, baseImage.width, baseImage.height)
+            } else {
+                image.crop(alignment.x, alignment.y, baseImage.width, baseImage.height)
+            }
 
             val error = baseImage.averageError(alignedImage)
             if (error <= errorThreshold) {
