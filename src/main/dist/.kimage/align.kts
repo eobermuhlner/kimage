@@ -84,6 +84,10 @@ kimage(0.1) {
             enabledWhen = Reference("saveBad").isEqual(true)
             default = "badaligned"
         }
+        boolean("sort") {
+            description = "Sort output files by error (best aligned first)."
+            default = true
+        }
     }
 
     multi {
@@ -123,6 +127,7 @@ kimage(0.1) {
         val prefix: String by arguments
         val saveBad: Boolean by arguments
         val prefixBad: String by arguments
+        val sort: Boolean by arguments
 
         println("Arguments (calculated from input):")
         println("  checkRadius = ${checkRadius.get()}")
@@ -138,6 +143,8 @@ kimage(0.1) {
             ImageWriter.write(checkImage, checkFile)
             println()
         }
+
+        val outputFilesAlignment = mutableListOf<Pair<File, Alignment>>()
 
         for (inputFile in inputFiles) {
             println("Loading image: $inputFile")
@@ -166,11 +173,13 @@ kimage(0.1) {
                 val alignedFile = inputFile.prefixName("${prefix}_")
                 println("Error $error <= $errorThreshold : saving $alignedFile")
                 ImageWriter.write(alignedImage, alignedFile)
+                outputFilesAlignment.add(Pair(alignedFile, alignment))
             } else {
                 if (saveBad) {
                     val badalignedFile = inputFile.prefixName("${prefixBad}_")
                     println("Error $error > $errorThreshold : saving $badalignedFile")
                     ImageWriter.write(alignedImage, badalignedFile)
+                    outputFilesAlignment.add(Pair(badalignedFile, alignment))
                 } else {
                     println("Error $error > $errorThreshold : ignoring badly aligned image")
                 }
@@ -181,6 +190,27 @@ kimage(0.1) {
                 println("Saving $deltaFile for manual analysis")
                 val deltaImage = deltaChannel(baseImage, alignedImage)
                 ImageWriter.write(deltaImage, deltaFile)
+            }
+
+            println()
+        }
+
+        // sort images by error
+        if (sort) {
+            outputFilesAlignment.sortBy { it.second.error }
+
+            var outputFileIndex = 0
+            for (outputFileAlignment in outputFilesAlignment) {
+                val fileName = outputFileAlignment.first.name
+                val sortString = String.format("_%04d", outputFileIndex)
+                val sortedFileName = when {
+                    fileName.startsWith(prefix) -> prefix + sortString + fileName.removePrefix(prefix)
+                    fileName.startsWith(prefixBad) -> prefixBad + sortString + fileName.removePrefix(prefixBad)
+                    else -> sortString + fileName
+                }
+                println("Renaming $fileName to $sortedFileName")
+                Files.move(outputFileAlignment.first.toPath(), File(outputFileAlignment.first.parent, sortedFileName).toPath())
+                outputFileIndex++;
             }
 
             println()
