@@ -209,7 +209,7 @@ kimage(0.1) {
                     else -> sortString + fileName
                 }
                 println("Renaming $fileName to $sortedFileName")
-                Files.move(outputFileAlignment.first.toPath(), File(outputFileAlignment.first.parent, sortedFileName).toPath())
+                Files.move(outputFileAlignment.first.toPath(), File(outputFileAlignment.first.parent, sortedFileName).toPath(), StandardCopyOption.REPLACE_EXISTING)
                 outputFileIndex++;
             }
 
