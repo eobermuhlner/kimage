@@ -68,6 +68,7 @@ kimage(0.1) {
         command.add("-j")
         command.add("-t")
         command.add("0")
+        command.add("-W")
 
         command.add("-O")
         command.add(file.prefixName("${name}_").replaceExtension("tif").path)
