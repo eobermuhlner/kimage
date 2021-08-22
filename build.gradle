@@ -40,6 +40,7 @@ dependencies {
     implementation 'org.kordamp.ikonli:ikonli-materialdesign2-pack:12.2.0'
 
     implementation 'org.apache.commons:commons-math3:3.6.1'
+    implementation 'org.apache.commons:commons-imaging:1.0-alpha2'
 
     implementation 'gov.nasa.gsfc.heasarc:nom-tam-fits:1.15.2'
 
