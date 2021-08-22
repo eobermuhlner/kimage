@@ -34,6 +34,10 @@ import javafx.scene.text.Font
 import javafx.scene.web.WebView
 import javafx.stage.*
 import javafx.util.converter.IntegerStringConverter
+import org.apache.commons.imaging.Imaging
+import org.apache.commons.imaging.common.GenericImageMetadata
+import org.apache.commons.imaging.common.ImageMetadata
+import org.apache.commons.imaging.formats.jpeg.JpegImageMetadata
 import org.kordamp.ikonli.javafx.FontIcon
 import java.awt.Desktop
 import java.io.*
@@ -93,6 +97,24 @@ class KImageApplication : Application() {
     private val inputDecorationsPane: Pane = Pane()
     private val outputDecorationsPane: Pane = Pane()
 
+    private val inputImageWidthProperty = SimpleIntegerProperty()
+    private val inputImageHeightProperty = SimpleIntegerProperty()
+    private val inputImageModelProperty = SimpleStringProperty()
+    private val inputImageLensModelProperty = SimpleStringProperty()
+    private val inputImageExposureTimeProperty = SimpleStringProperty()
+    private val inputImagePhotographicSensitivityProperty = SimpleStringProperty()
+    private val inputImageApertureValueProperty = SimpleStringProperty()
+    private val inputImageBitsPerSampleProperty = SimpleStringProperty()
+
+    private val outputImageWidthProperty = SimpleIntegerProperty()
+    private val outputImageHeightProperty = SimpleIntegerProperty()
+    private val outputImageModelProperty = SimpleStringProperty()
+    private val outputImageLensModelProperty = SimpleStringProperty()
+    private val outputImageExposureTimeProperty = SimpleStringProperty()
+    private val outputImagePhotographicSensitivityProperty = SimpleStringProperty()
+    private val outputImageApertureValueProperty = SimpleStringProperty()
+    private val outputImageBitsPerSampleProperty = SimpleStringProperty()
+
     private val crosshairColors = listOf(Color.YELLOW, Color.RED, Color.GREEN, Color.BLUE, Color.TRANSPARENT)
     private val crosshairColorProperty: ObjectProperty<Color> = SimpleObjectProperty(crosshairColors[0])
 
@@ -107,9 +129,11 @@ class KImageApplication : Application() {
     private val outputDirectoryProperty = SimpleStringProperty(Paths.get(".").toString())
     private val outputHideOldFilesProperty = SimpleBooleanProperty()
 
+    private val runOnlySelectedModeProperty = SimpleBooleanProperty()
     private val previewModeProperty = SimpleBooleanProperty()
 
     private val inputFiles = FXCollections.observableArrayList<File>()
+    private var selectedInputFiles = FXCollections.observableArrayList<File>()
     private val scriptNames = FXCollections.observableArrayList<String>()
     private val outputFiles = FXCollections.observableArrayList<File>()
     private val hiddenOutputFiles = mutableListOf<File>()
@@ -221,10 +245,98 @@ class KImageApplication : Application() {
             }
             row {
                 cell {
-                    node(withZoomRectangle(inputImageView, inputDecorationsPane)) {
-                        inputImageView.isPreserveRatio = true
-                        inputImageView.fitWidth = IMAGE_WIDTH.toDouble()
-                        inputImageView.fitHeight = IMAGE_HEIGHT.toDouble()
+                    tabpane {
+                        tabs += tab("Image") {
+                            content = node(withZoomRectangle(inputImageView, inputDecorationsPane)) {
+                                inputImageView.isPreserveRatio = true
+                                inputImageView.fitWidth = IMAGE_WIDTH.toDouble()
+                                inputImageView.fitHeight = IMAGE_HEIGHT.toDouble()
+                            }
+                        }
+                        tabs += tab("Info") {
+                            content = gridpane {
+                                row {
+                                    cell {
+                                        label("Width")
+                                    }
+                                    cell {
+                                        textfield(inputImageWidthProperty) {
+                                            isEditable = false
+                                        }
+                                    }
+                                }
+                                row {
+                                    cell {
+                                        label("Height")
+                                    }
+                                    cell {
+                                        textfield(inputImageHeightProperty) {
+                                            isEditable = false
+                                        }
+                                    }
+                                }
+                                row {
+                                    cell {
+                                        label("Model")
+                                    }
+                                    cell {
+                                        textfield(inputImageModelProperty) {
+                                            isEditable = false
+                                        }
+                                    }
+                                }
+                                row {
+                                    cell {
+                                        label("Lens Model")
+                                    }
+                                    cell {
+                                        textfield(inputImageLensModelProperty) {
+                                            isEditable = false
+                                        }
+                                    }
+                                }
+                                row {
+                                    cell {
+                                        label("Exposure Time")
+                                    }
+                                    cell {
+                                        textfield(inputImageExposureTimeProperty) {
+                                            isEditable = false
+                                        }
+                                    }
+                                }
+                                row {
+                                    cell {
+                                        label("ISO")
+                                    }
+                                    cell {
+                                        textfield(inputImagePhotographicSensitivityProperty) {
+                                            isEditable = false
+                                        }
+                                    }
+                                }
+                                row {
+                                    cell {
+                                        label("Aperture")
+                                    }
+                                    cell {
+                                        textfield(inputImageApertureValueProperty) {
+                                            isEditable = false
+                                        }
+                                    }
+                                }
+                                row {
+                                    cell {
+                                        label("Bits per Sample")
+                                    }
+                                    cell {
+                                        textfield(inputImageBitsPerSampleProperty) {
+                                            isEditable = false
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
                 cell {
@@ -260,10 +372,98 @@ class KImageApplication : Application() {
                     }
                 }
                 cell {
-                    node(withZoomRectangle(outputImageView, outputDecorationsPane)) {
-                        outputImageView.isPreserveRatio = true
-                        outputImageView.fitWidth = IMAGE_WIDTH.toDouble()
-                        outputImageView.fitHeight = IMAGE_HEIGHT.toDouble()
+                    tabpane {
+                        tabs += tab("Image") {
+                            content = node(withZoomRectangle(outputImageView, outputDecorationsPane)) {
+                                outputImageView.isPreserveRatio = true
+                                outputImageView.fitWidth = IMAGE_WIDTH.toDouble()
+                                outputImageView.fitHeight = IMAGE_HEIGHT.toDouble()
+                            }
+                        }
+                        tabs += tab("Info") {
+                            content = gridpane {
+                                row {
+                                    cell {
+                                        label("Width")
+                                    }
+                                    cell {
+                                        textfield(outputImageWidthProperty) {
+                                            isEditable = false
+                                        }
+                                    }
+                                }
+                                row {
+                                    cell {
+                                        label("Height")
+                                    }
+                                    cell {
+                                        textfield(outputImageHeightProperty) {
+                                            isEditable = false
+                                        }
+                                    }
+                                }
+                                row {
+                                    cell {
+                                        label("Model")
+                                    }
+                                    cell {
+                                        textfield(outputImageModelProperty) {
+                                            isEditable = false
+                                        }
+                                    }
+                                }
+                                row {
+                                    cell {
+                                        label("Lens Model")
+                                    }
+                                    cell {
+                                        textfield(outputImageLensModelProperty) {
+                                            isEditable = false
+                                        }
+                                    }
+                                }
+                                row {
+                                    cell {
+                                        label("Exposure Time")
+                                    }
+                                    cell {
+                                        textfield(outputImageExposureTimeProperty) {
+                                            isEditable = false
+                                        }
+                                    }
+                                }
+                                row {
+                                    cell {
+                                        label("ISO")
+                                    }
+                                    cell {
+                                        textfield(outputImagePhotographicSensitivityProperty) {
+                                            isEditable = false
+                                        }
+                                    }
+                                }
+                                row {
+                                    cell {
+                                        label("Aperture")
+                                    }
+                                    cell {
+                                        textfield(outputImageApertureValueProperty) {
+                                            isEditable = false
+                                        }
+                                    }
+                                }
+                                row {
+                                    cell {
+                                        label("Bits per Sample")
+                                    }
+                                    cell {
+                                        textfield(outputImageBitsPerSampleProperty) {
+                                            isEditable = false
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -404,7 +604,7 @@ class KImageApplication : Application() {
                                 selectionModel.selectedItems.toList().forEach {
                                     inputFiles.remove(it)
                                 }
-                                updateImageView(inputImageView, selectionModel.selectedItem, true)
+                                updateImageView(selectionModel.selectedItem, inputImageView, inputImageWidthProperty, inputImageHeightProperty, inputImageModelProperty, inputImageLensModelProperty, inputImageExposureTimeProperty, inputImagePhotographicSensitivityProperty, inputImageApertureValueProperty, inputImageBitsPerSampleProperty)
                             }
                         }
                     )
@@ -422,8 +622,9 @@ class KImageApplication : Application() {
                 }
 
                 selectionModel.selectedItemProperty().addListener { _, _, selected ->
-                    updateImageView(inputImageView, selected, true)
+                    updateImageView(selected, inputImageView, inputImageWidthProperty, inputImageHeightProperty, inputImageModelProperty, inputImageLensModelProperty, inputImageExposureTimeProperty, inputImagePhotographicSensitivityProperty, inputImageApertureValueProperty, inputImageBitsPerSampleProperty)
                 }
+                selectedInputFiles = selectionModel.selectedItems
             }
         }
     }
@@ -588,7 +789,7 @@ class KImageApplication : Application() {
                                     outputFiles.remove(it)
                                     it.delete()
                                 }
-                                updateImageView(outputImageView, selectionModel.selectedItem, false)
+                                updateImageView(selectionModel.selectedItem, outputImageView, outputImageWidthProperty, outputImageHeightProperty, outputImageModelProperty, outputImageLensModelProperty, outputImageExposureTimeProperty, outputImagePhotographicSensitivityProperty, outputImageApertureValueProperty, outputImageBitsPerSampleProperty)
                             }
                         }
                     )
@@ -617,15 +818,26 @@ class KImageApplication : Application() {
                 }
 
                 selectionModel.selectedItemProperty().addListener { _, _, selected ->
-                    updateImageView(outputImageView, selected, false)
+                    updateImageView(selected, outputImageView, outputImageWidthProperty, outputImageHeightProperty, outputImageModelProperty, outputImageLensModelProperty, outputImageExposureTimeProperty, outputImagePhotographicSensitivityProperty, outputImageApertureValueProperty, outputImageBitsPerSampleProperty)
                 }
             }
         }
     }
 
-    private fun updateImageView(imageView: ImageView, selectedFile: File?, updateCurrentInputImage: Boolean) {
+    private fun updateImageView(
+        selectedFile: File?,
+        imageView: ImageView,
+        imageWidthProperty: SimpleIntegerProperty,
+        imageHeightProperty: SimpleIntegerProperty,
+        imageModelProperty: SimpleStringProperty,
+        imageLensModelProperty: SimpleStringProperty,
+        imageExposureTimeProperty: SimpleStringProperty,
+        imagePhotographicSensitivityProperty: SimpleStringProperty,
+        imageApertureValueProperty: SimpleStringProperty,
+        imageBitsPerSampleProperty: SimpleStringProperty
+    ) {
         if (selectedFile == null) {
-            if (updateCurrentInputImage) {
+            if (imageView == inputImageView) {
                 currentInputImage = null
             }
             imageView.image = dummyImage
@@ -634,10 +846,13 @@ class KImageApplication : Application() {
             runWithProgressDialog("Load Image", "Loading image $selectedFile", 200) {
                 try {
                     val image = ImageReader.read(selectedFile)
-                    if (updateCurrentInputImage) {
+                    if (imageView == inputImageView) {
                         currentInputImage = image
                     }
+                    loadImageMetadata(selectedFile, imageModelProperty, imageLensModelProperty, imageExposureTimeProperty, imagePhotographicSensitivityProperty, imageApertureValueProperty, imageBitsPerSampleProperty)
                     image.let {
+                        imageWidthProperty.set(it.width)
+                        imageHeightProperty.set(it.height)
                         val writableImage = JavaFXImageUtil.toWritableImage(it)
 
                         Platform.runLater {
@@ -646,10 +861,45 @@ class KImageApplication : Application() {
                         }
                     }
                 } catch (ex: Exception) {
+                    ex.printStackTrace()
                     // ignore
                 }
             }
         }
+    }
+
+    private fun loadImageMetadata(
+        file: File,
+        imageModelProperty: SimpleStringProperty,
+        imageLensModelProperty: SimpleStringProperty,
+        imageExposureTimeProperty: SimpleStringProperty,
+        imagePhotographicSensitivityProperty: SimpleStringProperty,
+        imageApertureValueProperty: SimpleStringProperty,
+        imageBitsPerSampleProperty: SimpleStringProperty
+    ) {
+        val items = mutableMapOf<String, String>()
+
+        val metadata: ImageMetadata? = Imaging.getMetadata(file)
+        if (metadata is GenericImageMetadata) {
+            for (item in metadata.items) {
+                if (item is GenericImageMetadata.GenericImageMetadataItem) {
+                    items[item.keyword] = item.text
+                }
+            }
+        } else if (metadata is JpegImageMetadata) {
+            for (item in metadata.exif.items) {
+                if (item is GenericImageMetadata.GenericImageMetadataItem) {
+                    items[item.keyword] = item.text
+                }
+            }
+        }
+
+        imageModelProperty.set(items["Model"]?.trim('\''))
+        imageLensModelProperty.set(items["LensModel"]?.trim('\''))
+        imageExposureTimeProperty.set(items["ExposureTime"])
+        imagePhotographicSensitivityProperty.set(items["PhotographicSensitivity"])
+        imageApertureValueProperty.set(items["ApertureValue"])
+        imageBitsPerSampleProperty.set(items["BitsPerSample"])
     }
 
     private fun showCommandEditor(command: String) {
@@ -716,6 +966,12 @@ class KImageApplication : Application() {
                             onAction = EventHandler {
                                 updateOutputDirectoryFiles(outputHideOldFilesProperty.get())
 
+                                val runInputFiles = if (runOnlySelectedModeProperty.get()) {
+                                    selectedInputFiles
+                                } else {
+                                    inputFiles
+                                }
+
                                 infoTabPane.selectionModel.select(infoTabLog)
 
                                 runWithProgressDialog("Running ${script.name}", script.title, 0) {
@@ -727,7 +983,7 @@ class KImageApplication : Application() {
                                         KImageManager.executeScript(
                                             script,
                                             argumentsProperty,
-                                            inputFiles,
+                                            runInputFiles,
                                             false,
                                             verboseModeProperty.get(),
                                             debugModeProperty.get(),
@@ -745,6 +1001,10 @@ class KImageApplication : Application() {
                                     }
                                 }
                             }
+                        }
+                        children += checkbox(runOnlySelectedModeProperty) {
+                            tooltip = Tooltip("Run only the selected input files.")
+                            text = "Run only selected input"
                         }
                         children += checkbox(previewModeProperty) {
                             tooltip = Tooltip("Preview the ${script.name} script.")
