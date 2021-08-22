@@ -84,6 +84,22 @@ kimage(0.1) {
             double {
             }
         }
+        optionalInt("darkness") {
+            description = """
+              The darkness level.
+              
+              Corresponds to the `-k` option in the `dcraw` command line tool.
+              """
+            min = 0
+        }
+        optionalInt("saturation") {
+            description = """
+              The saturation level.
+              
+              Corresponds to the `-S` option in the `dcraw` command line tool.
+              """
+            min = 0
+        }
         string("colorspace") {
             description = """
                 The colorspace to be used for the output image.
@@ -159,6 +175,8 @@ kimage(0.1) {
         localY: Optional<Int>,
         localRadius: Optional<Int>,
         multipliers: Optional<List<Double>>,
+        darkness: Optional<Int>,
+        saturation: Optional<Int>,
         colorspace: String,
         interpolation: String,
         medianPasses: Int,
@@ -219,6 +237,14 @@ kimage(0.1) {
             }
             "fixed" -> command.add("-W")
             else -> throw java.lang.IllegalArgumentException("Unknown whitebalance: $whitebalance")
+        }
+        if (darkness.isPresent) {
+            command.add("-k");
+            command.add(darkness.get().toString());
+        }
+        if (saturation.isPresent) {
+            command.add("-S");
+            command.add(saturation.get().toString());
         }
         when (colorspace) {
             "raw" -> {
@@ -315,6 +341,8 @@ kimage(0.1) {
         val localY: Optional<Int> by arguments
         val localRadius: Optional<Int> by arguments
         val multipliers: Optional<List<Double>> by arguments
+        val darkness: Optional<Int> by arguments
+        val saturation: Optional<Int> by arguments
         val colorspace: String by arguments
         val interpolation: String by arguments
         val medianPasses: Int by arguments
@@ -323,7 +351,7 @@ kimage(0.1) {
 
         for (inputFile in inputFiles) {
             println("Converting $inputFile")
-            dcraw(dcraw, aspectRatio, rotate, whitebalance, localX, localY, localRadius, multipliers, colorspace, interpolation, medianPasses, bits, brightness, inputFile)
+            dcraw(dcraw, aspectRatio, rotate, whitebalance, localX, localY, localRadius, multipliers, darkness, saturation, colorspace, interpolation, medianPasses, bits, brightness, inputFile)
             println()
         }
 
