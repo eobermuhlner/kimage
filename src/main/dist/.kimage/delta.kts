@@ -53,7 +53,7 @@ kimage(0.1) {
             println("Loading image ${inputFile}")
             val image = ImageReader.read(inputFile)
 
-            val deltaFile = inputFile.prefixName("delta_")
+            val deltaFile = inputFile.prefixName(outputDirectory, "delta_")
             println("Saving $deltaFile")
             val deltaImage = deltaChannel(baseImage, image, factor = factor, channel = Channel.valueOf(channel))
             ImageWriter.write(deltaImage, deltaFile)

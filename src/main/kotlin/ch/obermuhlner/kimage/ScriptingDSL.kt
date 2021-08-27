@@ -204,7 +204,7 @@ class ScriptV0_1 : Script(0.1) {
         println()
     }
 
-    fun execute(inputFiles: List<File>, arguments: Map<String, Any>, verboseMode: Boolean, debugMode: Boolean, outputHandler: (File, Any?) -> Unit) {
+    fun execute(inputFiles: List<File>, arguments: Map<String, Any>, verboseMode: Boolean, debugMode: Boolean, outputDirectory: File, outputHandler: (File, Any?) -> Unit) {
         if (title.isNotBlank()) {
             print(title)
         } else {
@@ -216,10 +216,10 @@ class ScriptV0_1 : Script(0.1) {
         return try {
             when {
                 scriptMulti != null -> {
-                    executeMulti(inputFiles, arguments, verboseMode, debugMode, outputHandler)
+                    executeMulti(inputFiles, arguments, verboseMode, debugMode, outputDirectory, outputHandler)
                 }
                 scriptSingle != null -> {
-                    executeSingle(inputFiles, arguments, verboseMode, debugMode, outputHandler)
+                    executeSingle(inputFiles, arguments, verboseMode, debugMode, outputDirectory, outputHandler)
                 }
                 else -> {
                     throw java.lang.RuntimeException("Script has no execution block.")
@@ -232,7 +232,7 @@ class ScriptV0_1 : Script(0.1) {
         }
     }
 
-    fun executeSingle(inputFiles: List<File>, arguments: Map<String, Any>, verboseMode: Boolean, debugMode: Boolean, outputHandler: (File, Any?) -> Unit) {
+    fun executeSingle(inputFiles: List<File>, arguments: Map<String, Any>, verboseMode: Boolean, debugMode: Boolean, outputDirectory: File, outputHandler: (File, Any?) -> Unit) {
         scriptSingle?.let {
             for (inputFile in inputFiles) {
                 val inputImage = read(inputFile)
@@ -244,15 +244,23 @@ class ScriptV0_1 : Script(0.1) {
                     arguments,
                     verboseMode,
                     debugMode,
+                    outputDirectory,
                     outputHandler
                 )
             }
         }
     }
 
-    fun executeMulti(inputFiles: List<File>, arguments: Map<String, Any>, verboseMode: Boolean, debugMode: Boolean, outputHandler: (File, Any?) -> Unit) {
+    fun executeMulti(inputFiles: List<File>, arguments: Map<String, Any>, verboseMode: Boolean, debugMode: Boolean, outputDirectory: File, outputHandler: (File, Any?) -> Unit) {
         scriptMulti?.let {
-            it.executeMultiScript(inputFiles, scriptArguments, arguments, verboseMode, debugMode, outputHandler)
+            it.executeMultiScript(
+                inputFiles,
+                scriptArguments,
+                arguments,
+                verboseMode,
+                debugMode,
+                outputDirectory,
+                outputHandler)
         }
     }
 }
@@ -914,11 +922,13 @@ class ScriptSingle(val executable: ScriptSingle.() -> Any?) : AbstractScript() {
     var inputFiles: List<File> = listOf()
     var inputFile: File = File(".")
     var inputImage: Image = MatrixImage(0, 0)
+    var outputDirectory: File = File(".")
 
-    fun executeSingleScript(inputFiles: List<File>, inputFile: File, inputImage: Image, scriptArguments: ScriptArguments, rawArguments: Map<String, Any>, verboseMode: Boolean, debugMode: Boolean, outputHandler: (File, Any?) -> Unit) {
+    fun executeSingleScript(inputFiles: List<File>, inputFile: File, inputImage: Image, scriptArguments: ScriptArguments, rawArguments: Map<String, Any>, verboseMode: Boolean, debugMode: Boolean, outputDirectory: File, outputHandler: (File, Any?) -> Unit) {
         this.inputFiles = inputFiles
         this.inputFile = inputFile
         this.inputImage = inputImage
+        this.outputDirectory = outputDirectory
         this.scriptArguments = scriptArguments
         this.verboseMode = verboseMode
         this.debugMode = debugMode
@@ -939,9 +949,11 @@ class ScriptSingle(val executable: ScriptSingle.() -> Any?) : AbstractScript() {
 @KotlinDSL
 class ScriptMulti(val executable: ScriptMulti.() -> Any?) : AbstractScript() {
     var inputFiles: List<File> = listOf()
+    var outputDirectory: File = File(".")
 
-    fun executeMultiScript(inputFiles: List<File>, scriptArguments: ScriptArguments, rawArguments: Map<String, Any>, verboseMode: Boolean, debugMode: Boolean, outputHandler: (File, Any?) -> Unit) {
+    fun executeMultiScript(inputFiles: List<File>, scriptArguments: ScriptArguments, rawArguments: Map<String, Any>, verboseMode: Boolean, debugMode: Boolean, outputDirectory: File, outputHandler: (File, Any?) -> Unit) {
         this.inputFiles = inputFiles
+        this.outputDirectory = outputDirectory
         this.scriptArguments = scriptArguments
         this.verboseMode = verboseMode
         this.debugMode = debugMode

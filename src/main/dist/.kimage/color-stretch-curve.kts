@@ -92,7 +92,7 @@ kimage(0.1) {
             println("Input image - median: ${image.values().fastMedian()}")
             println("Input image - stddev: ${image.values().stddev()}")
 
-            val histogramInputFile = inputFile.prefixName("hist_input_")
+            val histogramInputFile = inputFile.prefixName(outputDirectory, "hist_input_")
             println("Saving $histogramInputFile for manual analysis")
             ImageWriter.write(image.histogramImage(histogramWidth, histogramHeight), histogramInputFile)
             println()
@@ -110,7 +110,7 @@ kimage(0.1) {
             println("After brightness correction - median: ${image.values().fastMedian()}")
             println("After brightness correction - stddev: ${image.values().stddev()}")
 
-            val histogramBrightnessFile = inputFile.prefixName("hist_brightness_")
+            val histogramBrightnessFile = inputFile.prefixName(outputDirectory, "hist_brightness_")
             println("Saving $histogramBrightnessFile (after brightness correction) for manual analysis")
             ImageWriter.write(image.histogramImage(histogramWidth, histogramHeight), histogramBrightnessFile)
             println()
@@ -220,14 +220,14 @@ kimage(0.1) {
                 println("After curve correction - median: ${image.values().fastMedian()}")
                 println("After curve correction - stddev: ${image.values().stddev()}")
 
-                val histogramOutputFile = inputFile.prefixName("hist_output_")
+                val histogramOutputFile = inputFile.prefixName(outputDirectory, "hist_output_")
                 println("Saving $histogramOutputFile (after curve correction) for manual analysis")
                 ImageWriter.write(image.histogramImage(histogramWidth, histogramHeight), histogramOutputFile)
                 println()
             }
 
             if (curve == "all") {
-                val outputFile = inputFile.prefixName("color-stretch(${brightness},${curve})_")
+                val outputFile = inputFile.prefixName(outputDirectory, "color-stretch(${brightness},${curve})_")
                 println("Saving $outputFile")
                 ImageWriter.write(image, outputFile)
             }

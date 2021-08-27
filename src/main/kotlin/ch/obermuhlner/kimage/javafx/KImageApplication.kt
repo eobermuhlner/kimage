@@ -42,6 +42,7 @@ import org.kordamp.ikonli.javafx.FontIcon
 import java.awt.Desktop
 import java.io.*
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.text.DecimalFormat
 import kotlin.math.max
@@ -128,6 +129,7 @@ class KImageApplication : Application() {
     private val useInputDirectoryAsOutputDirectoryProperty = SimpleBooleanProperty(true)
     private val outputDirectoryProperty = SimpleStringProperty(Paths.get(".").toString())
     private val outputHideOldFilesProperty = SimpleBooleanProperty()
+    private val autoCreateOutputDirectoryProperty = SimpleBooleanProperty()
 
     private val runOnlySelectedModeProperty = SimpleBooleanProperty()
     private val previewModeProperty = SimpleBooleanProperty()
@@ -662,6 +664,12 @@ class KImageApplication : Application() {
                         }
                     }
                 }
+                children += togglebutton(FontIcon()) {
+                    id = "auto-create-folder-icon"
+                    tooltip = Tooltip("Automatically creates a new output directory with the same name as the script and a running number.")
+                    selectedProperty().bindBidirectional(autoCreateOutputDirectoryProperty)
+                }
+
                 children += button(FontIcon()) {
                     id = "arrow-up-icon"
                     tooltip = Tooltip("Go to parent directory.")
@@ -964,6 +972,16 @@ class KImageApplication : Application() {
                             id = "play-icon"
                             tooltip = Tooltip("Run the ${script.name} script.")
                             onAction = EventHandler {
+                                if (autoCreateOutputDirectoryProperty.get()) {
+                                    val parentDir = if (useInputDirectoryAsOutputDirectoryProperty.get()) {
+                                        inputDirectoryProperty.get()
+                                    } else {
+                                        outputDirectoryProperty.get()
+                                    }
+                                    val dir = createWorkingDir(parentDir, script.name)
+                                    outputDirectoryProperty.set(dir.path)
+                                }
+
                                 updateOutputDirectoryFiles(outputHideOldFilesProperty.get())
 
                                 val runInputFiles = if (runOnlySelectedModeProperty.get()) {
@@ -1023,6 +1041,19 @@ class KImageApplication : Application() {
                 }
             }
         }
+    }
+
+    private fun createWorkingDir(parent: String, name: String): File {
+        var index = 1
+        var dir: File
+        do {
+            dir = File(parent, "${name}_$index")
+            index++
+        } while (dir.exists())
+
+        Files.createDirectory(dir.toPath())
+
+        return dir
     }
 
     private fun previewImage(

@@ -133,7 +133,7 @@ kimage(0.1) {
                 light = light / flat.get() * flat.get().values().max()
             }
 
-            val outputFile = inputFile.prefixName("calibrated_")
+            val outputFile = inputFile.prefixName(outputDirectory, "calibrated_")
             println("Saving $outputFile")
             ImageWriter.write(light, outputFile)
         }

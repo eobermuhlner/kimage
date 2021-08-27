@@ -11,7 +11,7 @@ class MatrixFunctionsTest {
         val matrix = Matrix.matrixOf(2, 2,
             0.1, 0.2,
             0.3, 0.4)
-        val scaled = matrix.scaleTo(4, 4, Scaling.Nearest)
+        val scaled = matrix.scaleTo(4, 4, 0.0, 0.0, Scaling.Nearest)
 
         val expected = Matrix.matrixOf(4, 4,
             0.1, 0.1, 0.2, 0.2,

@@ -110,7 +110,7 @@ kimage(0.1) {
 
             if (!centerX.isPresent) {
                 val csvWriter = if (verboseMode) {
-                    val file = inputFile.prefixName("find_center_x_${channel}_").suffixExtension(".csv")
+                    val file = inputFile.prefixName(outputDirectory, "find_center_x_${channel}_").suffixExtension(".csv")
                     println("Saving $file")
                     val csvWriter = PrintWriter(FileWriter(file))
                     csvWriter.println("  Y, Amplitude, Mean, Sigma")
@@ -142,7 +142,7 @@ kimage(0.1) {
 
             if (!centerY.isPresent) {
                 val csvWriter = if (verboseMode) {
-                    val file = inputFile.prefixName("find_center_y_${channel}_").suffixExtension(".csv")
+                    val file = inputFile.prefixName(outputDirectory, "find_center_y_${channel}_").suffixExtension(".csv")
                     println("Saving $file")
                     val csvWriter = PrintWriter(FileWriter(file))
                     csvWriter.println("  X, Amplitude, Mean, Sigma")
@@ -235,7 +235,7 @@ kimage(0.1) {
             println()
 
             if (debugMode) {
-                val file = inputFile.prefixName("vignette_curve_fit_${channel}_").suffixExtension(".csv")
+                val file = inputFile.prefixName(outputDirectory, "vignette_curve_fit_${channel}_").suffixExtension(".csv")
                 println("Saving $file")
                 val csvWriter = PrintWriter(FileWriter(file))
                 csvWriter.println("  Index, Count, Average, Median, Polynomial2, Gauss")
@@ -280,7 +280,7 @@ kimage(0.1) {
             Channel.Blue to channelMatrices[min(2, channelMatrices.size-1)])
 
         if (debugMode) {
-            val flatFile = inputFile.prefixName("flat_")
+            val flatFile = inputFile.prefixName(outputDirectory, "flat_")
             println("Saving $flatFile for manual analysis")
             ImageWriter.write(flatImage, flatFile)
             println()

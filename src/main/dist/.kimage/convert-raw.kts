@@ -182,7 +182,8 @@ kimage(0.1) {
         medianPasses: Int,
         bits: String,
         brightness: Double,
-        file: File
+        file: File,
+        outputDirectory: File
     ) {
         val processBuilder = ProcessBuilder()
 
@@ -316,7 +317,7 @@ kimage(0.1) {
         command.add(brightness.toString())
 
         command.add("-O")
-        command.add(file.prefixName("${name}_").replaceExtension("tif").path)
+        command.add(file.prefixName(outputDirectory, "${name}_").replaceExtension("tif").path)
 
         command.add(file.path)
 
@@ -351,7 +352,7 @@ kimage(0.1) {
 
         for (inputFile in inputFiles) {
             println("Converting $inputFile")
-            dcraw(dcraw, aspectRatio, rotate, whitebalance, localX, localY, localRadius, multipliers, darkness, saturation, colorspace, interpolation, medianPasses, bits, brightness, inputFile)
+            dcraw(dcraw, aspectRatio, rotate, whitebalance, localX, localY, localRadius, multipliers, darkness, saturation, colorspace, interpolation, medianPasses, bits, brightness, inputFile, outputDirectory)
             println()
         }
 

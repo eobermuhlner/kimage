@@ -79,7 +79,7 @@ kimage(0.1) {
 
         var backgroundImage = inputImage.interpolate(clippedGrid)
         if (debugMode) {
-            val backgroundFile = inputFile.prefixName("background_")
+            val backgroundFile = inputFile.prefixName(outputDirectory, "background_")
             println("Writing $backgroundFile")
             ImageWriter.write(backgroundImage, backgroundFile)
         }
@@ -88,7 +88,7 @@ kimage(0.1) {
         backgroundImage = backgroundImage * (removePercent/100.0)
 
         if (debugMode) {
-            val deltaFile = inputFile.prefixName("delta_")
+            val deltaFile = inputFile.prefixName(outputDirectory, "delta_")
             println("Saving $deltaFile for manual analysis")
             val deltaImage = deltaChannel(inputImage, backgroundImage)
             ImageWriter.write(deltaImage, deltaFile)

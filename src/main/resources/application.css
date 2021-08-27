@@ -32,6 +32,12 @@
     -fx-icon-color: dimgray;
 }
 
+#auto-create-folder-icon .ikonli-font-icon {
+    -fx-icon-code: "mdi2f-folder-plus-outline";
+    -fx-icon-size: 16px;
+    -fx-icon-color: dimgray;
+}
+
 #open-external .ikonli-font-icon {
     -fx-icon-code: "mdi2o-open-in-new";
     -fx-icon-size: 16px;

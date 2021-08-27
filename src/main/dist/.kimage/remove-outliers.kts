@@ -113,14 +113,14 @@ kimage(0.1) {
             outputMatrices[channel] = outputMatrix
         }
 
-        val file = inputFile.prefixName("badpixels_").suffixExtension(".txt")
+        val file = inputFile.prefixName(outputDirectory, "badpixels_").suffixExtension(".txt")
         println("Saving $file")
         val badpixelWriter = PrintWriter(FileWriter(file))
 
         for (badpixel in badpixels) {
             badpixelWriter.println(String.format("%6d %6d 0", badpixel.first, badpixel.second))
             if (debugMode) {
-                val badPixelFile = inputFile.prefixName("badpixel_${badpixel.first}_${badpixel.second}_")
+                val badPixelFile = inputFile.prefixName(outputDirectory, "badpixel_${badpixel.first}_${badpixel.second}_")
                 val badPixelCrop = inputImage.cropCenter(5, badpixel.first, badpixel.second).scaleBy(4.0, 4.0, 0.0, 0.0, Scaling.Nearest)
                 ImageWriter.write(badPixelCrop, badPixelFile)
             }
@@ -128,7 +128,7 @@ kimage(0.1) {
         badpixelWriter.close()
 
         if (debugMode) {
-            val badpixelImageFile = inputFile.prefixName("badpixel_")
+            val badpixelImageFile = inputFile.prefixName(outputDirectory, "badpixel_")
             println("Saving $badpixelImageFile")
             val badpixelImage = MatrixImage(inputImage.width, inputImage.height, inputImage.channels) { channel, _, _ -> badpixelMatrices[channel]!! }
             ImageWriter.write(badpixelImage, badpixelImageFile)

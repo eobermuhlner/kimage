@@ -48,7 +48,8 @@ kimage(0.1) {
     fun dcraw(
         dcraw: String,
         option: String,
-        file: File
+        file: File,
+        outputDirectory: File
     ) {
         val processBuilder = ProcessBuilder()
 
@@ -71,7 +72,7 @@ kimage(0.1) {
         command.add("-W")
 
         command.add("-O")
-        command.add(file.prefixName("${name}_").replaceExtension("tif").path)
+        command.add(file.prefixName(outputDirectory, "${name}_").replaceExtension("tif").path)
 
         command.add(file.path)
 
@@ -92,7 +93,7 @@ kimage(0.1) {
 
         for (inputFile in inputFiles) {
             println("Converting $inputFile")
-            dcraw(dcraw, option, inputFile)
+            dcraw(dcraw, option, inputFile, outputDirectory)
             println()
         }
 

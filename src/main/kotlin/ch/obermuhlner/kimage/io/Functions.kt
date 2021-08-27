@@ -5,7 +5,11 @@ import java.nio.file.FileSystems
 import java.nio.file.Path
 
 fun File.prefixName(prefix: String): File {
-    return File(this.parent, prefix + this.name)
+    return prefixName(this.parentFile, prefix)
+}
+
+fun File.prefixName(parent: File, prefix: String): File {
+    return File(parent, prefix + this.name)
 }
 
 fun File.suffixName(suffix: String): File {

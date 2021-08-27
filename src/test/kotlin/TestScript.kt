@@ -1,5 +1,6 @@
 import ch.obermuhlner.kimage.*
 import ch.obermuhlner.kimage.align.*
+import ch.obermuhlner.kimage.fft.Complex
 import ch.obermuhlner.kimage.fft.ComplexMatrix
 import ch.obermuhlner.kimage.fft.FFT
 import ch.obermuhlner.kimage.filter.*
@@ -8,7 +9,6 @@ import ch.obermuhlner.kimage.image.*
 import ch.obermuhlner.kimage.io.*
 import ch.obermuhlner.kimage.math.*
 import ch.obermuhlner.kimage.matrix.*
-import ch.obermuhlner.util.StreamGobbler
 import org.apache.commons.math3.fitting.*
 import org.apache.commons.math3.fitting.PolynomialCurveFitter
 import org.apache.commons.math3.fitting.WeightedObservedPoints
@@ -17,13 +17,14 @@ import java.io.*
 import java.lang.Math.toRadians
 import java.nio.file.*
 import java.util.*
-import java.util.concurrent.Executors
 import kotlin.math.*
 
 object TestScript {
 
     @JvmStatic
     fun main(args: Array<String>) {
+        KImageManager.addScriptDirectory(File("src/main/dist"))
+
         val orionImages = arrayOf("images/align/orion1.png", "images/align/orion2.png", "images/align/orion3.png", "images/align/orion4.png", "images/align/orion5.png", "images/align/orion6.png")
         val alignedOrionImages = arrayOf("images/align/aligned_orion1.png", "images/align/aligned_orion2.png", "images/align/aligned_orion3.png", "images/align/aligned_orion4.png", "images/align/aligned_orion5.png", "images/align/aligned_orion6.png")
         //val hdrImages = arrayOf("images/hdr/hdr1.jpg", "images/hdr/hdr2.jpg", "images/hdr/hdr3.jpg", "images/hdr/hdr4.jpg")
@@ -58,12 +59,261 @@ object TestScript {
         //runScript(scriptDebayer(), mapOf("interpolation" to "bilinear", "whitebalance" to "highlight-median", "localX" to "6036", "localY" to "2389", "localRadius" to "10", "stretch" to "true"), "images/raw/IMG_8922_pure-unscaled.tiff")
 
         //runScript(scriptDeconvolute(), mapOf(), "images/gauss3_animal.png")
-        runScript(scriptDeconvolute(), mapOf("method" to "fft"), "images/gauss3_animal.png")
+        //runScript(scriptDeconvolute(), mapOf("method" to "fft", "psf" to "gauss3x3"), "images/gauss3_animal.png")
 
         //runScript(scriptSamplePSF(), mapOf("sampleX" to "20", "sampleY" to "20", "radius" to "3"), "images/gauss3_animal.png")
 
         //runScript(scriptWhitebalance(), mapOf("whitebalance" to "local", "localX" to "1897", "localY" to "3207"), "images/colorchart/debayer_colorchart_cloudy.tiff")
+
+        //runScript(scriptComposition(), mapOf(), "images/animal.png")
+
+        runScript(scriptPickBest(), mapOf("centerX" to "400", "centerY" to "400", "radius" to "200"), *alignedOrionImages)
     }
+
+    private fun scriptPickBest(): Script =
+        kimage(0.1) {
+            name = "pick-best"
+            title = "Picks the best images"
+            description = """
+                Picks the best images.
+                
+                The input images must already be aligned.
+                """
+            arguments {
+                int("centerX") {
+                    description = """
+                        The center x coordinate to measure for similarity.
+                        """
+                    hint = Hint.ImageX
+                }
+                int("centerY") {
+                    description = """
+                        The center y coordinate to measure for similarity.
+                        """
+                    hint = Hint.ImageY
+                }
+                int("radius") {
+                    description = """
+                        The radius to measure for similarity.
+                        """
+                    min = 1
+                }
+                string("prefix") {
+                    description = """
+                        The prefix for the copied files.
+                        """
+                    default = "best"
+                }
+            }
+
+            multi {
+                val centerX: Int by arguments
+                val centerY: Int by arguments
+                val radius: Int by arguments
+                val prefix: String by arguments
+
+                val measureChannel = Channel.Luminance
+
+                val croppedSize = radius * 2 + 1
+                val errorMatrix = DoubleMatrix(croppedSize, croppedSize)
+                val croppedMatrices = mutableListOf<Matrix>()
+                //val huge = HugeFloatArray(inputFiles.size, croppedSize, croppedSize)
+
+                for (fileIndex in inputFiles.indices) {
+                    println("Loading ${inputFiles[fileIndex]}")
+                    val inputImage = ImageReader.read(inputFiles[fileIndex])
+
+                    val croppedImage = inputImage.cropCenter(radius, centerX, centerY)
+                    croppedMatrices.add(croppedImage[measureChannel].copy())
+                }
+                println()
+
+                println("Calculating error between images")
+                for (fileIndexY in inputFiles.indices) {
+                    for (fileIndexX in fileIndexY+1 until inputFiles.size) {
+                        errorMatrix[fileIndexX, fileIndexY] = croppedMatrices[fileIndexY].averageError(croppedMatrices[fileIndexX])
+                        errorMatrix[fileIndexY, fileIndexX] = errorMatrix[fileIndexX, fileIndexY]
+                    }
+                }
+
+                println("Finding best image")
+                var bestStddev = Double.MAX_VALUE
+                var bestFileIndex = 0
+                for (fileIndex in inputFiles.indices) {
+                    val errors = DoubleArray(inputFiles.size * 2)
+                    for (i in inputFiles.indices) {
+                        errors[2 * i + 0] = errorMatrix[fileIndex, i]
+                        errors[2 * i + 1] = -errorMatrix[fileIndex, i]
+                    }
+                    val stddev = errors.stddev()
+                    if (verboseMode) {
+                        println("Standard Deviation ${inputFiles[fileIndex]} : $stddev")
+                    }
+
+                    if (stddev < bestStddev) {
+                        bestStddev = stddev
+                        bestFileIndex = fileIndex
+                    }
+                }
+                if (verboseMode) {
+                    println()
+                }
+
+                val bestErrors = mutableMapOf<File, Double>()
+                for (fileIndex in inputFiles.indices) {
+                    bestErrors[inputFiles[fileIndex]] = errorMatrix[bestFileIndex, fileIndex]
+                }
+
+                val sortedFiles = inputFiles.sortedBy { f -> bestErrors[f] }
+
+                println("Best ${inputFiles[bestFileIndex]}")
+                for (sortedFile in sortedFiles) {
+                    val error = bestErrors[sortedFile]
+                    if (verboseMode) {
+                        println("  $sortedFile : $error")
+                    }
+                }
+                if (verboseMode) {
+                    println()
+                }
+
+                for (sortedFileIndex in sortedFiles.indices) {
+                    val fromFile = sortedFiles[sortedFileIndex]
+                    val sortPrefix = String.format("${prefix}_%04d_", sortedFileIndex)
+                    val toFile = fromFile.prefixName(outputDirectory, sortPrefix)
+
+                    println("Copying ${fromFile.name} to ${toFile.name}")
+                    Files.copy(fromFile.toPath(), toFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                }
+
+                null
+            }
+        }
+
+    private fun scriptCropBrightest(): Script =
+        kimage(0.1) {
+            name = "crop-brightest"
+            title = "Crop brightest patch"
+            description = """
+                Crops the brightest part of an image.
+                """
+            arguments {
+                double("percentile") {
+                    min = 0.0
+                    max = 100.0
+                    unit = "% percentile"
+                    default = 80.0
+                }
+                string("channel") {
+                    description = """
+                        """
+                    allowed = listOf("gray", "luminance", "red", "green", "blue")
+                    default = "gray"
+                }
+                int("radius") {
+                    min = 1
+                }
+            }
+
+            single {
+                val percentile: Double by arguments
+                val channel: String by arguments
+                val radius: Int by arguments
+
+                val measureChannel = when (channel) {
+                    "gray" -> Channel.Gray
+                    "luminance" -> Channel.Luminance
+                    "red" -> Channel.Red
+                    "green" -> Channel.Green
+                    "blue" -> Channel.Blue
+                    else -> throw IllegalArgumentException("Unknown channel: $channel")
+                }
+
+                val measureMatrix = inputImage[measureChannel]
+
+                val histogram = Histogram()
+                histogram.add(measureMatrix)
+                val percentileValue = histogram.estimatePercentile(percentile / 100.0)
+
+                var largestPatchWidth = 0
+                var largestPatchX = 0
+                var largestPatchY = 0
+
+                for (y in 0 until inputImage.height) {
+                    var insidePatch = false
+                    var patchStartX = 0
+                    for (x in 0 until inputImage.width) {
+                        if (measureMatrix[x, y] >= percentileValue) {
+                            if (!insidePatch) {
+                                patchStartX = x
+                                insidePatch = true
+                            }
+                        } else {
+                            if (insidePatch) {
+                                val patchWidth = x - patchStartX
+                                if (patchWidth > largestPatchWidth) {
+                                    largestPatchWidth = patchWidth
+                                    largestPatchX = patchStartX + largestPatchWidth/2
+                                    largestPatchY = y
+                                }
+                                insidePatch = false
+                            }
+                        }
+                    }
+                }
+
+                inputImage.cropCenter(radius, largestPatchX, largestPatchY)
+            }
+        }
+
+    private fun scriptDrizzle(): Script =
+        kimage(0.1) {
+            name = "drizzle"
+            title = "Drizzle multiple images"
+            description = """
+                Drizzle multiple images.
+                """
+            arguments {
+                double("factor") {
+                    default = 2.0
+                }
+                double("fraction") {
+                    default = 0.5
+                }
+            }
+
+            multi {
+                val factor: Double by arguments
+                val fraction: Double by arguments
+
+                null
+            }
+        }
+
+    private fun scriptComposition(): Script =
+        kimage(0.1) {
+            name = "test-composition"
+            title = "Composition of kimage scripts"
+            description = """
+                KImage scripts calling other kimage scripts.
+                """
+            arguments {
+            }
+
+            multi {
+                //val directory = if (inputFiles.isNotEmpty()) inputFiles[0].parentFile else File(".")
+                val directory = File(".")
+
+                runScript("filter",
+                    inputFiles,
+                    "filter" to "median",
+                    "radius" to 5)
+
+                runScript("rotate-left",
+                    directory.matchingFiles("filter_*"))
+
+            }
+        }
 
     private fun scriptSamplePSF(): Script =
         kimage(0.1) {
@@ -273,12 +523,24 @@ object TestScript {
 
                 fun Matrix.deconvoluteFFT(psfKernel: Matrix): Matrix {
                     val paddedMatrix = FFT.padPowerOfTwo(this)
-                    //val paddedKernel = psfKernel.crop((-paddedMatrix.width+psfKernel.width)/2, (-paddedMatrix.height+psfKernel.height)/2, paddedMatrix.width, paddedMatrix.height)
-                    val paddedKernel = psfKernel.crop(0, 0, paddedMatrix.width, paddedMatrix.height)
+                    val paddedKernel = Matrix.matrixOf(paddedMatrix.width, paddedMatrix.height)
+                    paddedKernel.set(psfKernel)
                     val frequencyMatrix = FFT.fft(ComplexMatrix(paddedMatrix))
                     val frequencyKernel = FFT.fft(ComplexMatrix(paddedKernel))
                     val frequencyDeconvoluted = frequencyMatrix elementDiv frequencyKernel
-                    return FFT.fftInverse(frequencyDeconvoluted).re
+                    frequencyDeconvoluted.onEach { c ->
+                        var re = c.re
+                        var im = c.im
+                        if (!re.isFinite()) {
+                            re = 1.0
+                        }
+                        if (!im.isFinite()) {
+                            im = 1.0
+                        }
+                        Complex(re, im)
+                    }
+                    val result = FFT.fftInverse(frequencyDeconvoluted)
+                    return result.re
                 }
 
                 val outputMatrices: MutableMap<Channel, Matrix> = mutableMapOf()
@@ -324,7 +586,7 @@ object TestScript {
                 if (debugMode) {
                     val m = psfKernelMatrices.iterator().next().value
                     val psfKernelImage = MatrixImage(m.width, m.height, psfKernelMatrices.keys.toList()) { channel, _, _ -> psfKernelMatrices[channel]!! }
-                    val psfFile = inputFile.prefixName("psf_")
+                    val psfFile = inputFile.prefixName(outputDirectory, "psf_")
                     println("Saving $psfFile for manual analysis")
                     ImageWriter.write(psfKernelImage, psfFile)
                 }
@@ -811,416 +1073,6 @@ object TestScript {
             }
         }
 
-    private fun scriptConvertRawPure(): Script =
-        kimage(0.1) {
-            name = "convert-raw-pure"
-            title = "Convert an image from pure raw format into tiff"
-            description = """
-                Convert a raw image with minimal transformations into a tiff image.
-                """
-            arguments {
-                string("dcraw") {
-                    description = """
-               The `dcraw` executable.
-               
-               If the executable is not in the `PATH` then the absolute path is required to run it.
-            """
-                    default = "dcraw"
-                }
-                string("option") {
-                    description = """
-                Specifies the transformation options to use.
-                No demosaicing interpolation will be used.
-                
-                - `scaled`, `none`: No interpolation, with automatic scaling to fill the value range.
-                
-                  Corresponds to the `-d` option in the `dcraw` command line tool.
-                - `unscaled`, `none-unscaled`: No interpolation, no scaling.
-                
-                  Corresponds to the `-D` option in the `dcraw` command line tool.
-                - `uncropped`, `none-uncropped`: No interpolation, no scaling, no cropping.
-                
-                  Corresponds to the `-E` option in the `dcraw` command line tool.
-                """
-                    allowed = listOf("scaled", "unscaled", "uncropped", "none", "none-unscaled", "none-uncropped")
-                    default = "unscaled"
-                }
-            }
-
-            fun dcraw(
-                dcraw: String,
-                option: String,
-                file: File
-            ) {
-                val processBuilder = ProcessBuilder()
-
-                val command = mutableListOf(dcraw, "-T", "-v")
-
-                when(option) {
-                    "scaled" -> command.add("-d")
-                    "none" -> command.add("-d")
-                    "unscaled" -> command.add("-D")
-                    "none-unscaled" -> command.add("-D")
-                    "uncropped" -> command.add("-E")
-                    "none-uncropped" -> command.add("-E")
-                    else -> throw IllegalArgumentException("Unknown option: $option")
-                }
-
-                command.add("-4")
-                command.add("-j")
-                command.add("-t")
-                command.add("0")
-                command.add("-O")
-                command.add(file.prefixName(name).replaceExtension("tif").path)
-                command.add(file.path)
-
-                println("Command: $command")
-
-                processBuilder.command(command)
-
-                val process = processBuilder.start()
-
-                Executors.newSingleThreadExecutor().submit(StreamGobbler(process.errorStream, System.out::println))
-                val exitCode = process.waitFor()
-                println("Exit code: $exitCode")
-            }
-
-            multi {
-                val dcraw: String by arguments
-                val option: String by arguments
-
-                for (inputFile in inputFiles) {
-                    println("Converting $inputFile")
-                    dcraw(dcraw, option, inputFile)
-                    println()
-                }
-
-                null
-            }
-        }
-
-    private fun scriptConvertRaw(): Script =
-        kimage(0.1) {
-            name = "convert-raw"
-            title = "Convert an image from raw format into tiff"
-            description = """
-                Convert an image from raw format into tiff.
-                """
-            arguments {
-                string("dcraw") {
-                    description = """
-               The `dcraw` executable.
-               
-               If the executable is not in the `PATH` then the absolute path is required to run it.
-            """
-                    default = "dcraw"
-                }
-                string("rotate") {
-                    description = """
-               The angle to rotate the image.
-               - `auto` will use the information in the image rotate. 
-               
-              This corresponds to the `-t` option in the `dcraw` command line tool.
-            """
-                    allowed = listOf("0", "90", "180", "270", "auto")
-                    default = "auto"
-                }
-                boolean("aspectRatio") {
-                    description = """
-               
-              This corresponds to the `-j` option in the `dcraw` command line tool.
-            """
-                    default = true
-                }
-                string("whitebalance") {
-                    description = """
-              The whitebalance setting used to adjust the colors.
-              
-              - `camera` will use the whitebalance settings measured by the camera (if available)
-              - `image` will calculate the whitebalance settings from the image
-              - `local` will calculate the whitebalance settings from a local area of the image
-              - `custom` will use the provided custom multipliers
-              - `fixed` will use fixed default white balance multipliers.
-              
-              The `camera` whitebalance corresponds to the `-w` option in the `dcraw` command line tool.
-              The `image` whitebalance corresponds to the `-a` option in the `dcraw` command line tool.
-              The `custom` whitebalance corresponds to the `-r` option in the `dcraw` command line tool.
-              The `fixed` whitebalance corresponds to the `-W` option in the `dcraw` command line tool.
-            """
-                    allowed = listOf("camera", "image", "local", "custom", "fixed")
-                    default = "camera"
-                }
-                optionalInt("localX") {
-                    hint = Hint.ImageX
-                    enabledWhen = Reference("whitebalance").isEqual("local")
-                }
-                optionalInt("localY") {
-                    hint = Hint.ImageY
-                    enabledWhen = Reference("whitebalance").isEqual("local")
-                }
-                optionalInt("localRadius") {
-                    enabledWhen = Reference("whitebalance").isEqual("local")
-                    default = 10
-                }
-                optionalList("multipliers") {
-                    description = """
-              The four multipliers used for `custom` whitebalance mode.
-              
-              Corresponds to the `-r` option in the `dcraw` command line tool.
-              """
-                    min = 4
-                    max = 4
-                    enabledWhen = Reference("whitebalance").isEqual("custom")
-                    double {
-                    }
-                }
-                string("colorspace") {
-                    description = """
-                The colorspace to be used for the output image.
-                """
-                    allowed = listOf("raw", "sRGB", "AdobeRGB", "WideGamutRGB", "KodakProPhotoRGB", "XYZ", "ACES", "embed")
-                    default = "sRGB"
-                }
-                string("interpolation") {
-                    description = """
-                The demosaicing interpolation method to use.
-                
-                - `bilinear`: Bilinear interpolation between neighboring pixels of the same color.
-                
-                  Corresponds to the `-q 0` option in the `dcraw` command line tool.
-                - `VNG`: Variable Number Gradients
-                
-                  Corresponds to the `-q 1` option in the `dcraw` command line tool.
-                - `PPG`: Patterned Pixel Grouping
-                
-                  Corresponds to the `-q 2` option in the `dcraw` command line tool.
-                - `AHD`: Adaptive Homogeneity Directed
-                
-                  Corresponds to the `-q 3` option in the `dcraw` command line tool.
-                - `none`: No interpolation, with automatic scaling to fill the value range.
-                
-                  Corresponds to the `-d` option in the `dcraw` command line tool.
-                - `none-unscaled`: No interpolation, no scaling.
-                
-                  Corresponds to the `-D` option in the `dcraw` command line tool.
-                - `none-uncropped`: No interpolation, no scaling, no cropping.
-                
-                  Corresponds to the `-E` option in the `dcraw` command line tool.
-                """
-                    allowed = listOf("bilinear", "VNG", "PPG", "AHD", "none", "none-unscaled", "none-uncropped")
-                    default = "AHD"
-                }
-                int("medianPasses") {
-                    description = """
-                The number of 3x3 median passes to post-process the output image.
-                
-                Corresponds to the `-m` option in the `dcraw` command line tool.
-                """
-                    default = 0
-                }
-                string("bits") {
-                    description = """
-                The number of bits used to store a single value in the image.                
-                
-                The 16 bit mode corresponds to the `-6` option in the `dcraw` command line tool.
-                """
-                    allowed = listOf("8", "16")
-                    default = "16"
-                }
-//        record("gamma") {
-//            double("gammaPower") {
-//                default = 2.222
-//            }
-//            double("gammaSlope") {
-//                default = 4.5
-//            }
-//        }
-                double("brightness") {
-                    default = 1.0
-                }
-            }
-
-            fun dcraw(
-                dcraw: String,
-                aspectRatio: Boolean,
-                rotate: String,
-                whitebalance: String,
-                localX: Optional<Int>,
-                localY: Optional<Int>,
-                localRadius: Optional<Int>,
-                multipliers: Optional<List<Double>>,
-                colorspace: String,
-                interpolation: String,
-                medianPasses: Int,
-                bits: String,
-                brightness: Double,
-                file: File
-            ) {
-                val processBuilder = ProcessBuilder()
-
-                val command = mutableListOf(dcraw, "-T", "-v")
-                if (!aspectRatio) {
-                    command.add("-j")
-                }
-                when (rotate) {
-                    "0" -> {
-                        command.add("-t")
-                        command.add("0")
-                    }
-                    "90" -> {
-                        command.add("-t")
-                        command.add("90")
-                    }
-                    "180" -> {
-                        command.add("-t")
-                        command.add("180")
-                    }
-                    "270" -> {
-                        command.add("-t")
-                        command.add("270")
-                    }
-                    "auto" -> {}
-                    else -> throw java.lang.IllegalArgumentException("Unknown rotate: $rotate")
-                }
-                when (whitebalance) {
-                    "camera" -> command.add("-w")
-                    "image" -> command.add("-a")
-                    "local" -> {
-                        command.add("-A")
-                        command.add((localX.get() - localRadius.get()).toString())
-                        command.add((localY.get() - localRadius.get()).toString())
-                        command.add((localRadius.get() * 2 + 1).toString())
-                        command.add((localRadius.get() * 2 + 1).toString())
-
-                    }
-                    "custom" -> {
-                        command.add("-r")
-                        if (multipliers.isPresent) {
-                            command.add(multipliers.get()[0].toString())
-                            command.add(multipliers.get()[1].toString())
-                            command.add(multipliers.get()[2].toString())
-                            command.add(multipliers.get()[3].toString())
-                        } else {
-                            command.add("1")
-                            command.add("1")
-                            command.add("1")
-                            command.add("1")
-                        }
-                    }
-                    "fixed" -> command.add("-W")
-                    else -> throw java.lang.IllegalArgumentException("Unknown whitebalance: $whitebalance")
-                }
-                when (colorspace) {
-                    "raw" -> {
-                        command.add("-o")
-                        command.add("0")
-                    }
-                    "sRGB" -> {
-                        command.add("-o")
-                        command.add("1")
-                    }
-                    "AdobeRGB" -> {
-                        command.add("-o")
-                        command.add("2")
-                    }
-                    "WideGamutRGB" -> {
-                        command.add("-o")
-                        command.add("3")
-                    }
-                    "KodakProPhotoRGB" -> {
-                        command.add("-o")
-                        command.add("4")
-                    }
-                    "XYZ" -> {
-                        command.add("-o")
-                        command.add("5")
-                    }
-                    "ACES" -> {
-                        command.add("-o")
-                        command.add("6")
-                    }
-                    "embed" -> {
-                        command.add("-p")
-                        command.add("embed")
-                    }
-                    else -> throw java.lang.IllegalArgumentException("Unknown colorspace: $colorspace")
-                }
-                when (interpolation) {
-                    // "bilinear", "variable-number-gradients", "patterned-pixel-grouping", "adaptive-homogeneity-directed", "none", "none-unscaled", "none-uncropped"
-                    "bilinear" -> {
-                        command.add("-q")
-                        command.add("0")
-                    }
-                    "VNG" -> {
-                        command.add("-q")
-                        command.add("1")
-                    }
-                    "PPG" -> {
-                        command.add("-q")
-                        command.add("2")
-                    }
-                    "AHD" -> {
-                        command.add("-q")
-                        command.add("3")
-                    }
-                    "none" -> command.add("-d")
-                    "none-unscaled" -> command.add("-D")
-                    "none-uncropped" -> command.add("-E")
-                    else -> throw java.lang.IllegalArgumentException("Unknown interpolation: $interpolation")
-                }
-                if (medianPasses > 0) {
-                    command.add("-m")
-                    command.add(medianPasses.toString())
-                }
-                when (bits) {
-                    "16" -> command.add("-6")
-                    else -> {}
-                }
-                command.add("-b")
-                command.add(brightness.toString())
-
-                command.add("-O")
-                command.add(file.prefixName("${name}_").replaceExtension("tif").path)
-
-                command.add(file.path)
-
-                println("Command: $command")
-
-                processBuilder.command(command)
-                //processBuilder.directory(file.parentFile)
-
-                val process = processBuilder.start()
-
-                Executors.newSingleThreadExecutor().submit(StreamGobbler(process.errorStream, System.out::println))
-                val exitCode = process.waitFor()
-                println("Exit code: $exitCode")
-            }
-
-            multi {
-                val dcraw: String by arguments
-                val aspectRatio: Boolean by arguments
-                val rotate: String by arguments
-                val whitebalance: String by arguments
-                val localX: Optional<Int> by arguments
-                val localY: Optional<Int> by arguments
-                val localRadius: Optional<Int> by arguments
-                val multipliers: Optional<List<Double>> by arguments
-                val colorspace: String by arguments
-                val interpolation: String by arguments
-                val medianPasses: Int by arguments
-                val bits: String by arguments
-                val brightness: Double by arguments
-
-                for (inputFile in inputFiles) {
-                    println("Converting $inputFile")
-                    dcraw(dcraw, aspectRatio, rotate, whitebalance, localX, localY, localRadius, multipliers, colorspace, interpolation, medianPasses, bits, brightness, inputFile)
-                    println()
-                }
-
-                null
-            }
-        }
-
     private fun scriptRemoveOutliers(): Script =
         kimage(0.1) {
             name = "remove-outliers"
@@ -1326,14 +1178,14 @@ object TestScript {
                     outputMatrices[channel] = outputMatrix
                 }
 
-                val file = inputFile.prefixName("badpixels_").suffixExtension(".txt")
+                val file = inputFile.prefixName(outputDirectory, "badpixels_").suffixExtension(".txt")
                 println("Saving $file")
                 val badpixelWriter = PrintWriter(FileWriter(file))
 
                 for (badpixel in badpixels) {
                     badpixelWriter.println(String.format("%6d %6d 0", badpixel.first, badpixel.second))
                     if (debugMode) {
-                        val badPixelFile = inputFile.prefixName("badpixel_${badpixel.first}_${badpixel.second}_")
+                        val badPixelFile = inputFile.prefixName(outputDirectory, "badpixel_${badpixel.first}_${badpixel.second}_")
                         val badPixelCrop = inputImage.cropCenter(5, badpixel.first, badpixel.second).scaleBy(
                             4.0,
                             4.0,
@@ -1347,7 +1199,7 @@ object TestScript {
                 badpixelWriter.close()
 
                 if (debugMode) {
-                    val badpixelImageFile = inputFile.prefixName("badpixel_")
+                    val badpixelImageFile = inputFile.prefixName(outputDirectory, "badpixel_")
                     println("Saving $badpixelImageFile")
                     val badpixelImage = MatrixImage(inputImage.width, inputImage.height, inputImage.channels) { channel, _, _ -> badpixelMatrices[channel]!! }
                     ImageWriter.write(badpixelImage, badpixelImageFile)
@@ -1429,7 +1281,7 @@ object TestScript {
                 if (verboseMode) println("Running median filter ...")
                 val medianImage = inputImage.medianFilter(medianFilterSize)
                 if (debugMode) {
-                    val medianFile = inputFile.prefixName("median_")
+                    val medianFile = inputFile.prefixName(outputDirectory, "median_")
                     println("Writing $medianFile")
                     ImageWriter.write(medianImage, medianFile)
                 }
@@ -1437,7 +1289,7 @@ object TestScript {
                 if (verboseMode) println("Running gaussian blur filter ...")
                 val backgroundImage = medianImage.gaussianBlurFilter(blurFilterSize)
                 if (debugMode) {
-                    val backgroundFile = inputFile.prefixName("background_")
+                    val backgroundFile = inputFile.prefixName(outputDirectory, "background_")
                     println("Writing $backgroundFile")
                     ImageWriter.write(backgroundImage, backgroundFile)
                 }
@@ -1501,6 +1353,12 @@ object TestScript {
                     min = 0.0
                     default = 0.001
                 }
+                double("subPixelStep") {
+                    description = """
+                        """
+                    //allowed = listOf(0.5, 0.2, 0.1, 0.05, 0.02, 0.01)
+                    default = 0.1
+                }
                 string("prefix") {
                     description = "The prefix of the aligned output files."
                     default = "aligned"
@@ -1513,6 +1371,10 @@ object TestScript {
                     description = "The prefix of the badly aligned output files."
                     enabledWhen = Reference("saveBad").isEqual(true)
                     default = "badaligned"
+                }
+                boolean("sort") {
+                    description = "Sort output files by error (best aligned first)."
+                    default = true
                 }
             }
 
@@ -1549,9 +1411,11 @@ object TestScript {
                 }
 
                 val errorThreshold: Double by arguments
+                val subPixelStep: Double by arguments
                 val prefix: String by arguments
                 val saveBad: Boolean by arguments
                 val prefixBad: String by arguments
+                val sort: Boolean by arguments
 
                 println("Arguments (calculated from input):")
                 println("  checkRadius = ${checkRadius.get()}")
@@ -1562,11 +1426,13 @@ object TestScript {
 
                 if (debugMode) {
                     val checkImage = baseImage.cropCenter(checkRadius.get(), centerX.get(), centerY.get())
-                    val checkFile = baseInputFile.prefixName("check_")
+                    val checkFile = baseInputFile.prefixName(outputDirectory, "check_")
                     println("Saving $checkFile for manual analysis")
                     ImageWriter.write(checkImage, checkFile)
                     println()
                 }
+
+                val outputFilesAlignment = mutableListOf<Pair<File, Alignment>>()
 
                 for (inputFile in inputFiles) {
                     println("Loading image: $inputFile")
@@ -1579,32 +1445,60 @@ object TestScript {
                         image,
                         centerX = centerX.get(),
                         centerY = centerY.get(),
-                        maxOffset = searchRadius.get()
+                        maxOffset = searchRadius.get(),
+                        subPixelStep = subPixelStep
                     )
                     println("Alignment: $alignment")
 
-                    val alignedImage = image.crop(alignment.x, alignment.y, baseImage.width, baseImage.height)
+                    val alignedImage = if (alignment.subPixelX != 0.0 || alignment.subPixelY != 0.0) {
+                        image.scaleBy(1.0, 1.0, alignment.subPixelX, alignment.subPixelY).crop(alignment.x, alignment.y, baseImage.width, baseImage.height)
+                    } else {
+                        image.crop(alignment.x, alignment.y, baseImage.width, baseImage.height)
+                    }
 
                     val error = baseImage.averageError(alignedImage)
                     if (error <= errorThreshold) {
-                        val alignedFile = inputFile.prefixName("${prefix}_")
+                        val alignedFile = inputFile.prefixName(outputDirectory, "${prefix}_")
                         println("Error $error <= $errorThreshold : saving $alignedFile")
                         ImageWriter.write(alignedImage, alignedFile)
+                        outputFilesAlignment.add(Pair(alignedFile, alignment))
                     } else {
                         if (saveBad) {
-                            val badalignedFile = inputFile.prefixName("${prefixBad}_")
+                            val badalignedFile = inputFile.prefixName(outputDirectory, "${prefixBad}_")
                             println("Error $error > $errorThreshold : saving $badalignedFile")
                             ImageWriter.write(alignedImage, badalignedFile)
+                            outputFilesAlignment.add(Pair(badalignedFile, alignment))
                         } else {
                             println("Error $error > $errorThreshold : ignoring badly aligned image")
                         }
                     }
 
                     if (debugMode) {
-                        val deltaFile = inputFile.prefixName("delta_${prefix}_")
+                        val deltaFile = inputFile.prefixName(outputDirectory, "delta_${prefix}_")
                         println("Saving $deltaFile for manual analysis")
                         val deltaImage = deltaChannel(baseImage, alignedImage)
                         ImageWriter.write(deltaImage, deltaFile)
+                    }
+
+                    println()
+                }
+
+                // sort images by error
+                if (sort) {
+                    outputFilesAlignment.sortBy { it.second.error }
+
+                    var outputFileIndex = 0
+                    for (outputFileAlignment in outputFilesAlignment) {
+                        val fileName = outputFileAlignment.first.name
+                        val sortString = String.format("_%04d", outputFileIndex)
+                        val sortedFileName = when {
+                            fileName.startsWith(prefix) -> prefix + sortString + fileName.removePrefix(prefix)
+                            fileName.startsWith(prefixBad) -> prefixBad + sortString + fileName.removePrefix(prefixBad)
+                            else -> sortString + fileName
+                        }
+                        println("Renaming $fileName to $sortedFileName")
+                        Files.move(outputFileAlignment.first.toPath(), File(outputFileAlignment.first.parent, sortedFileName).toPath(), StandardCopyOption.REPLACE_EXISTING)
+                        outputFileIndex++;
                     }
 
                     println()
@@ -1819,7 +1713,7 @@ object TestScript {
                         println()
                     }
 
-                    val outputFile = inputFiles[0].prefixName("stack(${method})_")
+                    val outputFile = inputFiles[0].prefixName(outputDirectory, "stack(${method})_")
                     println("Saving $outputFile")
                     ImageWriter.write(resultImage, outputFile)
 
@@ -1930,7 +1824,7 @@ object TestScript {
                     }
                 }
 
-                val outputFile = inputFiles[0].prefixName("hdr_")
+                val outputFile = inputFiles[0].prefixName(outputDirectory, "hdr_")
                 println("Saving $outputFile")
                 ImageWriter.write(resultImage, outputFile)
 
@@ -2121,7 +2015,7 @@ object TestScript {
                         light = light / flat.get() * flat.get().values().max()
                     }
 
-                    val outputFile = inputFile.prefixName("calibrated_")
+                    val outputFile = inputFile.prefixName(outputDirectory, "calibrated_")
                     println("Saving $outputFile")
                     ImageWriter.write(light, outputFile)
                 }
@@ -2201,7 +2095,7 @@ object TestScript {
 
                 var backgroundImage = inputImage.interpolate(clippedGrid)
                 if (debugMode) {
-                    val backgroundFile = inputFile.prefixName("background_")
+                    val backgroundFile = inputFile.prefixName(outputDirectory, "background_")
                     println("Writing $backgroundFile")
                     ImageWriter.write(backgroundImage, backgroundFile)
                 }
@@ -2210,7 +2104,7 @@ object TestScript {
                 backgroundImage = backgroundImage * (removePercent/100.0)
 
                 if (debugMode) {
-                    val deltaFile = inputFile.prefixName("delta_")
+                    val deltaFile = inputFile.prefixName(outputDirectory, "delta_")
                     println("Saving $deltaFile for manual analysis")
                     val deltaImage = deltaChannel(inputImage, backgroundImage)
                     ImageWriter.write(deltaImage, deltaFile)
@@ -2318,7 +2212,7 @@ object TestScript {
 
                     if (!centerX.isPresent) {
                         val csvWriter = if (verboseMode) {
-                            val file = inputFile.prefixName("find_center_x_${channel}_").suffixExtension(".csv")
+                            val file = inputFile.prefixName(outputDirectory, "find_center_x_${channel}_").suffixExtension(".csv")
                             println("Saving $file")
                             val csvWriter = PrintWriter(FileWriter(file))
                             csvWriter.println("  Y, Amplitude, Mean, Sigma")
@@ -2350,7 +2244,7 @@ object TestScript {
 
                     if (!centerY.isPresent) {
                         val csvWriter = if (verboseMode) {
-                            val file = inputFile.prefixName("find_center_y_${channel}_").suffixExtension(".csv")
+                            val file = inputFile.prefixName(outputDirectory, "find_center_y_${channel}_").suffixExtension(".csv")
                             println("Saving $file")
                             val csvWriter = PrintWriter(FileWriter(file))
                             csvWriter.println("  X, Amplitude, Mean, Sigma")
@@ -2443,7 +2337,7 @@ object TestScript {
                     println()
 
                     if (debugMode) {
-                        val file = inputFile.prefixName("vignette_curve_fit_${channel}_").suffixExtension(".csv")
+                        val file = inputFile.prefixName(outputDirectory, "vignette_curve_fit_${channel}_").suffixExtension(".csv")
                         println("Saving $file")
                         val csvWriter = PrintWriter(FileWriter(file))
                         csvWriter.println("  Index, Count, Average, Median, Polynomial2, Gauss")
@@ -2488,7 +2382,7 @@ object TestScript {
                     Channel.Blue to channelMatrices[min(2, channelMatrices.size-1)])
 
                 if (debugMode) {
-                    val flatFile = inputFile.prefixName("flat_")
+                    val flatFile = inputFile.prefixName(outputDirectory, "flat_")
                     println("Saving $flatFile for manual analysis")
                     ImageWriter.write(flatImage, flatFile)
                     println()
@@ -2914,8 +2808,8 @@ object TestScript {
     }
 
     fun runScript(script: Script, arguments: Map<String, String>, files: List<File>) {
-        KImageManager.executeScript(script, arguments, files, true, true, true , "output", "")
-        KImageManager.executeScript(script, arguments, files, false, true, true , "output", "")
+        KImageManager.executeScript(script, arguments, files, true, true, true , "output", ".")
+        KImageManager.executeScript(script, arguments, files, false, true, true , "output", ".")
     }
 
     private fun runSingleModeScript(filepath: String) {

@@ -170,7 +170,7 @@ kimage(0.1) {
         if (debugMode) {
             val m = psfKernelMatrices.iterator().next().value
             val psfKernelImage = MatrixImage(m.width, m.height, psfKernelMatrices.keys.toList()) { channel, _, _ -> psfKernelMatrices[channel]!! }
-            val psfFile = inputFile.prefixName("psf_")
+            val psfFile = inputFile.prefixName(outputDirectory, "psf_")
             println("Saving $psfFile for manual analysis")
             ImageWriter.write(psfKernelImage, psfFile)
         }

@@ -80,7 +80,7 @@ class ImageAligner(
                                 bestAlignX = dx
                                 bestAlignY = dy
                                 mutex.withLock {
-                                    bestError0 = error0
+                                    //bestError0 = error0
                                     bestError1 = error1
                                     bestError2 = error2
                                 }

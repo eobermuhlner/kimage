@@ -1,14 +1,19 @@
 package ch.obermuhlner.kimage
 
 import ch.obermuhlner.kimage.align.*
+import ch.obermuhlner.kimage.fft.Complex
 import ch.obermuhlner.kimage.fft.ComplexMatrix
 import ch.obermuhlner.kimage.fft.FFT
+import ch.obermuhlner.kimage.fft.contentToString
 import ch.obermuhlner.kimage.filter.*
 import ch.obermuhlner.kimage.image.*
 import ch.obermuhlner.kimage.io.*
 import ch.obermuhlner.kimage.io.ImageReader.read
 import ch.obermuhlner.kimage.math.*
+import ch.obermuhlner.kimage.matrix.Matrix
+import ch.obermuhlner.kimage.matrix.contentToString
 import java.io.File
+import kotlin.math.abs
 import kotlin.random.Random
 
 object TestMain {
@@ -33,7 +38,88 @@ object TestMain {
 //        exampleError()
 //        exampleAlign()
 
-        exampleFFT("animal.png")
+        //exampleFFT("animal.png")
+
+        //exampleConvoluteFFT()
+        exampleDeconvoluteFFT()
+    }
+
+    private fun exampleConvoluteFFT() {
+        val originalMatrix = Matrix.matrixOf(7, 7)
+        originalMatrix[3, 3] = 1.0
+
+        val convolutedMatrix = originalMatrix.convolute(KernelFilter.GaussianBlur3)
+        println("convoluted =")
+        println(convolutedMatrix.contentToString(true))
+
+        val paddedMatrix = FFT.padPowerOfTwo(originalMatrix)
+
+        val kernelMatrix = KernelFilter.GaussianBlur3
+        val paddedKernel = Matrix.matrixOf(paddedMatrix.width, paddedMatrix.height)
+        paddedKernel.set(kernelMatrix, 0, 0)
+        println("paddedKernel =")
+        println(paddedKernel.contentToString(true))
+
+        val frequencyMatrix = FFT.fft(ComplexMatrix(paddedMatrix))
+        println("frequencyMatrix =")
+        println(frequencyMatrix.contentToString(true))
+
+        val frequencyKernel = FFT.fft(ComplexMatrix(paddedKernel))
+        println("frequencyKernel =")
+        println(frequencyMatrix.contentToString(true))
+
+        val frequencyResult = frequencyMatrix elementTimes frequencyKernel
+        println("frequencyResult =")
+        println(frequencyResult.contentToString(true))
+
+        val result = FFT.fftInverse(frequencyResult).re
+        result.onEach { v -> if (abs(v) < 1E-10) 0.0 else v }
+        println("result =")
+        println(result.contentToString(true))
+    }
+
+    private fun exampleDeconvoluteFFT() {
+        val originalMatrix = Matrix.matrixOf(7, 7)
+        originalMatrix[3, 3] = 1.0
+
+        val convolutedMatrix = originalMatrix.convolute(KernelFilter.GaussianBlur3)
+        println("convoluted =")
+        println(convolutedMatrix.contentToString(true))
+
+        val paddedMatrix = FFT.padPowerOfTwo(convolutedMatrix)
+
+        val kernelMatrix = KernelFilter.GaussianBlur3
+        val paddedKernel = Matrix.matrixOf(paddedMatrix.width, paddedMatrix.height)
+        paddedKernel.set(kernelMatrix, 0, 0)
+        println("paddedKernel =")
+        println(paddedKernel.contentToString(true))
+
+        val frequencyMatrix = FFT.fft(ComplexMatrix(paddedMatrix))
+        println("frequencyMatrix =")
+        println(frequencyMatrix.contentToString(true))
+
+        val frequencyKernel = FFT.fft(ComplexMatrix(paddedKernel))
+        println("frequencyKernel =")
+        println(frequencyMatrix.contentToString(true))
+        frequencyKernel.onEach { c ->
+            var re = c.re
+            var im = c.im
+            if (re == 0.0) {
+                re = 1.0E-100
+            }
+            if (im == 0.0) {
+                im = 1.0E-100
+            }
+            Complex(re, im)
+        }
+
+        val frequencyDeconvoluted = frequencyMatrix elementDiv frequencyKernel
+        println("frequencyDeconvoluted =")
+        println(frequencyDeconvoluted.contentToString(true))
+
+        val deconvolutedMatrix = FFT.fftInverse(frequencyDeconvoluted).re
+        println("deconvolutedMatrix =")
+        println(deconvolutedMatrix.contentToString(true))
     }
 
     private fun exampleFFT(imageName: String) {
@@ -261,13 +347,13 @@ object TestMain {
             }
 
             val alignedImage2 = image2.crop(alignX, alignY, image2.width, image2.height)
-            ImageWriter.write(alignedImage2, inputFile.prefixName("aligned_"))
+            ImageWriter.write(alignedImage2, inputFile.prefixName(outputDirectory, "aligned_"))
 
             sumImage += alignedImage2
             sumImageCount++
 
             val stackedImage = sumImage / sumImageCount.toDouble()
-            ImageWriter.write(stackedImage, inputFile.prefixName("stacked_"))
+            ImageWriter.write(stackedImage, inputFile.prefixName(outputDirectory, "stacked_"))
         }
     }
 

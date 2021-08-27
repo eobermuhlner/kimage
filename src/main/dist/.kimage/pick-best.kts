@@ -64,10 +64,11 @@ kimage(0.1) {
             val inputImage = ImageReader.read(inputFiles[fileIndex])
 
             val croppedImage = inputImage.cropCenter(radius, centerX, centerY)
-            croppedMatrices.add(croppedImage[measureChannel])
+            croppedMatrices.add(croppedImage[measureChannel].copy())
         }
         println()
 
+        println("Calculating error between images")
         for (fileIndexY in inputFiles.indices) {
             for (fileIndexX in fileIndexY+1 until inputFiles.size) {
                 errorMatrix[fileIndexX, fileIndexY] = croppedMatrices[fileIndexY].averageError(croppedMatrices[fileIndexX])
@@ -75,6 +76,7 @@ kimage(0.1) {
             }
         }
 
+        println("Finding best image")
         var bestStddev = Double.MAX_VALUE
         var bestFileIndex = 0
         for (fileIndex in inputFiles.indices) {
@@ -116,11 +118,12 @@ kimage(0.1) {
         }
 
         for (sortedFileIndex in sortedFiles.indices) {
-            val fileName = sortedFiles[sortedFileIndex].name
-            val sortString = String.format("_%04d_", sortedFileIndex)
-            val sortedFileName = prefix + sortString + fileName
-            println("Copying $fileName to $sortedFileName")
-            Files.copy(sortedFiles[sortedFileIndex].toPath(), File(sortedFiles[sortedFileIndex].parent, sortedFileName).toPath(), StandardCopyOption.REPLACE_EXISTING)
+            val fromFile = sortedFiles[sortedFileIndex]
+            val sortPrefix = String.format("${prefix}_%04d_", sortedFileIndex)
+            val toFile = fromFile.prefixName(outputDirectory, sortPrefix)
+
+            println("Copying ${fromFile.name} to ${toFile.name}")
+            Files.copy(fromFile.toPath(), toFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
         }
 
         null

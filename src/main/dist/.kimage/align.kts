@@ -86,7 +86,7 @@ kimage(0.1) {
         }
         boolean("sort") {
             description = "Sort output files by error (best aligned first)."
-            default = true
+            default = false
         }
     }
 
@@ -138,7 +138,7 @@ kimage(0.1) {
 
         if (debugMode) {
             val checkImage = baseImage.cropCenter(checkRadius.get(), centerX.get(), centerY.get())
-            val checkFile = baseInputFile.prefixName("check_")
+            val checkFile = baseInputFile.prefixName(outputDirectory, "check_")
             println("Saving $checkFile for manual analysis")
             ImageWriter.write(checkImage, checkFile)
             println()
@@ -170,13 +170,13 @@ kimage(0.1) {
 
             val error = baseImage.averageError(alignedImage)
             if (error <= errorThreshold) {
-                val alignedFile = inputFile.prefixName("${prefix}_")
+                val alignedFile = inputFile.prefixName(outputDirectory, "${prefix}_")
                 println("Error $error <= $errorThreshold : saving $alignedFile")
                 ImageWriter.write(alignedImage, alignedFile)
                 outputFilesAlignment.add(Pair(alignedFile, alignment))
             } else {
                 if (saveBad) {
-                    val badalignedFile = inputFile.prefixName("${prefixBad}_")
+                    val badalignedFile = inputFile.prefixName(outputDirectory, "${prefixBad}_")
                     println("Error $error > $errorThreshold : saving $badalignedFile")
                     ImageWriter.write(alignedImage, badalignedFile)
                     outputFilesAlignment.add(Pair(badalignedFile, alignment))
@@ -186,7 +186,7 @@ kimage(0.1) {
             }
 
             if (debugMode) {
-                val deltaFile = inputFile.prefixName("delta_${prefix}_")
+                val deltaFile = inputFile.prefixName(outputDirectory, "delta_${prefix}_")
                 println("Saving $deltaFile for manual analysis")
                 val deltaImage = deltaChannel(baseImage, alignedImage)
                 ImageWriter.write(deltaImage, deltaFile)

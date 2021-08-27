@@ -272,7 +272,7 @@ object KImageManager {
         } else {
             when (script) {
                 is ScriptV0_1 -> {
-                    script.execute(inputFiles, arguments, verboseMode, debugMode, outputHandler)
+                    script.execute(inputFiles, arguments, verboseMode, debugMode, File(outputDirectory), outputHandler)
                 }
             }
         }

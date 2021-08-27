@@ -122,7 +122,7 @@ kimage(0.1) {
             }
         }
 
-        val outputFile = inputFiles[0].prefixName("hdr_")
+        val outputFile = inputFiles[0].prefixName(outputDirectory, "hdr_")
         println("Saving $outputFile")
         ImageWriter.write(resultImage, outputFile)
 
