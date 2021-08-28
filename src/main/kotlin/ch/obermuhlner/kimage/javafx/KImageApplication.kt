@@ -606,7 +606,7 @@ class KImageApplication : Application() {
                                 selectionModel.selectedItems.toList().forEach {
                                     inputFiles.remove(it)
                                 }
-                                updateImageView(selectionModel.selectedItem, inputImageView, inputImageWidthProperty, inputImageHeightProperty, inputImageModelProperty, inputImageLensModelProperty, inputImageExposureTimeProperty, inputImagePhotographicSensitivityProperty, inputImageApertureValueProperty, inputImageBitsPerSampleProperty)
+                                updateImageView(null, inputImageView, inputImageWidthProperty, inputImageHeightProperty, inputImageModelProperty, inputImageLensModelProperty, inputImageExposureTimeProperty, inputImagePhotographicSensitivityProperty, inputImageApertureValueProperty, inputImageBitsPerSampleProperty)
                             }
                         }
                     )
@@ -793,11 +793,14 @@ class KImageApplication : Application() {
                         menuitem("Delete File forever", FontIcon()) {
                             id = "delete-forever-icon"
                             onAction = EventHandler {
-                                selectionModel.selectedItems.toList().forEach {
-                                    outputFiles.remove(it)
-                                    it.delete()
+                                val filesToDelete = selectionModel.selectedItems.toList()
+                                runWithProgressDialog("Delete Files", "Deleting ${filesToDelete.size} files", 200) {
+                                    filesToDelete.forEach {
+                                        outputFiles.remove(it)
+                                        it.delete()
+                                    }
+                                    updateImageView(null, outputImageView, outputImageWidthProperty, outputImageHeightProperty, outputImageModelProperty, outputImageLensModelProperty, outputImageExposureTimeProperty, outputImagePhotographicSensitivityProperty, outputImageApertureValueProperty, outputImageBitsPerSampleProperty)
                                 }
-                                updateImageView(selectionModel.selectedItem, outputImageView, outputImageWidthProperty, outputImageHeightProperty, outputImageModelProperty, outputImageLensModelProperty, outputImageExposureTimeProperty, outputImagePhotographicSensitivityProperty, outputImageApertureValueProperty, outputImageBitsPerSampleProperty)
                             }
                         }
                     )
