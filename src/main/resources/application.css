@@ -153,6 +153,11 @@
     -fx-icon-color: dimgray;
 }
 
+#save-settings-icon .ikonli-font-icon {
+    -fx-icon-code: "mdi2c-content-save-cog-outline";
+    -fx-icon-size: 16px;
+    -fx-icon-color: dimgray;
+}
 
 
 

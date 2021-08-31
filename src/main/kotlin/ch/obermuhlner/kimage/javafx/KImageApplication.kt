@@ -42,9 +42,9 @@ import org.kordamp.ikonli.javafx.FontIcon
 import java.awt.Desktop
 import java.io.*
 import java.nio.file.Files
-import java.nio.file.Path
 import java.nio.file.Paths
 import java.text.DecimalFormat
+import java.util.*
 import kotlin.math.max
 import kotlin.math.min
 import ch.obermuhlner.kimage.math.clamp as clamp
@@ -75,7 +75,10 @@ class KImageApplication : Application() {
 
     private var currentInputImage: Image? = null
 
+    private val scriptNameProperty = SimpleStringProperty()
     private val argumentsProperty = SimpleMapProperty<String, Any>(FXCollections.observableHashMap())
+    private val commandPresetsNames = FXCollections.observableArrayList<String>()
+    private val commandPresets = mutableMapOf<String, Map<String, Any>>()
 
     private var previewScript: ScriptV0_1? = null
     private var previewCommand: String? = null
@@ -224,7 +227,8 @@ class KImageApplication : Application() {
                                 listview(scriptNames) {
                                     selectionModel.selectedItemProperty().addListener { _, _, selected ->
                                         selected?.let {
-                                            showCommandEditor(it)
+                                            loadCommandPresets(it)
+                                            showCommandEditor(it, mapOf<String, Any>())
                                         }
                                     }
                                 }
@@ -232,9 +236,51 @@ class KImageApplication : Application() {
                             cell {
                                 vbox(SPACING) {
                                     padding = Insets(0.0, SPACING, 0.0, SPACING)
-
                                     prefWidth = ARGUMENT_EDITOR_WIDTH.toDouble()
                                     prefHeight = ARGUMENT_EDITOR_HEIGHT.toDouble()
+
+                                    children += hbox(SPACING) {
+                                        val presetCombobox = combobox(commandPresetsNames) {
+                                            valueProperty().addListener { _, _, value ->
+                                                if (value != null) {
+                                                    showCommandEditor(scriptNameProperty.get(), commandPresets.getOrDefault(value, mapOf()))
+                                                }
+                                            }
+                                        }
+                                        val savePresetButton = button(FontIcon()) {
+                                            id = "save-settings-icon"
+                                            onAction = EventHandler {
+                                                val presetArguments = argumentsProperty.get().toMap()
+                                                val dialog = TextInputDialog("")
+                                                dialog.title = "Save script arguments"
+                                                dialog.headerText = "Save the arguments for the script '${scriptNameProperty.get()}':\n\n" + presetArguments.entries.joinToString("\n")
+                                                dialog.contentText = "Settings name:"
+                                                dialog.dialogPane.minWidth = 300.0
+                                                val optionalPresetName = dialog.showAndWait()
+                                                if (optionalPresetName.isPresent) {
+                                                    val presetName = optionalPresetName.get()
+                                                    savePreset(scriptNameProperty.get(), presetName, presetArguments)
+                                                }
+                                            }
+                                        }
+                                        val deletePresetButton = button(FontIcon()) {
+                                            id = "delete-forever-icon"
+                                            onAction = EventHandler {
+                                                val deletablePresetNames = commandPresetsNames.toMutableList()
+                                                deletablePresetNames.remove("")
+                                                val dialog = ChoiceDialog(presetCombobox.valueProperty().get(), deletablePresetNames)
+                                                dialog.contentText = "Delete the arguments of the script '${scriptNameProperty.get()}:'"
+                                                val optionalDeletePreset = dialog.showAndWait()
+                                                if (optionalDeletePreset.isPresent) {
+                                                    deletePreset(scriptNameProperty.get(), optionalDeletePreset.get())
+                                                }
+                                            }
+                                        }
+
+                                        children += presetCombobox
+                                        children += savePresetButton
+                                        children += deletePresetButton
+                                    }
                                     children += commandArgumentEditor
                                 }
                             }
@@ -470,6 +516,78 @@ class KImageApplication : Application() {
                 }
             }
         }
+    }
+
+    private fun deletePreset(commandName: String, presetName: String) {
+        val presetsDir = File(File(File(System.getProperty("user.home"), ".kimage"), "config"), commandName)
+
+        val presetsFile = File(presetsDir, "${presetName}.properties")
+        if (presetsFile.exists()) {
+            presetsFile.delete()
+
+            loadCommandPresets(commandName)
+        }
+    }
+
+    private fun savePreset(commandName: String, presetName: String, arguments: Map<String, Any>) {
+        val presetsDir = File(File(File(System.getProperty("user.home"), ".kimage"), "config"), commandName)
+        presetsDir.mkdirs()
+
+        val properties = Properties()
+        arguments.forEach { (k, v) ->
+            properties[k] = v.toString()
+        }
+
+        val presetsFile = File(presetsDir, "${presetName}.properties")
+        try {
+            presetsFile.canonicalPath // throws exception if invalid path
+
+            val writer = BufferedWriter(FileWriter(presetsFile))
+            writer.use {
+                properties.store(it, "KImage arguments for $commandName")
+            }
+
+            loadCommandPresets(commandName)
+        } catch (ex: IOException) {
+            val alert = Alert(Alert.AlertType.ERROR, "The name '$presetName' is not valid to store script arguments.")
+            alert.showAndWait()
+        }
+
+    }
+
+    private fun loadCommandPresets(commandName: String) {
+        val presetsDir = File(File(File(System.getProperty("user.home"), ".kimage"), "config"), commandName)
+        if (!presetsDir.exists()) {
+            presetsDir.mkdirs()
+        }
+
+        val presetFiles = presetsDir.listFiles() { file ->
+            file.extension == "properties"
+        }
+
+        commandPresetsNames.clear()
+        commandPresets.clear()
+
+        commandPresetsNames.add("")
+        commandPresets[""] = mapOf()
+
+        for (presetFile in presetFiles) {
+            val presetName = presetFile.nameWithoutExtension
+            val properties = Properties()
+            val reader = BufferedReader(FileReader(presetFile))
+            reader.use {
+                properties.load(it)
+            }
+
+            val map = mutableMapOf<String, Any>()
+            properties.forEach { k, v ->
+                map[k.toString()] = v.toString()
+            }
+
+            commandPresetsNames.add(presetName)
+            commandPresets[presetName] = map
+        }
+
     }
 
     private fun createZoomViewer(): Node {
@@ -913,7 +1031,8 @@ class KImageApplication : Application() {
         imageBitsPerSampleProperty.set(items["BitsPerSample"])
     }
 
-    private fun showCommandEditor(command: String) {
+    private fun showCommandEditor(command: String, initialArgumentValues: Map<String, Any>) {
+        scriptNameProperty.set(command)
         commandArgumentEditor.children.clear()
         argumentsProperty.clear()
 
@@ -946,7 +1065,7 @@ class KImageApplication : Application() {
                                 vgap = SPACING
 
                                 for (argument in script.scriptArguments.arguments) {
-                                    setupArgumentEditor(argument)
+                                    setupArgumentEditor(argument, initialArgumentValues[argument.name])
                                 }
 
                                 row {
@@ -1024,11 +1143,11 @@ class KImageApplication : Application() {
                             }
                         }
                         children += checkbox(runOnlySelectedModeProperty) {
-                            tooltip = Tooltip("Run only the selected input files.")
-                            text = "Run only selected input"
+                            tooltip = Tooltip("Process only the selected input files.")
+                            text = "Process only selected input"
                         }
                         children += checkbox(previewModeProperty) {
-                            tooltip = Tooltip("Preview the ${script.name} script.")
+                            tooltip = Tooltip("Preview the output of the ${script.name} script.")
                             text = "Preview Mode"
                             previewModeProperty.addListener { _, _, value ->
                                 if (value) {
@@ -1114,7 +1233,8 @@ class KImageApplication : Application() {
     }
 
     private fun GridPaneContext.setupArgumentEditor(
-        argument: ScriptArg
+        argument: ScriptArg,
+        initialValue: Any?
     ) {
         row {
             cell {
@@ -1126,7 +1246,8 @@ class KImageApplication : Application() {
                     is ScriptBooleanArg -> {
                         checkbox {
                             tooltip = Tooltip(argument.tooltip())
-                            argument.default?.let {
+
+                            toBooleanValue(initialValue, argument.default)?.let {
                                 isSelected = it
                             }
                             selectedProperty().addListener { _, _, value ->
@@ -1153,7 +1274,7 @@ class KImageApplication : Application() {
                                 children += label(it)
                             }
                             setupHints(argument, argProperty)
-                            argument.default?.let {
+                            toIntValue(initialValue, argument.default)?.let {
                                 argProperty.set(it.toString())
                             }
                         }
@@ -1175,7 +1296,7 @@ class KImageApplication : Application() {
                                 children += label(it)
                             }
                             setupHints(argument, argProperty)
-                            argument.default?.let {
+                            toDoubleValue(initialValue, argument.default)?.let {
                                 argProperty.set(it.toString())
                             }
                         }
@@ -1196,7 +1317,7 @@ class KImageApplication : Application() {
                                     tooltip = Tooltip(argument.tooltip())
                                     valueProperty().bindBidirectional(argProperty)
                                     setupEnabledWhen(argument, this.disableProperty())
-                                    argument.default?.let {
+                                    toStringValue(initialValue, argument.default)?.let {
                                         argProperty.set(it)
                                     }
                                 }
@@ -1224,7 +1345,7 @@ class KImageApplication : Application() {
                                     children += label(it)
                                 }
                                 setupHints(argument, argProperty)
-                                argument.default?.let {
+                                toStringValue(initialValue, argument.default)?.let {
                                     argProperty.set(it)
                                 }
                             }
@@ -1244,7 +1365,9 @@ class KImageApplication : Application() {
                             children += textfield(argProperty) {
                                 // TODO relative to input or output dir?
                                 tooltip = Tooltip(argument.tooltip())
-                                text = argument.default?.toString()
+                                toStringValue(initialValue, argument.default)?.let {
+                                    text = it
+                                }
                                 setupValidation(this, textProperty(), argument, argProperty)
                                 setupEnabledWhen(argument, this.disableProperty())
                             }
@@ -1270,8 +1393,8 @@ class KImageApplication : Application() {
                                     }
                                 }
                                 setupHints(argument, argProperty)
-                                argument.default?.let {
-                                    argProperty.set(it.toString())
+                                toStringValue(initialValue, argument.default)?.let {
+                                    argProperty.set(it)
                                 }
                             }
                             argument.unit?.let {
@@ -1292,7 +1415,9 @@ class KImageApplication : Application() {
                             }
                             children += textfield(argProperty) {
                                 tooltip = Tooltip(argument.tooltip())
-                                text = argument.default?.toString()
+                                toStringValue(initialValue, argument.default)?.let {
+                                    text = it
+                                }
                                 setupValidation(this, textProperty(), argument, argProperty)
                                 setupEnabledWhen(argument, this.disableProperty())
                             }
@@ -1310,8 +1435,8 @@ class KImageApplication : Application() {
                                 children += label(it)
                             }
                             setupHints(argument, argProperty)
-                            argument.default?.let {
-                                argProperty.set(it.toString())
+                            toStringValue(initialValue, argument.default)?.let {
+                                argProperty.set(it)
                             }
                         }
                     }
@@ -1331,11 +1456,35 @@ class KImageApplication : Application() {
                                 children += label(it)
                             }
                             setupHints(argument, argProperty)
+                            toStringValue(initialValue)?.let {
+                                argProperty.set(it)
+                            }
                         }
                     }
                 }
             }
         }
+    }
+
+    private fun toStringValue(vararg values: Any?): String? {
+        for (value in values) {
+            if (value != null) {
+                return value.toString()
+            }
+        }
+        return null
+    }
+
+    private fun toBooleanValue(vararg values: Any?): Boolean? {
+        return toStringValue(*values)?.toBoolean()
+    }
+
+    private fun toIntValue(vararg values: Any?): Int? {
+        return toStringValue(*values)?.toInt()
+    }
+
+    private fun toDoubleValue(vararg values: Any?): Double? {
+        return toStringValue(*values)?.toDouble()
     }
 
     private fun <T> remember(obj: T): T {
