@@ -19,7 +19,7 @@ kimage(0.1) {
         double("low") {
             description = """
                 Low percentile that will be stretched to 0.
-                Values below this percentile will be clipped at 1.
+                Values below this percentile will be clipped at 0.
                 """
             unit = "% percentile"
             default = 0.1
