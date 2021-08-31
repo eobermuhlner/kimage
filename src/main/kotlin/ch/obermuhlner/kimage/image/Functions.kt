@@ -220,6 +220,12 @@ fun Image.cropCenter(radiusX: Int, radiusY: Int, croppedCenterX: Int = width / 2
     return crop(croppedCenterX - radiusX, croppedCenterY - radiusY, radiusX*2+1, radiusY*2+1, strictClipping)
 }
 
+fun Image.copy(): Image {
+    return MatrixImage(this.width, this.height, this.channels) { channel, width, height ->
+        this[channel].copy()
+    }
+}
+
 fun Image.scaleBy(
     scaleX: Double,
     scaleY: Double,
