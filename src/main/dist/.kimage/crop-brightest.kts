@@ -11,17 +11,12 @@ import kotlin.math.*
 
 kimage(0.1) {
     name = "crop-brightest"
-    title = "Crop largest brightest patch"
+    title = "Crop brightest patch"
     description = """
-                Crops the largest bright part of an image.
-                
-                The script searches the largest patch above the defined percentile on the x-axis and centers it on the y-axis.
+                Crops the brightest part of an image.
                 """
     arguments {
         double("percentile") {
-            description = """
-                        The percentile to determine the brightest patch.
-                        """
             min = 0.0
             max = 100.0
             unit = "% percentile"
@@ -29,12 +24,14 @@ kimage(0.1) {
         }
         string("channel") {
             description = """
-                        The channel used to find the largest bright patch.
                         """
             allowed = listOf("gray", "luminance", "red", "green", "blue")
             default = "gray"
         }
         int("radius") {
+            description = """
+                        The radius around the center of the brightest patch to crop.
+                        """
             min = 1
         }
     }
@@ -84,6 +81,25 @@ kimage(0.1) {
                     }
                 }
             }
+        }
+
+        println("Largest patch:")
+        println("  X: $largestPatchX (width $largestPatchWidth)")
+        println("  Y: $largestPatchY")
+        println()
+
+        if (debugMode) {
+            val debugImage = inputImage.copy()
+            for (x in 0 until largestPatchX-largestPatchWidth/2) {
+                debugImage[Channel.Red][x, largestPatchY] = 1.0
+            }
+            for (x in largestPatchX+largestPatchWidth/2 until debugImage.width) {
+                debugImage[Channel.Red][x, largestPatchY] = 1.0
+            }
+            val debugFile = inputFile.prefixName(outputDirectory, "debug_patch_")
+            println("Saving $debugFile for manual analysis")
+            ImageWriter.write(debugImage, debugFile)
+            println()
         }
 
         inputImage.cropCenter(radius, largestPatchX, largestPatchY)
