@@ -2,8 +2,6 @@ package ch.obermuhlner.kimage.align
 
 import ch.obermuhlner.kimage.image.*
 import ch.obermuhlner.kimage.math.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -46,7 +44,7 @@ class ImageAligner(
 
     fun align(base: Image, image: Image, centerX: Int, centerY: Int, maxOffset: Int, subPixelStep: Double = 0.1): Alignment = runBlocking {
         if (base === image) {
-            return@runBlocking Alignment(0, 0, 0.0, 0.0, 0.0)
+            return@runBlocking Alignment(0, 0, 0.0, 0.0, 0.0, 0, 0, 0)
         }
 
         val baseCropped0 = base.crop(centerX, centerY, 1, 1, false)
@@ -58,10 +56,14 @@ class ImageAligner(
         var bestError1 = Double.MAX_VALUE
         var bestError2 = Double.MAX_VALUE
 
+        var hitCountError0 = 0
+        var hitCountError1 = 0
+        var hitCountError2 = 0
+
         var bestAlignX = 0
         var bestAlignY = 0
         for (dy in -maxOffset .. maxOffset) {
-            launch(Dispatchers.Default) {
+            //launch(Dispatchers.Default) {
                 for (dx in -maxOffset..maxOffset) {
                     val x = centerX + dx
                     val y = centerY + dy
@@ -69,18 +71,21 @@ class ImageAligner(
                     val error0 = baseCropped0.averageError(crop0)
                     if (error0 < bestError0 * fastErrorThreshold) {
                         //println("Error0: $dx, $dy : $error0")
+                        hitCountError0++
                         val crop1 = image.crop(x - fastRadiusX, y - fastRadiusY, fastRadiusX * 2 + 1, fastRadiusY + 1, false)
                         val error1 = baseCropped1.averageError(crop1)
                         if (error1 < bestError1 * fastErrorThreshold) {
                             //println("Error1: $dx, $dy : $error1")
+                            hitCountError1++
                             val crop2 = image.crop(x - radiusX, y - radiusY, radiusX * 2 + 1, radiusY * 2 + 1, false)
                             val error2 = baseCropped2.averageError(crop2)
                             if (error2 < bestError2) {
+                                hitCountError2++
                                 //println("Error2: $dx, $dy : $error2")
                                 bestAlignX = dx
                                 bestAlignY = dy
                                 mutex.withLock {
-                                    //bestError0 = error0
+                                    bestError0 = error0
                                     bestError1 = error1
                                     bestError2 = error2
                                 }
@@ -88,7 +93,7 @@ class ImageAligner(
                         }
                     }
                 }
-            }
+            //}
         }
 
         var subPixelAlignX = 0.0
@@ -116,8 +121,17 @@ class ImageAligner(
             }
         }
 
-        Alignment(bestAlignX, bestAlignY, subPixelAlignX, subPixelAlignY, bestError2)
+        Alignment(bestAlignX, bestAlignY, subPixelAlignX, subPixelAlignY, bestError2, hitCountError0, hitCountError1, hitCountError2)
     }
 }
 
-data class Alignment(val x: Int, val y: Int, val subPixelX: Double, val subPixelY: Double, val error: Double)
+data class Alignment(
+    val x: Int,
+    val y: Int,
+    val subPixelX: Double,
+    val subPixelY: Double,
+    val error: Double,
+    val hitCountError0: Int,
+    val hitCountError1: Int,
+    val hitCountError2: Int
+)
