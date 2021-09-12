@@ -68,6 +68,14 @@ kimage(0.1) {
             allowed = listOf("red", "green", "blue", "gray", "luminance")
             default = "gray"
         }
+        boolean("ignoreOverExposed") {
+            description = """
+                        Ignore pixels where at least one color channel is at maximum level.
+                        This will ignore overexposed pixels.
+                        """
+            enabledWhen = Reference("whitebalance").isEqual("highlight")
+            default = true
+        }
         optionalDouble("red") {
             description = """
                 The red value for custom white balancing.
@@ -95,6 +103,7 @@ kimage(0.1) {
         val localRadius: Int by arguments
         val highlight: Double by arguments
         val highlightChannel: String by arguments
+        val ignoreOverExposed: Boolean by arguments
         var red: Optional<Double> by arguments
         var green: Optional<Double> by arguments
         var blue: Optional<Double> by arguments
@@ -136,22 +145,36 @@ kimage(0.1) {
                     "luminance" -> Channel.Luminance
                     else -> throw IllegalArgumentException("Unknown channel: $highlightChannel")
                 }
-                val hightlightMatrix = inputImage[channel]
+                val highlightMatrix = inputImage[channel]
                 val histogram = Histogram()
-                histogram.add(hightlightMatrix)
+                histogram.add(highlightMatrix)
                 val highlightValue = histogram.estimatePercentile(highlight / 100.0)
 
+                var overExposedCount = 0
                 val redValues = mutableListOf<Double>()
                 val greenValues = mutableListOf<Double>()
                 val blueValues = mutableListOf<Double>()
-                for (y in 0 until hightlightMatrix.height) {
-                    for (x in 0 until hightlightMatrix.width) {
-                        if (hightlightMatrix[x, y] >= highlightValue) {
-                            redValues += redMatrix[x, y]
-                            greenValues += greenMatrix[x, y]
-                            blueValues += blueMatrix[x, y]
+                for (y in 0 until highlightMatrix.height) {
+                    for (x in 0 until highlightMatrix.width) {
+                        if (highlightMatrix[x, y] >= highlightValue) {
+                            val r = redMatrix[x, y]
+                            val g = greenMatrix[x, y]
+                            val b = blueMatrix[x, y]
+                            if (ignoreOverExposed && (r >= 1.0 || g >= 1.0 || b >= 1.0)) {
+                                overExposedCount++
+                            } else {
+                                redValues += r
+                                greenValues += g
+                                blueValues += b
+                            }
                         }
                     }
+                }
+                if (verboseMode && ignoreOverExposed) {
+                    println("Over exposure: $overExposedCount pixels ignored")
+                }
+                if (verboseMode) {
+                    println("Highlight ${highlight} (>= $highlightValue in $channel): ${redValues.size} pixels found")
                 }
                 red = Optional.of(redValues.median())
                 green = Optional.of(greenValues.median())
@@ -178,9 +201,9 @@ kimage(0.1) {
         }
 
         val maxFactor = max(red.get(), max(green.get(), blue.get()))
-        var redFactor = maxFactor / red.get()
-        var greenFactor = maxFactor / green.get()
-        var blueFactor = maxFactor / blue.get()
+        var redFactor = if (red.get() == 0.0) 1.0 else maxFactor / red.get()
+        var greenFactor = if (green.get() == 0.0) 1.0 else maxFactor / green.get()
+        var blueFactor = if (blue.get() == 0.0) 1.0 else maxFactor / blue.get()
 
         println("Whitebalance Factor:")
         println("  red =   $redFactor")

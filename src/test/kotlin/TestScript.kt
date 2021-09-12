@@ -64,10 +64,11 @@ object TestScript {
         //runScript(scriptSamplePSF(), mapOf("sampleX" to "20", "sampleY" to "20", "radius" to "3"), "images/gauss3_animal.png")
 
         //runScript(scriptWhitebalance(), mapOf("whitebalance" to "local", "localX" to "1897", "localY" to "3207"), "images/colorchart/debayer_colorchart_cloudy.tiff")
+        runScript(scriptWhitebalance(), mapOf(), "images/M31.tif")
 
         //runScript(scriptComposition(), mapOf(), "images/animal.png")
 
-        runScript(scriptPickBest(), mapOf("centerX" to "400", "centerY" to "400", "radius" to "200"), *alignedOrionImages)
+        //runScript(scriptPickBest(), mapOf("centerX" to "400", "centerY" to "400", "radius" to "200"), *alignedOrionImages)
     }
 
     private fun scriptPickBest(): Script =
@@ -211,6 +212,9 @@ object TestScript {
                     default = "gray"
                 }
                 int("radius") {
+                    description = """
+                        The radius around the center of the brightest patch to crop.
+                        """
                     min = 1
                 }
             }
@@ -260,6 +264,25 @@ object TestScript {
                             }
                         }
                     }
+                }
+
+                println("Largest patch:")
+                println("  X: $largestPatchX (width $largestPatchWidth)")
+                println("  Y: $largestPatchY")
+                println()
+
+                if (debugMode) {
+                    val debugImage = inputImage.copy()
+                    for (x in 0 until largestPatchX-largestPatchWidth/2) {
+                        debugImage[Channel.Red][x, largestPatchY] = 1.0
+                    }
+                    for (x in largestPatchX+largestPatchWidth/2 until debugImage.width) {
+                        debugImage[Channel.Red][x, largestPatchY] = 1.0
+                    }
+                    val debugFile = inputFile.prefixName(outputDirectory, "debug_patch_")
+                    println("Saving $debugFile for manual analysis")
+                    ImageWriter.write(debugImage, debugFile)
+                    println()
                 }
 
                 inputImage.cropCenter(radius, largestPatchX, largestPatchY)
@@ -653,6 +676,14 @@ object TestScript {
                     allowed = listOf("red", "green", "blue", "gray", "luminance")
                     default = "gray"
                 }
+                boolean("ignoreOverExposed") {
+                    description = """
+                        Ignore pixels where at least one color channel is at maximum level.
+                        This will ignore overexposed pixels.
+                        """
+                    enabledWhen = Reference("whitebalance").isEqual("highlight")
+                    default = true
+                }
                 optionalDouble("red") {
                     description = """
                 The red value for custom white balancing.
@@ -680,6 +711,7 @@ object TestScript {
                 val localRadius: Int by arguments
                 val highlight: Double by arguments
                 val highlightChannel: String by arguments
+                val ignoreOverExposed: Boolean by arguments
                 var red: Optional<Double> by arguments
                 var green: Optional<Double> by arguments
                 var blue: Optional<Double> by arguments
@@ -721,22 +753,36 @@ object TestScript {
                             "luminance" -> Channel.Luminance
                             else -> throw IllegalArgumentException("Unknown channel: $highlightChannel")
                         }
-                        val hightlightMatrix = inputImage[channel]
+                        val highlightMatrix = inputImage[channel]
                         val histogram = Histogram()
-                        histogram.add(hightlightMatrix)
+                        histogram.add(highlightMatrix)
                         val highlightValue = histogram.estimatePercentile(highlight / 100.0)
 
+                        var overExposedCount = 0
                         val redValues = mutableListOf<Double>()
                         val greenValues = mutableListOf<Double>()
                         val blueValues = mutableListOf<Double>()
-                        for (y in 0 until hightlightMatrix.height) {
-                            for (x in 0 until hightlightMatrix.width) {
-                                if (hightlightMatrix[x, y] >= highlightValue) {
-                                    redValues += redMatrix[x, y]
-                                    greenValues += greenMatrix[x, y]
-                                    blueValues += blueMatrix[x, y]
+                        for (y in 0 until highlightMatrix.height) {
+                            for (x in 0 until highlightMatrix.width) {
+                                if (highlightMatrix[x, y] >= highlightValue) {
+                                    val r = redMatrix[x, y]
+                                    val g = greenMatrix[x, y]
+                                    val b = blueMatrix[x, y]
+                                    if (ignoreOverExposed && (r >= 1.0 || g >= 1.0 || b >= 1.0)) {
+                                        overExposedCount++
+                                    } else {
+                                        redValues += r
+                                        greenValues += g
+                                        blueValues += b
+                                    }
                                 }
                             }
+                        }
+                        if (verboseMode && ignoreOverExposed) {
+                            println("Over exposure: $overExposedCount pixels ignored")
+                        }
+                        if (verboseMode) {
+                            println("Highlight ${highlight} (>= $highlightValue in $channel): ${redValues.size} pixels found")
                         }
                         red = Optional.of(redValues.median())
                         green = Optional.of(greenValues.median())
@@ -763,9 +809,9 @@ object TestScript {
                 }
 
                 val maxFactor = max(red.get(), max(green.get(), blue.get()))
-                var redFactor = maxFactor / red.get()
-                var greenFactor = maxFactor / green.get()
-                var blueFactor = maxFactor / blue.get()
+                var redFactor = if (red.get() == 0.0) 1.0 else maxFactor / red.get()
+                var greenFactor = if (green.get() == 0.0) 1.0 else maxFactor / green.get()
+                var blueFactor = if (blue.get() == 0.0) 1.0 else maxFactor / blue.get()
 
                 println("Whitebalance Factor:")
                 println("  red =   $redFactor")
