@@ -55,6 +55,10 @@ kimage(0.1) {
             hint = Hint.ImageY
             min = 0
         }
+        int("medianRadius") {
+            min = 0
+            default = 1
+        }
         double("errorThreshold") {
             description = """
                         The maximum error threshold for storing an aligned image.
@@ -86,14 +90,16 @@ kimage(0.1) {
         }
         boolean("sort") {
             description = "Sort output files by error (best aligned first)."
-            default = false
+            default = true
         }
     }
 
     multi {
+        val medianRadius: Int by arguments
+
         val baseInputFile = inputFiles[0]
         println("Loading base image: $baseInputFile")
-        val baseImage = ImageReader.read(baseInputFile)
+        val baseImage = ImageReader.read(baseInputFile).medianFilter(medianRadius)
         println("Base image: $baseImage")
         println()
 
@@ -151,10 +157,11 @@ kimage(0.1) {
 
             val image = ImageReader.read(inputFile)
             if (verboseMode) println("Aligning image: $image")
+            val medianImage = if (medianRadius == 0) image else image.medianFilter(medianRadius)
 
             val alignment = imageAligner.align(
                 baseImage,
-                image,
+                medianImage,
                 centerX = centerX.get(),
                 centerY = centerY.get(),
                 maxOffset = searchRadius.get(),
