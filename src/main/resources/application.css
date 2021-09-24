@@ -123,6 +123,28 @@
     -fx-icon-color: white;
 }
 
+#move-up-icon .ikonli-font-icon {
+    -fx-icon-code: "mdi2i-inbox-arrow-up-outline";
+    -fx-icon-size: 16px;
+    -fx-icon-color: dimgray;
+}
+#move-up-icon:focused .ikonli-font-icon {
+    -fx-icon-code: "mdi2i-inbox-arrow-up-outline";
+    -fx-icon-size: 16px;
+    -fx-icon-color: white;
+}
+
+#move-down-icon .ikonli-font-icon {
+    -fx-icon-code: "mdi2i-inbox-arrow-down-outline";
+    -fx-icon-size: 16px;
+    -fx-icon-color: dimgray;
+}
+#move-down-icon:focused .ikonli-font-icon {
+    -fx-icon-code: "mdi2i-inbox-arrow-down-outline";
+    -fx-icon-size: 16px;
+    -fx-icon-color: white;
+}
+
 
 #play-icon .ikonli-font-icon {
     -fx-icon-code: "mdi2p-play";
