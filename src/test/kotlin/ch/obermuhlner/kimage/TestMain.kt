@@ -319,6 +319,7 @@ object TestMain {
     }
 
     private fun exampleError() {
+        val outputDirectory = File(".")
         var image1 = measureElapsed("Read image1") {
             read(File("images/align/orion1.png"))
         }

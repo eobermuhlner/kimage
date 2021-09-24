@@ -9,6 +9,7 @@ import ch.obermuhlner.kimage.image.*
 import ch.obermuhlner.kimage.io.*
 import ch.obermuhlner.kimage.math.*
 import ch.obermuhlner.kimage.matrix.*
+import ch.obermuhlner.util.StreamGobbler
 import org.apache.commons.math3.fitting.*
 import org.apache.commons.math3.fitting.PolynomialCurveFitter
 import org.apache.commons.math3.fitting.WeightedObservedPoints
@@ -17,6 +18,7 @@ import java.io.*
 import java.lang.Math.toRadians
 import java.nio.file.*
 import java.util.*
+import java.util.concurrent.Executors
 import kotlin.math.*
 
 object TestScript {
@@ -64,19 +66,523 @@ object TestScript {
         //runScript(scriptSamplePSF(), mapOf("sampleX" to "20", "sampleY" to "20", "radius" to "3"), "images/gauss3_animal.png")
 
         //runScript(scriptWhitebalance(), mapOf("whitebalance" to "local", "localX" to "1897", "localY" to "3207"), "images/colorchart/debayer_colorchart_cloudy.tiff")
-        runScript(scriptWhitebalance(), mapOf(), "images/M31.tif")
+        //runScript(scriptWhitebalance(), mapOf(), "images/M31.tif")
 
         //runScript(scriptComposition(), mapOf(), "images/animal.png")
 
         //runScript(scriptPickBest(), mapOf("centerX" to "400", "centerY" to "400", "radius" to "200"), *alignedOrionImages)
+
+        runScript(scriptSharpen(), mapOf(), "images/sharpen/moon.tif")
     }
+
+    private fun scriptSharpen(): Script =
+        kimage(0.1) {
+            name = "sharpen"
+            title = "Sharpen an image"
+            description = """
+                Sharpens an image using unsharp mask.
+                """
+            arguments {
+                int("radius") {
+                    description = """
+                The radius in pixels for the unsharp mask filter.
+                """
+                    min = 0
+                    default = 3
+                }
+                double("strength") {
+                    description = """
+                The strength of the unsharp mask filter.
+                """
+                    min = 0.0
+                    default = 1.0
+                }
+                boolean("edgeDetection") {
+                    default = true
+                }
+                int("edgePreBlurRadius") {
+                    default = 1
+                }
+                string("edgeAlgorithm") {
+                    allowed = listOf("sobel5x5", "sobel3x3", "edgeDetectionStrong", "edgeDetectionCross", "edgeDetectionDiagonal")
+                    default = "sobel5x5"
+                }
+                boolean("edgeNormalize") {
+                    default = true
+                }
+                int("edgePostBlurRadius") {
+                    default = 0
+                }
+                double("edgeSensitivity") {
+                    min = 0.0
+                    max = 1.0
+                    default = 0.5
+                }
+            }
+
+            fun Matrix.unsharpMaskEdgeFilter(radius: Int, strength: Double, edge: Matrix): Matrix {
+                val blurred = this.gaussianBlurFilter(radius)
+
+                val m = (this - blurred) * strength
+                val m2 = m elementTimes edge
+                return this + m2
+            }
+            fun Image.unsharpMaskEdgeFilter(radius: Int, strength: Double, edge: Matrix): Image = MatrixImageFilter({ _, matrix -> matrix.unsharpMaskEdgeFilter(radius, strength, edge) }).filter(this)
+
+            single {
+                val radius: Int by arguments
+                val strength: Double by arguments
+                val edgeDetection: Boolean by arguments
+                val edgePreBlurRadius: Int by arguments
+                val edgeAlgorithm: String by arguments
+                val edgePostBlurRadius: Int by arguments
+                val edgeNormalize: Boolean by arguments
+                val edgeSensitivity: Double by arguments
+
+                var edgeMatrix: Matrix? = null
+                if (edgeDetection) {
+                    edgeMatrix = inputImage[Channel.Luminance]
+                    edgeMatrix = edgeMatrix.gaussianBlurFilter(edgePreBlurRadius)
+                    edgeMatrix = when (edgeAlgorithm) {
+                        "sobel5x5" -> edgeMatrix.sobelFilter5()
+                        "sobel3x3" -> edgeMatrix.sobelFilter3()
+                        "edgeDetectionStrong" -> edgeMatrix.edgeDetectionStrongFilter()
+                        "edgeDetectionCross" -> edgeMatrix.edgeDetectionCrossFilter()
+                        "edgeDetectionDiagonal" -> edgeMatrix.edgeDetectionDiagonalFilter()
+                        else -> throw IllegalArgumentException("Unknown edgeAlgorithm: $edgeAlgorithm")
+                    }
+                    edgeMatrix = edgeMatrix.gaussianBlurFilter(edgePostBlurRadius)
+                    if (edgeNormalize) {
+                        edgeMatrix = edgeMatrix / edgeMatrix.max()
+                    }
+                    edgeMatrix.onEach { v -> clamp(v, 0.0, 1.0) * edgeSensitivity + (1.0 - edgeSensitivity ) }
+
+                    if (debugMode) {
+                        val edgeDebugFile = inputFile.prefixName(outputDirectory, "edge_")
+                        println("Saving $edgeDebugFile for manual analysis")
+                        val edgeDebugImage = MatrixImage(edgeMatrix.width, edgeMatrix.height, Channel.Red to edgeMatrix, Channel.Green to edgeMatrix, Channel.Blue to edgeMatrix)
+                        ImageWriter.write(edgeDebugImage, edgeDebugFile)
+                        println()
+                    }
+                }
+
+                if (edgeMatrix != null) {
+                    inputImage.unsharpMaskEdgeFilter(radius, strength, edgeMatrix)
+                } else {
+                    inputImage.unsharpMaskFilter(radius, strength)
+                }
+            }
+        }
+
+    private fun scriptConvertRaw(): Script =
+        kimage(0.1) {
+            name = "convert-raw"
+            title = "Convert an image from raw format into tiff"
+            description = """
+                Convert an image from raw format into tiff.
+                """
+            arguments {
+                string("dcraw") {
+                    description = """
+               The `dcraw` executable.
+               
+               If the executable is not in the `PATH` then the absolute path is required to run it.
+            """
+                    default = "dcraw"
+                }
+                string("rotate") {
+                    description = """
+               The angle to rotate the image.
+               - `auto` will use the information in the image rotate. 
+               
+              This corresponds to the `-t` option in the `dcraw` command line tool.
+            """
+                    allowed = listOf("0", "90", "180", "270", "auto")
+                    default = "auto"
+                }
+                boolean("aspectRatio") {
+                    description = """
+               
+              This corresponds to the `-j` option in the `dcraw` command line tool.
+            """
+                    default = true
+                }
+                string("whitebalance") {
+                    description = """
+              The whitebalance setting used to adjust the colors.
+              
+              - `camera` will use the whitebalance settings measured by the camera (if available)
+              - `image` will calculate the whitebalance settings from the image
+              - `local` will calculate the whitebalance settings from a local area of the image
+              - `custom` will use the provided custom multipliers
+              - `fixed` will use fixed default white balance multipliers.
+              
+              The `camera` whitebalance corresponds to the `-w` option in the `dcraw` command line tool.
+              The `image` whitebalance corresponds to the `-a` option in the `dcraw` command line tool.
+              The `custom` whitebalance corresponds to the `-r` option in the `dcraw` command line tool.
+              The `fixed` whitebalance corresponds to the `-W` option in the `dcraw` command line tool.
+            """
+                    allowed = listOf("camera", "image", "local", "custom", "fixed")
+                    default = "camera"
+                }
+                optionalInt("localX") {
+                    hint = Hint.ImageX
+                    enabledWhen = Reference("whitebalance").isEqual("local")
+                }
+                optionalInt("localY") {
+                    hint = Hint.ImageY
+                    enabledWhen = Reference("whitebalance").isEqual("local")
+                }
+                optionalInt("localRadius") {
+                    enabledWhen = Reference("whitebalance").isEqual("local")
+                    default = 10
+                }
+                optionalList("multipliers") {
+                    description = """
+              The four multipliers used for `custom` whitebalance mode.
+              
+              Corresponds to the `-r` option in the `dcraw` command line tool.
+              """
+                    min = 4
+                    max = 4
+                    enabledWhen = Reference("whitebalance").isEqual("custom")
+                    double {
+                    }
+                }
+                optionalInt("darkness") {
+                    description = """
+              The darkness level.
+              
+              Corresponds to the `-k` option in the `dcraw` command line tool.
+              """
+                    min = 0
+                }
+                optionalInt("saturation") {
+                    description = """
+              The saturation level.
+              
+              Corresponds to the `-S` option in the `dcraw` command line tool.
+              """
+                    min = 0
+                }
+                string("colorspace") {
+                    description = """
+                The colorspace to be used for the output image.
+                """
+                    allowed = listOf("raw", "sRGB", "AdobeRGB", "WideGamutRGB", "KodakProPhotoRGB", "XYZ", "ACES", "embed")
+                    default = "sRGB"
+                }
+                string("interpolation") {
+                    description = """
+                The demosaicing interpolation method to use.
+                
+                - `bilinear`: Bilinear interpolation between neighboring pixels of the same color.
+                
+                  Corresponds to the `-q 0` option in the `dcraw` command line tool.
+                - `VNG`: Variable Number Gradients
+                
+                  Corresponds to the `-q 1` option in the `dcraw` command line tool.
+                - `PPG`: Patterned Pixel Grouping
+                
+                  Corresponds to the `-q 2` option in the `dcraw` command line tool.
+                - `AHD`: Adaptive Homogeneity Directed
+                
+                  Corresponds to the `-q 3` option in the `dcraw` command line tool.
+                - `none`: No interpolation, with automatic scaling to fill the value range.
+                
+                  Corresponds to the `-d` option in the `dcraw` command line tool.
+                - `none-unscaled`: No interpolation, no scaling.
+                
+                  Corresponds to the `-D` option in the `dcraw` command line tool.
+                - `none-uncropped`: No interpolation, no scaling, no cropping.
+                
+                  Corresponds to the `-E` option in the `dcraw` command line tool.
+                """
+                    allowed = listOf("bilinear", "VNG", "PPG", "AHD", "none", "none-unscaled", "none-uncropped")
+                    default = "AHD"
+                }
+                int("medianPasses") {
+                    description = """
+                The number of 3x3 median passes to post-process the output image.
+                
+                Corresponds to the `-m` option in the `dcraw` command line tool.
+                """
+                    default = 0
+                }
+                string("bits") {
+                    description = """
+                The number of bits used to store a single value in the image.                
+                
+                The 16 bit mode corresponds to the `-6` option in the `dcraw` command line tool.
+                """
+                    allowed = listOf("8", "16")
+                    default = "16"
+                }
+//        record("gamma") {
+//            double("gammaPower") {
+//                default = 2.222
+//            }
+//            double("gammaSlope") {
+//                default = 4.5
+//            }
+//        }
+                double("brightness") {
+                    default = 1.0
+                }
+            }
+
+            fun dcraw(
+                dcraw: String,
+                aspectRatio: Boolean,
+                rotate: String,
+                whitebalance: String,
+                localX: Optional<Int>,
+                localY: Optional<Int>,
+                localRadius: Optional<Int>,
+                multipliers: Optional<List<Double>>,
+                darkness: Optional<Int>,
+                saturation: Optional<Int>,
+                colorspace: String,
+                interpolation: String,
+                medianPasses: Int,
+                bits: String,
+                brightness: Double,
+                file: File,
+                outputDirectory: File
+            ) {
+                val processBuilder = ProcessBuilder()
+
+                val command = mutableListOf(dcraw, "-T", "-v")
+                if (!aspectRatio) {
+                    command.add("-j")
+                }
+                when (rotate) {
+                    "0" -> {
+                        command.add("-t")
+                        command.add("0")
+                    }
+                    "90" -> {
+                        command.add("-t")
+                        command.add("90")
+                    }
+                    "180" -> {
+                        command.add("-t")
+                        command.add("180")
+                    }
+                    "270" -> {
+                        command.add("-t")
+                        command.add("270")
+                    }
+                    "auto" -> {}
+                    else -> throw java.lang.IllegalArgumentException("Unknown rotate: $rotate")
+                }
+                when (whitebalance) {
+                    "camera" -> command.add("-w")
+                    "image" -> command.add("-a")
+                    "local" -> {
+                        command.add("-A")
+                        command.add((localX.get() - localRadius.get()).toString())
+                        command.add((localY.get() - localRadius.get()).toString())
+                        command.add((localRadius.get() * 2 + 1).toString())
+                        command.add((localRadius.get() * 2 + 1).toString())
+
+                    }
+                    "custom" -> {
+                        command.add("-r")
+                        if (multipliers.isPresent) {
+                            command.add(multipliers.get()[0].toString())
+                            command.add(multipliers.get()[1].toString())
+                            command.add(multipliers.get()[2].toString())
+                            command.add(multipliers.get()[3].toString())
+                        } else {
+                            command.add("1")
+                            command.add("1")
+                            command.add("1")
+                            command.add("1")
+                        }
+                    }
+                    "fixed" -> command.add("-W")
+                    else -> throw java.lang.IllegalArgumentException("Unknown whitebalance: $whitebalance")
+                }
+                if (darkness.isPresent) {
+                    command.add("-k");
+                    command.add(darkness.get().toString());
+                }
+                if (saturation.isPresent) {
+                    command.add("-S");
+                    command.add(saturation.get().toString());
+                }
+                when (colorspace) {
+                    "raw" -> {
+                        command.add("-o")
+                        command.add("0")
+                    }
+                    "sRGB" -> {
+                        command.add("-o")
+                        command.add("1")
+                    }
+                    "AdobeRGB" -> {
+                        command.add("-o")
+                        command.add("2")
+                    }
+                    "WideGamutRGB" -> {
+                        command.add("-o")
+                        command.add("3")
+                    }
+                    "KodakProPhotoRGB" -> {
+                        command.add("-o")
+                        command.add("4")
+                    }
+                    "XYZ" -> {
+                        command.add("-o")
+                        command.add("5")
+                    }
+                    "ACES" -> {
+                        command.add("-o")
+                        command.add("6")
+                    }
+                    "embed" -> {
+                        command.add("-p")
+                        command.add("embed")
+                    }
+                    else -> throw java.lang.IllegalArgumentException("Unknown colorspace: $colorspace")
+                }
+                when (interpolation) {
+                    // "bilinear", "variable-number-gradients", "patterned-pixel-grouping", "adaptive-homogeneity-directed", "none", "none-unscaled", "none-uncropped"
+                    "bilinear" -> {
+                        command.add("-q")
+                        command.add("0")
+                    }
+                    "VNG" -> {
+                        command.add("-q")
+                        command.add("1")
+                    }
+                    "PPG" -> {
+                        command.add("-q")
+                        command.add("2")
+                    }
+                    "AHD" -> {
+                        command.add("-q")
+                        command.add("3")
+                    }
+                    "none" -> command.add("-d")
+                    "none-unscaled" -> command.add("-D")
+                    "none-uncropped" -> command.add("-E")
+                    else -> throw java.lang.IllegalArgumentException("Unknown interpolation: $interpolation")
+                }
+                if (medianPasses > 0) {
+                    command.add("-m")
+                    command.add(medianPasses.toString())
+                }
+                when (bits) {
+                    "16" -> command.add("-6")
+                    else -> {}
+                }
+                command.add("-b")
+                command.add(brightness.toString())
+
+                command.add("-O")
+                command.add(file.prefixName(outputDirectory, "${name}_").replaceExtension("tif").path)
+
+                command.add(file.path)
+
+                println("Command: $command")
+
+                processBuilder.command(command)
+                //processBuilder.directory(file.parentFile)
+
+                val process = processBuilder.start()
+
+                Executors.newSingleThreadExecutor().submit(StreamGobbler(process.errorStream, System.out::println))
+                val exitCode = process.waitFor()
+                println("Exit code: $exitCode")
+            }
+
+            multi {
+                val dcraw: String by arguments
+                val aspectRatio: Boolean by arguments
+                val rotate: String by arguments
+                val whitebalance: String by arguments
+                val localX: Optional<Int> by arguments
+                val localY: Optional<Int> by arguments
+                val localRadius: Optional<Int> by arguments
+                val multipliers: Optional<List<Double>> by arguments
+                val darkness: Optional<Int> by arguments
+                val saturation: Optional<Int> by arguments
+                val colorspace: String by arguments
+                val interpolation: String by arguments
+                val medianPasses: Int by arguments
+                val bits: String by arguments
+                val brightness: Double by arguments
+
+                for (inputFile in inputFiles) {
+                    println("Converting $inputFile")
+                    dcraw(dcraw, aspectRatio, rotate, whitebalance, localX, localY, localRadius, multipliers, darkness, saturation, colorspace, interpolation, medianPasses, bits, brightness, inputFile, outputDirectory)
+                    println()
+                }
+
+                null
+            }
+        }
+
+    private fun scriptConvertFrames(): Script =
+        kimage(0.1) {
+            name = "convert-frames"
+            title = "Convert a video frames into images"
+            description = """
+                Convert an a video frames into images.
+                """
+            arguments {
+                string("ffmpeg") {
+                    description = """
+               The `ffmpeg` executable.
+               
+               If the executable is not in the `PATH` then the absolute path is required to run it.
+            """
+                    default = "dcraw"
+                }
+                string("extension") {
+                    default = "tif"
+                }
+            }
+
+            multi {
+                val dcraw: String by arguments
+                val extension: String by arguments
+
+                val scriptName = this@kimage.name
+
+                for (inputFile in inputFiles) {
+                    println("Converting $inputFile")
+
+                    val processBuilder = ProcessBuilder()
+
+                    val command = mutableListOf(dcraw, "-i", inputFile.path)
+
+                    // TODO add script name
+                    command.add(inputFile.prefixName(outputDirectory, "${scriptName}_%04d_").replaceExtension(extension).path)
+
+                    println("Command: $command")
+
+                    processBuilder.command(command)
+
+                    val process = processBuilder.start()
+
+                    Executors.newSingleThreadExecutor().submit(StreamGobbler(process.errorStream, System.out::println))
+                    val exitCode = process.waitFor()
+                    println("Exit code: $exitCode")
+                }
+
+                null
+            }
+        }
 
     private fun scriptPickBest(): Script =
         kimage(0.1) {
             name = "pick-best"
             title = "Picks the best images"
             description = """
-                Picks the best images.
+                Picks the best image and sorts all other images by similarity.
                 
                 The input images must already be aligned.
                 """
@@ -92,6 +598,14 @@ object TestScript {
                         The center y coordinate to measure for similarity.
                         """
                     hint = Hint.ImageY
+                }
+                int("medianRadius") {
+                    description = """
+                        The radius of the median filter before measuring for similarity.
+                        This is useful to reduce noise.
+                        """
+                    min = 0
+                    default = 1
                 }
                 int("radius") {
                     description = """
@@ -110,6 +624,7 @@ object TestScript {
             multi {
                 val centerX: Int by arguments
                 val centerY: Int by arguments
+                val medianRadius: Int by arguments
                 val radius: Int by arguments
                 val prefix: String by arguments
 
@@ -124,7 +639,7 @@ object TestScript {
                     println("Loading ${inputFiles[fileIndex]}")
                     val inputImage = ImageReader.read(inputFiles[fileIndex])
 
-                    val croppedImage = inputImage.cropCenter(radius, centerX, centerY)
+                    val croppedImage = inputImage.cropCenter(radius, centerX, centerY).medianFilter(medianRadius)
                     croppedMatrices.add(croppedImage[measureChannel].copy())
                 }
                 println()
@@ -1389,6 +1904,10 @@ object TestScript {
                     hint = Hint.ImageY
                     min = 0
                 }
+                int("medianRadius") {
+                    min = 0
+                    default = 1
+                }
                 double("errorThreshold") {
                     description = """
                         The maximum error threshold for storing an aligned image.
@@ -1425,9 +1944,11 @@ object TestScript {
             }
 
             multi {
+                val medianRadius: Int by arguments
+
                 val baseInputFile = inputFiles[0]
                 println("Loading base image: $baseInputFile")
-                val baseImage = ImageReader.read(baseInputFile)
+                val baseImage = ImageReader.read(baseInputFile).medianFilter(medianRadius)
                 println("Base image: $baseImage")
                 println()
 
@@ -1485,10 +2006,11 @@ object TestScript {
 
                     val image = ImageReader.read(inputFile)
                     if (verboseMode) println("Aligning image: $image")
+                    val medianImage = if (medianRadius == 0) image else image.medianFilter(medianRadius)
 
                     val alignment = imageAligner.align(
                         baseImage,
-                        image,
+                        medianImage,
                         centerX = centerX.get(),
                         centerY = centerY.get(),
                         maxOffset = searchRadius.get(),
