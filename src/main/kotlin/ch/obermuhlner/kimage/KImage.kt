@@ -261,6 +261,10 @@ object KImageManager {
         debugMode: Boolean,
         outputPrefix: String,
         outputDirectory: String,
+        progress: Progress = object : Progress {
+            override fun addTotal(totalStepCount: Int, message: String) {}
+            override fun step(stepCount: Int, message: String) {}
+        },
         outputHandler: (inputFile: File, output: Any?) -> Unit = { inputFile, output -> defaultOutputHandler(outputFile(inputFile, outputPrefix, outputDirectory), output) }
     ) {
         if (helpMode) {
@@ -272,7 +276,7 @@ object KImageManager {
         } else {
             when (script) {
                 is ScriptV0_1 -> {
-                    script.execute(inputFiles, arguments, verboseMode, debugMode, File(outputDirectory), outputHandler)
+                    script.execute(inputFiles, arguments, verboseMode, debugMode, progress, File(outputDirectory), outputHandler)
                 }
             }
         }
@@ -389,3 +393,4 @@ object KImageManager {
 data class Point(val x: Double, val y: Double)
 
 data class Rectangle(val x: Double, val y: Double, val width: Double, val height: Double)
+

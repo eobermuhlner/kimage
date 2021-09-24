@@ -718,10 +718,33 @@ class KImageApplication : Application() {
                         }
                     }
                     tableRow.contextMenu = ContextMenu(
+                        menuitem("Move to top", FontIcon()) {
+                            id = "move-up-icon"
+                            onAction = EventHandler {
+                                val items = selectionModel.selectedItems.toList()
+                                items.reversed().forEach {
+                                    inputFiles.remove(it)
+                                    inputFiles.add(0, it)
+                                }
+                                updateImageView(null, inputImageView, inputImageWidthProperty, inputImageHeightProperty, inputImageModelProperty, inputImageLensModelProperty, inputImageExposureTimeProperty, inputImagePhotographicSensitivityProperty, inputImageApertureValueProperty, inputImageBitsPerSampleProperty)
+                            }
+                        },
+                        menuitem("Move to bottom", FontIcon()) {
+                            id = "move-down-icon"
+                            onAction = EventHandler {
+                                val items = selectionModel.selectedItems.toList()
+                                items.forEach {
+                                    inputFiles.remove(it)
+                                    inputFiles.add(it)
+                                }
+                                updateImageView(null, inputImageView, inputImageWidthProperty, inputImageHeightProperty, inputImageModelProperty, inputImageLensModelProperty, inputImageExposureTimeProperty, inputImagePhotographicSensitivityProperty, inputImageApertureValueProperty, inputImageBitsPerSampleProperty)
+                            }
+                        },
                         menuitem("Remove from list", FontIcon()) {
                             id = "remove-icon"
                             onAction = EventHandler {
-                                selectionModel.selectedItems.toList().forEach {
+                                val items = selectionModel.selectedItems.toList()
+                                items.forEach {
                                     inputFiles.remove(it)
                                 }
                                 updateImageView(null, inputImageView, inputImageWidthProperty, inputImageHeightProperty, inputImageModelProperty, inputImageLensModelProperty, inputImageExposureTimeProperty, inputImagePhotographicSensitivityProperty, inputImageApertureValueProperty, inputImageBitsPerSampleProperty)
@@ -1114,7 +1137,7 @@ class KImageApplication : Application() {
 
                                 infoTabPane.selectionModel.select(infoTabLog)
 
-                                runWithProgressDialog("Running ${script.name}", script.title, 0) {
+                                runWithProgressDialog("Running ${script.name}", script.title, 0) { progress ->
                                     val systemOut = System.out
                                     try {
                                         logTextArea.clear()
@@ -1128,7 +1151,8 @@ class KImageApplication : Application() {
                                             verboseModeProperty.get(),
                                             debugModeProperty.get(),
                                             command,
-                                            outputDirectoryProperty.get()
+                                            outputDirectoryProperty.get(),
+                                            progress
                                         )
                                     } catch (ex: Exception) {
                                         println()
@@ -1514,6 +1538,36 @@ class KImageApplication : Application() {
                     setupEnabledWhen(argument, this.disableProperty())
                 }
             }
+            Hint.ImageDeltaX -> {
+                children += button("Take X") {
+                    onAction = EventHandler {
+                        argProperty.set(zoomCenterXProperty.get().toString())
+                    }
+                    setupEnabledWhen(argument, this.disableProperty())
+                }
+                children += button("Take DeltaX") {
+                    onAction = EventHandler {
+                        val delta = zoomCenterXProperty.get() - argProperty.get().toDouble()
+                        argProperty.set(delta.toString())
+                    }
+                    setupEnabledWhen(argument, this.disableProperty())
+                }
+            }
+            Hint.ImageDeltaY -> {
+                children += button("Take Y") {
+                    onAction = EventHandler {
+                        argProperty.set(zoomCenterYProperty.get().toString())
+                    }
+                    setupEnabledWhen(argument, this.disableProperty())
+                }
+                children += button("Take DeltaY") {
+                    onAction = EventHandler {
+                        val delta = zoomCenterYProperty.get() - argProperty.get().toDouble()
+                        argProperty.set(delta.toString())
+                    }
+                    setupEnabledWhen(argument, this.disableProperty())
+                }
+            }
             else -> {
                 // do nothing
             }
@@ -1559,13 +1613,14 @@ class KImageApplication : Application() {
         return renderer.render(parser.parse(markdown))
     }
 
-    private fun runWithProgressDialog(title: String, message: String, sleepMillis: Long, function: () -> Unit) {
+    private fun runWithProgressDialog(title: String, message: String, sleepMillis: Long, function: (Progress) -> Unit) {
+        val progress = ProgressProperties()
         var progressDialog: ProgressDialog? = null
         var finished = false
 
         Thread {
             try {
-                function()
+                function(progress)
             } catch (ex: Throwable) {
                 ex.printStackTrace()
             } finally {
@@ -1584,15 +1639,26 @@ class KImageApplication : Application() {
         Thread.sleep(sleepMillis)
         synchronized(this) {
             if (!finished) {
+                val progressBar = ProgressBar()
                 val dialogContent = vbox(SPACING) {
                     padding = Insets(10.0)
-                    children += node(ProgressBar()) {
+                    children += node(progressBar) {
                         prefWidth = 200.0
                     }
                     children += label(message)
                 }
+                progress.totalProperty.addListener { _, _, value ->
+                    progressBar.progress = progress.progressPercent()
+                }
+                progress.stepProperty.addListener { _, _, value ->
+                    progressBar.progress = progress.progressPercent()
+                }
+                if (progress.totalProperty.get() > 0) {
+                    progressBar.progress = progress.progressPercent()
+                }
 
                 progressDialog = ProgressDialog(dialogContent, title)
+
                 progressDialog?.show()
             }
         }
