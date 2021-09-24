@@ -16,7 +16,7 @@ kimage(0.1) {
     name = "pick-best"
     title = "Picks the best images"
     description = """
-                Picks the best images.
+                Picks the best image and sorts all other images by similarity.
                 
                 The input images must already be aligned.
                 """
@@ -32,6 +32,14 @@ kimage(0.1) {
                         The center y coordinate to measure for similarity.
                         """
             hint = Hint.ImageY
+        }
+        int("medianRadius") {
+            description = """
+                        The radius of the median filter before measuring for similarity.
+                        This is useful to reduce noise.
+                        """
+            min = 0
+            default = 1
         }
         int("radius") {
             description = """
@@ -50,6 +58,7 @@ kimage(0.1) {
     multi {
         val centerX: Int by arguments
         val centerY: Int by arguments
+        val medianRadius: Int by arguments
         val radius: Int by arguments
         val prefix: String by arguments
 
@@ -58,12 +67,13 @@ kimage(0.1) {
         val croppedSize = radius * 2 + 1
         val errorMatrix = DoubleMatrix(croppedSize, croppedSize)
         val croppedMatrices = mutableListOf<Matrix>()
+        //val huge = HugeFloatArray(inputFiles.size, croppedSize, croppedSize)
 
         for (fileIndex in inputFiles.indices) {
             println("Loading ${inputFiles[fileIndex]}")
             val inputImage = ImageReader.read(inputFiles[fileIndex])
 
-            val croppedImage = inputImage.cropCenter(radius, centerX, centerY)
+            val croppedImage = inputImage.cropCenter(radius, centerX, centerY).medianFilter(medianRadius)
             croppedMatrices.add(croppedImage[measureChannel].copy())
         }
         println()
