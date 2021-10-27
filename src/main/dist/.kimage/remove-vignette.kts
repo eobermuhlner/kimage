@@ -172,7 +172,9 @@ kimage(0.1) {
                 }
             }
 
-            val calculatedMaxDistance = centerX.get() + centerY.get() // TODO calculate better
+            val maxDistanceX = max(centerX.get(), inputImage.width-centerX.get())
+            val maxDistanceY = max(centerY.get(), inputImage.width-centerY.get())
+            val calculatedMaxDistance = maxDistanceX + maxDistanceY // TODO calculate better
             val distanceValues = Array<MutableList<Float>>(calculatedMaxDistance) { mutableListOf() }
             val clippedDistanceValues = Array<MutableList<Float>>(calculatedMaxDistance) { mutableListOf() }
 
