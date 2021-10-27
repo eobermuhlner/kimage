@@ -10,10 +10,13 @@ import java.util.*
 import kotlin.math.*
 
 kimage(0.1) {
-    name = "find-dirt"
-    title = "Find dirt on the sensor in a flat image"
+    name = "distance-to-median"
+    title = "Visualize the distance to median for every pixel."
     description = """
-                Find dirt on the sensor in a flat image by creating a false color image showing the distance to the median.
+                Creates a false color image showing the distance to the median.
+                
+                Useful to find dirt on the sensor in a flat image.
+                Useful to visualize light pollution and vignetting in an image.
                 """
     arguments {
         string("channel") {
