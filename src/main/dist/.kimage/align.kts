@@ -99,9 +99,13 @@ kimage(0.1) {
 
         val baseInputFile = inputFiles[0]
         println("Loading base image: $baseInputFile")
-        val baseImage = ImageReader.read(baseInputFile).medianFilter(medianRadius)
+        var baseImage = ImageReader.read(baseInputFile)
         println("Base image: $baseImage")
         println()
+
+        if (medianRadius > 0) {
+            baseImage = baseImage.medianFilter(medianRadius)
+        }
 
         val baseImageMinSize = min(baseImage.width, baseImage.height)
         val defaultCheckRadius = sqrt(baseImageMinSize.toDouble()).toInt()
@@ -165,9 +169,51 @@ kimage(0.1) {
                 centerX = centerX.get(),
                 centerY = centerY.get(),
                 maxOffset = searchRadius.get(),
-                subPixelStep = subPixelStep
+                subPixelStep = subPixelStep,
+                createErrorMatrix = debugMode
             )
             println("Alignment: $alignment")
+
+            alignment.errorMatrix0?.let {
+                val normalizedErrorMatrix = it / it.max()
+                val errorFile = inputFile.prefixName(outputDirectory, "error0_${prefix}_")
+                println("Saving $errorFile for manual analysis")
+                val errorImage = MatrixImage(normalizedErrorMatrix.width, normalizedErrorMatrix.height,
+                    Channel.Red to normalizedErrorMatrix.copy().onEach { v -> if (v < 0) 1.0 else v },
+                    Channel.Green to normalizedErrorMatrix.copy().onEach { v -> if (v < 0) 0.0 else v },
+                    Channel.Blue to normalizedErrorMatrix).copy().onEach { v -> if (v < 0) 0.0 else v }
+                ImageWriter.write(errorImage, errorFile)
+            }
+            alignment.errorMatrix1?.let {
+                val normalizedErrorMatrix = it / it.max()
+                val errorFile = inputFile.prefixName(outputDirectory, "error1_${prefix}_")
+                println("Saving $errorFile for manual analysis")
+                val errorImage = MatrixImage(normalizedErrorMatrix.width, normalizedErrorMatrix.height,
+                    Channel.Red to normalizedErrorMatrix.copy().onEach { v -> if (v < 0) 1.0 else v },
+                    Channel.Green to normalizedErrorMatrix.copy().onEach { v -> if (v < 0) 0.0 else v },
+                    Channel.Blue to normalizedErrorMatrix).copy().onEach { v -> if (v < 0) 0.0 else v }
+                ImageWriter.write(errorImage, errorFile)
+            }
+            alignment.errorMatrix2?.let {
+                val normalizedErrorMatrix = it / it.max()
+                val errorFile = inputFile.prefixName(outputDirectory, "error2_${prefix}_")
+                println("Saving $errorFile for manual analysis")
+                val errorImage = MatrixImage(normalizedErrorMatrix.width, normalizedErrorMatrix.height,
+                    Channel.Red to normalizedErrorMatrix.copy().onEach { v -> if (v < 0) 1.0 else v },
+                    Channel.Green to normalizedErrorMatrix.copy().onEach { v -> if (v < 0) 0.0 else v },
+                    Channel.Blue to normalizedErrorMatrix).copy().onEach { v -> if (v < 0) 0.0 else v }
+                ImageWriter.write(errorImage, errorFile)
+            }
+            alignment.errorMatrix3?.let {
+                val normalizedErrorMatrix = it / it.max()
+                val errorFile = inputFile.prefixName(outputDirectory, "error3_${prefix}_")
+                println("Saving $errorFile for manual analysis")
+                val errorImage = MatrixImage(normalizedErrorMatrix.width, normalizedErrorMatrix.height,
+                    Channel.Red to normalizedErrorMatrix.copy().onEach { v -> if (v < 0) 1.0 else v },
+                    Channel.Green to normalizedErrorMatrix.copy().onEach { v -> if (v < 0) 0.0 else v },
+                    Channel.Blue to normalizedErrorMatrix).copy().onEach { v -> if (v < 0) 0.0 else v }
+                ImageWriter.write(errorImage, errorFile)
+            }
 
             val alignedImage = if (alignment.subPixelX != 0.0 || alignment.subPixelY != 0.0) {
                 image.scaleBy(1.0, 1.0, alignment.subPixelX, alignment.subPixelY).crop(alignment.x, alignment.y, baseImage.width, baseImage.height)
@@ -175,16 +221,17 @@ kimage(0.1) {
                 image.crop(alignment.x, alignment.y, baseImage.width, baseImage.height)
             }
 
-            val error = baseImage.averageError(alignedImage)
+            //val error = baseImage.averageError(alignedImage)
+            val error = alignment.error
             if (error <= errorThreshold) {
                 val alignedFile = inputFile.prefixName(outputDirectory, "${prefix}_")
-                println("Error $error <= $errorThreshold : saving $alignedFile")
+                println("Good : Error $error <= $errorThreshold : saving $alignedFile")
                 ImageWriter.write(alignedImage, alignedFile)
                 outputFilesAlignment.add(Pair(alignedFile, alignment))
             } else {
                 if (saveBad) {
                     val badalignedFile = inputFile.prefixName(outputDirectory, "${prefixBad}_")
-                    println("Error $error > $errorThreshold : saving $badalignedFile")
+                    println("Bad  : Error $error > $errorThreshold : saving $badalignedFile")
                     ImageWriter.write(alignedImage, badalignedFile)
                     outputFilesAlignment.add(Pair(badalignedFile, alignment))
                 } else {
