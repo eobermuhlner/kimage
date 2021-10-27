@@ -253,24 +253,21 @@ fun Image.scaleTo(
     }
 }
 
-fun Image.interpolate(fixPoints: List<Pair<Int, Int>>, power: Double = estimatePowerForInterpolation(fixPoints.size)): Image {
-    val fixPointsXY = fixPoints.map { Pair(it.first, it.second) }
-    val medianRadius = min(width, height) / max(sqrt(fixPoints.size.toDouble()).toInt()+1, 2)
+fun Image.interpolate(fixPoints: List<Pair<Int, Int>>, medianRadius: Int = min(width, height) / max(sqrt(fixPoints.size.toDouble()).toInt()+1, 2), power: Double = estimatePowerForInterpolation(fixPoints.size)): Image {
     return MatrixImage(
         width,
         height,
         this.channels) { channel, _, _ ->
-        this[channel].interpolate(fixPointsXY,  { this[channel].medianAround(it.first, it.second, medianRadius) }, power = power)
+        this[channel].interpolate(fixPoints,  { this[channel].medianAround(it.first, it.second, medianRadius) }, power = power)
     }
 }
 
 fun Image.interpolate(fixPoints: List<Pair<Int, Int>>, fixValues: List<Double>, power: Double = estimatePowerForInterpolation(fixPoints.size)): Image {
-    val fixPointsXY = fixPoints.map { Pair(it.first, it.second) }
     return MatrixImage(
         width,
         height,
         this.channels) { channel, _, _ ->
-        this[channel].interpolate(fixPointsXY,  fixValues, power = power)
+        this[channel].interpolate(fixPoints,  fixValues, power = power)
     }
 }
 
