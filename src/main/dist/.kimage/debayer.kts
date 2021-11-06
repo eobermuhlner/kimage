@@ -201,10 +201,13 @@ kimage(0.1) {
         println("  blue =  $blue")
         println()
 
-        val maxFactor = max(red.get(), max(green.get(), blue.get()))
-        var redFactor = maxFactor / red.get()
-        var greenFactor = maxFactor / green.get()
-        var blueFactor = maxFactor / blue.get()
+//        val maxFactor = max(red.get(), max(green.get(), blue.get()))
+//        var redFactor = maxFactor / red.get()
+//        var greenFactor = maxFactor / green.get()
+//        var blueFactor = maxFactor / blue.get()
+        var redFactor = red.get()
+        var greenFactor = green.get()
+        var blueFactor = blue.get()
 
         println("Whitebalance:")
         println("  red =   $redFactor")
