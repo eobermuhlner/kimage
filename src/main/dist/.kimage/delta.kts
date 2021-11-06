@@ -30,6 +30,7 @@ kimage(0.1) {
                 Controls how much the differences are exaggerated.
             """
             default = 5.0
+            min = 0
         }
         string("channel") {
             description = """
