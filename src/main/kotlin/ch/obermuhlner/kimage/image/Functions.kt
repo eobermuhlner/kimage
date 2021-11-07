@@ -33,7 +33,7 @@ fun deltaChannel(image1: Image, image2: Image, factor: Double = 5.0, channel: Ch
 }
 
 // exaggerates low values but never reaches 1.0
-private fun exaggerate(x: Double): Double = -1/(x+0.5)+2
+fun exaggerate(x: Double): Double = -1/(x+0.5)+2
 
 fun Image.histogramImage(
     histogramWidth: Int,
