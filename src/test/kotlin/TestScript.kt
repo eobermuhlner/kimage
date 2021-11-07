@@ -28,11 +28,13 @@ object TestScript {
         KImageManager.addScriptDirectory(File("src/main/dist"))
 
         val orionImages = arrayOf("images/align/orion1.png", "images/align/orion2.png", "images/align/orion3.png", "images/align/orion4.png", "images/align/orion5.png", "images/align/orion6.png")
+        val orion2Images = arrayOf("images/align/orion1.png", "images/align/orion2.png")
         val alignedOrionImages = arrayOf("images/align/aligned_orion1.png", "images/align/aligned_orion2.png", "images/align/aligned_orion3.png", "images/align/aligned_orion4.png", "images/align/aligned_orion5.png", "images/align/aligned_orion6.png")
         //val hdrImages = arrayOf("images/hdr/hdr1.jpg", "images/hdr/hdr2.jpg", "images/hdr/hdr3.jpg", "images/hdr/hdr4.jpg")
         val hdrImages = arrayOf("images/hdr/HDRI_Sample_Scene_Window_-_01.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_02.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_03.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_04.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_05.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_06.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_07.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_08.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_09.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_10.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_11.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_12.jpg")
 
-        //runScript(scriptAlign(), *orionImages)
+        //runScript(scriptAlign(), mapOf("centerX" to "447", "centerY" to "517", "checkRadius" to "20", "searchRadius" to "100", "medianRadius" to "0", "subPixelStep" to "0", "sort" to "false"), *orion2Images)
+        //runScript(scriptAlign(), mapOf("sort" to "false"), *orion2Images)
         //runScript(scriptStackMax(), mapOf(), *orionImages)
         //runScript(scriptStack(), mapOf("kappa" to "2.0"), *alignedOrionImages)
         //runScript(scriptStack(), mapOf("kappa" to "2.0"), *orionImages)
@@ -72,8 +74,279 @@ object TestScript {
 
         //runScript(scriptPickBest(), mapOf("centerX" to "400", "centerY" to "400", "radius" to "200"), *alignedOrionImages)
 
-        runScript(scriptSharpen(), mapOf(), "images/sharpen/moon.tif")
+        //runScript(scriptSharpen(), mapOf(), "images/sharpen/moon.tif")
+        //runScript(scriptFindDirt(), mapOf(), "images/dirt/IMG_3194.JPG")
+
+        runScript(scriptTransformSaturationBrightness(), mapOf(), "images/animal.png")
     }
+
+    private fun scriptTransformSaturationBrightness(): Script =
+        kimage(0.1) {
+            name = "transform-saturation-brightness"
+            title = "Transform the saturation and brightness of an image"
+            description = """
+                Transform the saturation and brightness of an image.
+                """
+            arguments {
+                string("saturationFunction") {
+                    allowed = listOf("linear", "power", "exaggerate")
+                    default = "linear"
+                }
+                double("saturationFactor") {
+                    default = 1.0
+                }
+                string("brightnessFunction") {
+                    allowed = listOf("linear", "power", "exaggerate")
+                    default = "linear"
+                }
+                double("brightnessFactor") {
+                    default = 1.0
+                }
+            }
+
+            single {
+                val saturationFunction: String by arguments
+                val saturationFactor: Double by arguments
+                val brightnessFunction: String by arguments
+                val brightnessFactor: Double by arguments
+
+                val hue = inputImage[Channel.Hue]
+                val saturation = inputImage[Channel.Saturation]
+                val brightness = inputImage[Channel.Brightness]
+
+                val changedSaturation = when(saturationFunction) {
+                    "linear" -> saturation * saturationFactor
+                    "power" -> saturation.copy().onEach { v -> v.pow(1.0/saturationFactor) }
+                    "exaggerate" -> saturation.copy().onEach { v -> exaggerate(v * saturationFactor) }
+                    else -> throw IllegalArgumentException("Unknown function: $saturationFunction")
+                }
+                val changedBrightness = when(brightnessFunction) {
+                    "linear" -> brightness * brightnessFactor
+                    "power" -> brightness.copy().onEach { v -> v.pow(1.0/brightnessFactor) }
+                    "exaggerate" -> brightness.copy().onEach { v -> exaggerate(v * brightnessFactor) }
+                    else -> throw IllegalArgumentException("Unknown function: $brightnessFunction")
+                }
+
+                val hsbImage = MatrixImage(inputImage.width, inputImage.height,
+                    Channel.Hue to hue,
+                    Channel.Saturation to changedSaturation,
+                    Channel.Brightness to changedBrightness)
+
+                MatrixImage(inputImage.width, inputImage.height,
+                    Channel.Red to hsbImage[Channel.Red],
+                    Channel.Green to hsbImage[Channel.Green],
+                    Channel.Blue to hsbImage[Channel.Blue])
+            }
+        }
+
+    private fun scriptFilter(): Script =
+        kimage(0.1) {
+            name = "filter"
+            title = "Filter an image"
+            description = """
+                Filter an image according the specified arguments.
+                """
+            arguments {
+                string("filter") {
+                    description = """
+                The filter algorithm.
+                
+                - `blur` uses a gaussian blur filter of the specified `radius`
+                - `unsharpMask` uses an unsharp mask of the specified `radius`
+                - `blur3x3` uses a gaussian blur filter using a 3x3 kernel
+                - `blur5x5` uses a gaussian blur filter using a 5x5 kernel
+                - `blur7x7` uses a gaussian blur filter using a 7x7 kernel
+                - `median` uses a median filter of the specified `radius`
+                - `average` uses an average filter of the specified `radius`
+                - `sharpen3x3` uses a 3x3 sharpen mask
+                - `unsharpMask3x3` uses a 3x3 unsharp mask
+                - `edgeDetectionStrong3x3` detects edges along the horizontal/vertial axes and both diagonals using a 3x3 kernel
+                - `edgeDetectionCross3x3` detects edges along the horizontal/vertial axes using a 3x3 kernel
+                - `edgeDetectionDiagonal3x3` detects edges along both diagonals using a 3x3 kernel
+                """
+                    allowed = listOf("blur", "median", "average", "unsharpMask", "sobel3x3", "sobel5x5", "blur3x3", "blur5x5", "blur7x7", "sharpen3x3", "unsharpMask3x3", "edgeDetectionStrong3x3", "edgeDetectionCross3x3", "edgeDetectionDiagonal3x3")
+                }
+                int("radius") {
+                    description = """
+                The radius in pixels for the `blur`, 'unsharpMask', `median` and `average` filters.
+                """
+                    enabledWhen = Reference("filter").isEqual("blur", "median", "average", "unsharpMask")
+                    min = 1
+                    default = 3
+                }
+                double("strength") {
+                    description = """
+                The strength of the filter.
+                """
+                    enabledWhen = Reference("filter").isEqual("unsharpMask")
+                    min = 0.0
+                    max = 1.0
+                    default = 0.5
+                }
+                string("channels") {
+                    allowed = listOf("rgb", "red", "green", "blue", "hue", "saturation", "brightness", "hsb", "hs", "hb", "sb")
+                    default = "rgb"
+                }
+            }
+
+            single {
+                val filter: String by arguments
+                val radius: Int by arguments
+                val strength: Double by arguments
+                val channels: String by arguments
+
+                fun matrixFilter(matrix: Matrix): Matrix {
+                    return when (filter) {
+                        "blur" -> matrix.gaussianBlurFilter(radius)
+                        "median" -> matrix.medianFilter(radius)
+                        "average" -> matrix.averageFilter(radius)
+                        "sharpen" -> matrix.sharpenFilter()
+                        "unsharpMask" -> matrix.unsharpMaskFilter(radius, strength)
+                        "unsharpMask3x3" -> matrix.convolute(KernelFilter.UnsharpMask)
+                        "blur3x3" -> matrix.convolute(KernelFilter.GaussianBlur3)
+                        "blur5x5" -> matrix.convolute(KernelFilter.GaussianBlur5)
+                        "blur7x7" -> matrix.convolute(KernelFilter.GaussianBlur7)
+                        "edgeDetectionStrong3x3" -> matrix.edgeDetectionStrongFilter()
+                        "edgeDetectionCross3x3" -> matrix.edgeDetectionCrossFilter()
+                        "edgeDetectionDiagonal3x3" -> matrix.edgeDetectionDiagonalFilter()
+                        "sobel3x3" -> matrix.sobelFilter3()
+                        "sobel5x5" -> matrix.sobelFilter5()
+                        else -> throw IllegalArgumentException("Unknown filter: $filter")
+                    }
+                }
+
+                when(channels) {
+                    "rgb", "red", "green", "blue" -> {
+                        var red = inputImage[Channel.Red]
+                        var green = inputImage[Channel.Green]
+                        var blue = inputImage[Channel.Blue]
+
+                        when(channels) {
+                            "red" -> red = matrixFilter(red)
+                            "green" -> green = matrixFilter(green)
+                            "blue" -> blue = matrixFilter(blue)
+                            "rgb" -> {
+                                red = matrixFilter(red)
+                                green = matrixFilter(green)
+                                blue = matrixFilter(blue)
+                            }
+                            else -> throw IllegalArgumentException("Unknown channels: $channels")
+                        }
+
+                        MatrixImage(inputImage.width, inputImage.height,
+                            Channel.Red to red,
+                            Channel.Green to green,
+                            Channel.Blue to blue)
+                    }
+                    else -> {
+                        var hue = inputImage[Channel.Hue]
+                        var saturation = inputImage[Channel.Saturation]
+                        var brightness = inputImage[Channel.Brightness]
+
+                        when(channels) {
+                            "hue" -> hue = matrixFilter(hue)
+                            "saturation" -> saturation = matrixFilter(saturation)
+                            "brightness" -> brightness = matrixFilter(brightness)
+                            "hsb" -> {
+                                hue = matrixFilter(hue)
+                                saturation = matrixFilter(saturation)
+                                brightness = matrixFilter(brightness)
+                            }
+                            "hs" -> {
+                                hue = matrixFilter(hue)
+                                saturation = matrixFilter(saturation)
+                            }
+                            "hb" -> {
+                                hue = matrixFilter(hue)
+                                brightness = matrixFilter(brightness)
+                            }
+                            "sb" -> {
+                                saturation = matrixFilter(saturation)
+                                brightness = matrixFilter(brightness)
+                            }
+                            else -> throw IllegalArgumentException("Unknown channels: $channels")
+                        }
+
+                        val hsbImage = MatrixImage(inputImage.width, inputImage.height,
+                            Channel.Hue to hue,
+                            Channel.Saturation to saturation,
+                            Channel.Brightness to brightness)
+
+                        MatrixImage(inputImage.width, inputImage.height,
+                            Channel.Red to hsbImage[Channel.Red],
+                            Channel.Green to hsbImage[Channel.Green],
+                            Channel.Blue to hsbImage[Channel.Blue])
+                    }
+                }
+            }
+        }
+
+
+    private fun scriptFindDirt(): Script =
+        kimage(0.1) {
+            name = "find-dirt"
+            title = "Find dirt on the sensor in a flat image"
+            description = """
+                Find dirt on the sensor in a flat image by creating a false color image showing the distance to the median.
+                """
+            arguments {
+                string("channel") {
+                    description = """
+                        """
+                    allowed = listOf("gray", "luminance", "red", "green", "blue")
+                    default = "gray"
+                }
+                double("factor") {
+                    default = 2.0
+                }
+            }
+
+            single {
+                val channel: String by arguments
+                val factor: Double by arguments
+
+                val measureChannel = when (channel) {
+                    "gray" -> Channel.Gray
+                    "luminance" -> Channel.Luminance
+                    "red" -> Channel.Red
+                    "green" -> Channel.Green
+                    "blue" -> Channel.Blue
+                    else -> throw IllegalArgumentException("Unknown channel: $channel")
+                }
+
+                val measureMatrix = inputImage[measureChannel]
+
+                val median = measureMatrix.median();
+
+                val f = 0.2
+                var delta = Matrix.matrixOf(measureMatrix.width, measureMatrix.height) { x, y ->
+                    (measureMatrix[x, y] - median)
+                }
+                val min = delta.min()
+                val max = delta.max()
+                delta.onEach { v ->
+                    (v + min)/(max - min) - min / (max - min)
+                }
+                delta.onEach { v ->
+                    if (v >= 0.0) {
+                        v.pow(1.0 / factor)
+                    } else {
+                        -((-v).pow(1.0 / factor))
+                    }
+                }
+
+                val red = delta.copy().onEach   { v -> if (v < 0.0) -v     else v * f }
+                val green = delta.copy().onEach { v -> if (v < 0.0) -v * f else v * f }
+                val blue = delta.copy().onEach  { v -> if (v < 0.0) -v * f else v     }
+
+
+                MatrixImage(measureMatrix.width, measureMatrix.height,
+                    Channel.Red to red,
+                    Channel.Green to green,
+                    Channel.Blue to blue
+                )
+            }
+        }
 
     private fun scriptSharpen(): Script =
         kimage(0.1) {
@@ -1948,9 +2221,13 @@ object TestScript {
 
                 val baseInputFile = inputFiles[0]
                 println("Loading base image: $baseInputFile")
-                val baseImage = ImageReader.read(baseInputFile).medianFilter(medianRadius)
+                var baseImage = ImageReader.read(baseInputFile)
                 println("Base image: $baseImage")
                 println()
+
+                if (medianRadius > 0) {
+                    baseImage = baseImage.medianFilter(medianRadius)
+                }
 
                 val baseImageMinSize = min(baseImage.width, baseImage.height)
                 val defaultCheckRadius = sqrt(baseImageMinSize.toDouble()).toInt()
@@ -2014,9 +2291,51 @@ object TestScript {
                         centerX = centerX.get(),
                         centerY = centerY.get(),
                         maxOffset = searchRadius.get(),
-                        subPixelStep = subPixelStep
+                        subPixelStep = subPixelStep,
+                        createErrorMatrix = debugMode
                     )
                     println("Alignment: $alignment")
+
+                    alignment.errorMatrix0?.let {
+                        val normalizedErrorMatrix = it / it.max()
+                        val errorFile = inputFile.prefixName(outputDirectory, "error0_${prefix}_")
+                        println("Saving $errorFile for manual analysis")
+                        val errorImage = MatrixImage(normalizedErrorMatrix.width, normalizedErrorMatrix.height,
+                            Channel.Red to normalizedErrorMatrix.copy().onEach { v -> if (v < 0) 1.0 else v },
+                            Channel.Green to normalizedErrorMatrix.copy().onEach { v -> if (v < 0) 0.0 else v },
+                            Channel.Blue to normalizedErrorMatrix).copy().onEach { v -> if (v < 0) 0.0 else v }
+                        ImageWriter.write(errorImage, errorFile)
+                    }
+                    alignment.errorMatrix1?.let {
+                        val normalizedErrorMatrix = it / it.max()
+                        val errorFile = inputFile.prefixName(outputDirectory, "error1_${prefix}_")
+                        println("Saving $errorFile for manual analysis")
+                        val errorImage = MatrixImage(normalizedErrorMatrix.width, normalizedErrorMatrix.height,
+                            Channel.Red to normalizedErrorMatrix.copy().onEach { v -> if (v < 0) 1.0 else v },
+                            Channel.Green to normalizedErrorMatrix.copy().onEach { v -> if (v < 0) 0.0 else v },
+                            Channel.Blue to normalizedErrorMatrix).copy().onEach { v -> if (v < 0) 0.0 else v }
+                        ImageWriter.write(errorImage, errorFile)
+                    }
+                    alignment.errorMatrix2?.let {
+                        val normalizedErrorMatrix = it / it.max()
+                        val errorFile = inputFile.prefixName(outputDirectory, "error2_${prefix}_")
+                        println("Saving $errorFile for manual analysis")
+                        val errorImage = MatrixImage(normalizedErrorMatrix.width, normalizedErrorMatrix.height,
+                            Channel.Red to normalizedErrorMatrix.copy().onEach { v -> if (v < 0) 1.0 else v },
+                            Channel.Green to normalizedErrorMatrix.copy().onEach { v -> if (v < 0) 0.0 else v },
+                            Channel.Blue to normalizedErrorMatrix).copy().onEach { v -> if (v < 0) 0.0 else v }
+                        ImageWriter.write(errorImage, errorFile)
+                    }
+                    alignment.errorMatrix3?.let {
+                        val normalizedErrorMatrix = it / it.max()
+                        val errorFile = inputFile.prefixName(outputDirectory, "error3_${prefix}_")
+                        println("Saving $errorFile for manual analysis")
+                        val errorImage = MatrixImage(normalizedErrorMatrix.width, normalizedErrorMatrix.height,
+                            Channel.Red to normalizedErrorMatrix.copy().onEach { v -> if (v < 0) 1.0 else v },
+                            Channel.Green to normalizedErrorMatrix.copy().onEach { v -> if (v < 0) 0.0 else v },
+                            Channel.Blue to normalizedErrorMatrix).copy().onEach { v -> if (v < 0) 0.0 else v }
+                        ImageWriter.write(errorImage, errorFile)
+                    }
 
                     val alignedImage = if (alignment.subPixelX != 0.0 || alignment.subPixelY != 0.0) {
                         image.scaleBy(1.0, 1.0, alignment.subPixelX, alignment.subPixelY).crop(alignment.x, alignment.y, baseImage.width, baseImage.height)
@@ -2024,16 +2343,17 @@ object TestScript {
                         image.crop(alignment.x, alignment.y, baseImage.width, baseImage.height)
                     }
 
-                    val error = baseImage.averageError(alignedImage)
+                    //val error = baseImage.averageError(alignedImage)
+                    val error = alignment.error
                     if (error <= errorThreshold) {
                         val alignedFile = inputFile.prefixName(outputDirectory, "${prefix}_")
-                        println("Error $error <= $errorThreshold : saving $alignedFile")
+                        println("Good : Error $error <= $errorThreshold : saving $alignedFile")
                         ImageWriter.write(alignedImage, alignedFile)
                         outputFilesAlignment.add(Pair(alignedFile, alignment))
                     } else {
                         if (saveBad) {
                             val badalignedFile = inputFile.prefixName(outputDirectory, "${prefixBad}_")
-                            println("Error $error > $errorThreshold : saving $badalignedFile")
+                            println("Bad  : Error $error > $errorThreshold : saving $badalignedFile")
                             ImageWriter.write(alignedImage, badalignedFile)
                             outputFilesAlignment.add(Pair(badalignedFile, alignment))
                         } else {
@@ -2085,7 +2405,7 @@ object TestScript {
                 println(String.format("%-40s %6s %6s %12s %5s %5s %-8s %-8s", "Name", "Exists", "Type", "Bytes", "Width", "Height", "Median", "Stddev"))
                 for (file in inputFiles) {
                     val fileSize = if (file.exists()) Files.size(file.toPath()) else 0
-                    val fileType = if (file.isFile()) "File" else if (file.isDirectory()) "Dir" else "Other"
+                    val fileType = if (file.isFile()) "File" else if (file.isDirectory) "Dir" else "Other"
 
                     print(String.format("%-40s %6s %6s %12d", file.name, file.exists(), fileType, fileSize))
                     if (file.isFile()) {
