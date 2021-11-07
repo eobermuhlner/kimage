@@ -3,6 +3,7 @@ package ch.obermuhlner.kimage.image
 import ch.obermuhlner.kimage.math.clamp
 import ch.obermuhlner.kimage.matrix.DoubleMatrix
 import ch.obermuhlner.kimage.matrix.Matrix
+import kotlin.math.floor
 
 interface Image {
     val width: Int
@@ -36,14 +37,17 @@ interface Image {
             Channel.Luminance -> 0.2126 * getPixel(x, y, Channel.Red) + 0.7152 * getPixel(x, y, Channel.Green) +  0.0722 * getPixel(x, y, Channel.Blue)
             Channel.Gray -> (getPixel(x, y, Channel.Red) + getPixel(x, y, Channel.Green) + getPixel(x, y, Channel.Blue)) / 3.0
             Channel.Alpha -> 1.0
-            Channel.Hue -> RGBtoHSB(getPixel(x, y, Channel.Red), getPixel(x, y, Channel.Green), getPixel(x, y, Channel.Blue))[0]
-            Channel.Saturation -> RGBtoHSB(getPixel(x, y, Channel.Red), getPixel(x, y, Channel.Green), getPixel(x, y, Channel.Blue))[1]
-            Channel.Value -> RGBtoHSB(getPixel(x, y, Channel.Red), getPixel(x, y, Channel.Green), getPixel(x, y, Channel.Blue))[2]
+            Channel.Hue -> convertRGBtoHSB(getPixel(x, y, Channel.Red), getPixel(x, y, Channel.Green), getPixel(x, y, Channel.Blue))[0]
+            Channel.Saturation -> convertRGBtoHSB(getPixel(x, y, Channel.Red), getPixel(x, y, Channel.Green), getPixel(x, y, Channel.Blue))[1]
+            Channel.Brightness -> convertRGBtoHSB(getPixel(x, y, Channel.Red), getPixel(x, y, Channel.Green), getPixel(x, y, Channel.Blue))[2]
+            Channel.Red -> convertHSBtoRGB(getPixel(x, y, Channel.Hue), getPixel(x, y, Channel.Saturation), getPixel(x, y, Channel.Brightness))[0]
+            Channel.Green -> convertHSBtoRGB(getPixel(x, y, Channel.Hue), getPixel(x, y, Channel.Saturation), getPixel(x, y, Channel.Brightness))[1]
+            Channel.Blue -> convertHSBtoRGB(getPixel(x, y, Channel.Hue), getPixel(x, y, Channel.Saturation), getPixel(x, y, Channel.Brightness))[2]
             else -> 0.0
         }
     }
 
-    fun RGBtoHSB(r: Double, g: Double, b: Double, hsbvals: DoubleArray = DoubleArray(3)): DoubleArray {
+    fun convertRGBtoHSB(r: Double, g: Double, b: Double, hsbvals: DoubleArray = DoubleArray(3)): DoubleArray {
         var hue: Double
         val saturation: Double
         val brightness: Double
@@ -67,6 +71,61 @@ interface Image {
         hsbvals[1] = saturation
         hsbvals[2] = brightness
         return hsbvals
+    }
+
+    fun convertHSBtoRGB(hue: Double, saturation: Double, brightness: Double, rgbvals: DoubleArray = DoubleArray(3)): DoubleArray {
+        var r = 0.0
+        var g = 0.0
+        var b = 0.0
+        if (saturation == 0.0) {
+            b = brightness
+            g = b
+            r = g
+        } else {
+            val h = (hue - floor(hue)) * 6.0
+            val f = h - floor(h)
+            val p = brightness * (1.0 - saturation)
+            val q = brightness * (1.0 - saturation * f)
+            val t = brightness * (1.0 - saturation * (1.0 - f))
+            when (h.toInt()) {
+                0 -> {
+                    r = brightness
+                    g = t
+                    b = p
+                }
+                1 -> {
+                    r = q
+                    g = brightness
+                    b = p
+                }
+                2 -> {
+                    r = p
+                    g = brightness
+                    b = t
+                }
+                3 -> {
+                    r = p
+                    g = q
+                    b = brightness
+                }
+                4 -> {
+                    r = t
+                    g = p
+                    b = brightness
+                }
+                5 -> {
+                    r = brightness
+                    g = p
+                    b = q
+                }
+            }
+        }
+
+        rgbvals[0] = r
+        rgbvals[1] = g
+        rgbvals[2] = b
+
+        return rgbvals
     }
 
     fun getPixel(x: Int, y: Int, targetChannels: List<Channel>, color: DoubleArray = DoubleArray(targetChannels.size)) {

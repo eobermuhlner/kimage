@@ -8,6 +8,6 @@ enum class Channel {
     Luminance,
     Hue,
     Saturation,
-    Value,
+    Brightness,
     Alpha
 }
