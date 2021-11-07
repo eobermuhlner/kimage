@@ -627,7 +627,7 @@ object TestMain {
         }
 
         example("channel_value", imageName) {
-            val value = image[Channel.Value]
+            val value = image[Channel.Brightness]
             MatrixImage(
                 image.width,
                 image.height,
