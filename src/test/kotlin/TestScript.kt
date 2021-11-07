@@ -3485,6 +3485,14 @@ object TestScript {
                     description = "Example argument for an optional directory."
                     isDirectory = true
                 }
+                point("pointArg") {
+                    min = Point(0, 0)
+                    max = Point(100.0, 200.0)
+                    hint = Hint.ImageXY
+                }
+                optionalPoint("optionalPointArg") {
+                    min = Point(1, 2)
+                }
                 list("listOfIntArg") {
                     description = "Example argument for a list of integer values."
                     min = 1

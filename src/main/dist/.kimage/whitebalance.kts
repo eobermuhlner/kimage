@@ -26,23 +26,16 @@ kimage(0.1) {
                 - `global` uses the median of the entire input image to determine the gray value.
                 - `highlight` uses the median of the highlighted pixels of the entire input image to determine the gray value.
                    Use `highlight` to specify the percentile of the pixels that should be used
-                - `local` uses the median of a region centered at `localX`/`localY` with a radius of `localRadius` pixels.
+                - `local` uses the median of a region centered at the point `localCenter` with a radius of `localRadius` pixels.
                 """
             allowed = listOf("custom", "global", "highlight", "local")
             default = "highlight"
         }
-        optionalInt("localX") {
+        optionalPoint("localCenter") {
             description = """
-                The center on the x axis of the local area to determine the gray value for white balancing.
+                The center of the local area to determine the gray value for white balancing.
                 """
-            hint = Hint.ImageX
-            enabledWhen = Reference("whitebalance").isEqual("local")
-        }
-        optionalInt("localY") {
-            description = """
-                The center on the y axis of the local area to determine the gray value for white balancing.
-                """
-            hint = Hint.ImageY
+            hint = Hint.ImageXY
             enabledWhen = Reference("whitebalance").isEqual("local")
         }
         int("localRadius") {
@@ -98,8 +91,7 @@ kimage(0.1) {
 
     single {
         var whitebalance: String by arguments
-        var localX: Optional<Int> by arguments
-        var localY: Optional<Int> by arguments
+        var localCenter: Optional<Point> by arguments
         val localRadius: Int by arguments
         val highlight: Double by arguments
         val highlightChannel: String by arguments
@@ -108,11 +100,8 @@ kimage(0.1) {
         var green: Optional<Double> by arguments
         var blue: Optional<Double> by arguments
 
-        if (!localX.isPresent) {
-            localX = Optional.of(inputImage.width / 2)
-        }
-        if (!localY.isPresent) {
-            localY = Optional.of(inputImage.height/ 2)
+        if (!localCenter.isPresent) {
+            localCenter = Optional.of(Point(inputImage.width / 2, inputImage.height/ 2))
         }
 
         val redMatrix = inputImage[Channel.Red]
@@ -181,8 +170,8 @@ kimage(0.1) {
                 blue = Optional.of(blueValues.median())
             }
             "local" -> {
-                val centerX = localX.get()
-                val centerY = localY.get()
+                val centerX = localCenter.get().x.toInt()
+                val centerY = localCenter.get().y.toInt()
                 red = Optional.of(redMatrix.cropCenter(localRadius, centerX, centerY, false).median())
                 green = Optional.of(greenMatrix.cropCenter(localRadius, centerX, centerY, false).median())
                 blue = Optional.of(blueMatrix.cropCenter(localRadius, centerX, centerY, false).median())

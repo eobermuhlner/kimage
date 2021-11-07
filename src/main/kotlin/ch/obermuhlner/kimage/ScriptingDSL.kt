@@ -179,6 +179,17 @@ class ScriptV0_1 : Script(0.1) {
                     println("${indent}- Default path: `${arg.default}`")
                 }
             }
+            is ScriptPointArg -> {
+                if (arg.min != null) {
+                    println("${indent}- Minimum value: ${arg.min}")
+                }
+                if (arg.max != null) {
+                    println("${indent}- Maximum value: ${arg.max}")
+                }
+                if (arg.default != null) {
+                    println("${indent}- Default value: ${arg.default}")
+                }
+            }
             is ScriptListArg -> {
                 println("${indent}- List Elements:")
                 for (listElement in arg.arguments) {
@@ -333,6 +344,12 @@ interface ScriptNamedTypes {
     fun optionalImage(name: String, initializer: ScriptOptionalImageArg.() -> Unit) =
         arguments.addIfNotContains(ScriptOptionalImageArg().apply { this.name = name }.apply(initializer))
 
+    fun point(name: String, initializer: ScriptPointArg.() -> Unit) =
+        arguments.addIfNotContains(ScriptPointArg().apply { this.name = name }.apply(initializer))
+
+    fun optionalPoint(name: String, initializer: ScriptOptionalPointArg.() -> Unit) =
+        arguments.addIfNotContains(ScriptOptionalPointArg().apply { this.name = name }.apply(initializer))
+
     fun list(name: String, initializer: ScriptListArg.() -> Unit) =
         arguments.addIfNotContains(ScriptListArg().apply { this.name = name }.apply(initializer))
 
@@ -387,6 +404,12 @@ interface ScriptUnnamedTypes {
     fun optionalImage(initializer: ScriptImageArg.() -> Unit) =
         arguments.add(ScriptImageArg().apply(initializer))
 
+    fun point(initializer: ScriptPointArg.() -> Unit) =
+        arguments.add(ScriptPointArg().apply(initializer))
+
+    fun optionalPoint(initializer: ScriptOptionalPointArg.() -> Unit) =
+        arguments.add(ScriptOptionalPointArg().apply(initializer))
+
     fun list(initializer: ScriptListArg.() -> Unit) =
         arguments.add(ScriptListArg().apply(initializer))
 
@@ -407,6 +430,7 @@ class ScriptArguments(override val arguments: MutableList<ScriptArg> = mutableLi
 enum class Hint {
     ImageX,
     ImageY,
+    ImageXY,
     ImageDeltaX,
     ImageDeltaY,
     ImageWidth,
@@ -773,6 +797,75 @@ class ScriptOptionalImageArg() : ScriptImageArg(false) {
         }
         val file = if (anyValue is File) anyValue else File(anyValue.toString())
         return Optional.of(ImageReader.read(file))
+    }
+}
+
+@KotlinDSL
+open class ScriptPointArg(mandatory: Boolean = true) : ScriptArg("point", mandatory) {
+    var min: Point? = null
+    var max: Point? = null
+    var default: Point? = null
+
+    override val hasDefault: Boolean
+        get() = default != null
+
+    override fun toValue(anyValue: Any?): Any {
+        return toPointValue(anyValue)
+    }
+
+    fun toPointValue(anyValue: Any?): Point {
+        if (anyValue == null || anyValue == "") {
+            default?.let {
+                return toPointValue(it.toString())
+            }
+            throw ScriptArgumentException("Argument $name is mandatory")
+        }
+        try {
+            val value = if (anyValue is Point) anyValue else toPointValue(anyValue.toString())
+            min?.let {
+                if (value.x < it.x) {
+                    throw ScriptArgumentException("Argument $name.x must be >= $it.x but is ${value.x}")
+                }
+                if (value.y < it.y) {
+                    throw ScriptArgumentException("Argument $name.y must be >= $it.y but is ${value.y}")
+                }
+            }
+            max?.let {
+                if (value.x > it.x) {
+                    throw ScriptArgumentException("Argument $name.x must be <= $it.x but is ${value.x}")
+                }
+                if (value.y > it.y) {
+                    throw ScriptArgumentException("Argument $name.y must be <= $it.y but is ${value.y}")
+                }
+            }
+            return value
+        } catch (ex: NumberFormatException) {
+            throw ScriptArgumentException("Argument $name must be an Point value, but is '$anyValue'")
+        }
+    }
+
+    private fun toPointValue(string: String): Point {
+        val parts = string.split(",")
+        return Point(parts[0].toDouble(), parts[1].toDouble())
+    }
+}
+
+@KotlinDSL
+class ScriptOptionalPointArg : ScriptPointArg(false) {
+    override fun toValue(anyValue: Any?): Any {
+        return toOptionalPointValue(anyValue)
+    }
+
+    fun toOptionalPointValue(anyValue: Any?): Optional<Point> {
+        if (anyValue == null || anyValue == "") {
+            if (default == null) {
+                return Optional.empty()
+            }
+            default?.let {
+                return Optional.of(toPointValue(it.toString()))
+            }
+        }
+        return Optional.of(toPointValue(anyValue))
     }
 }
 

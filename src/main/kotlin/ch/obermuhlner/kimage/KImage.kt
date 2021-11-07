@@ -390,7 +390,17 @@ object KImageManager {
     }
 }
 
-data class Point(val x: Double, val y: Double)
+data class Point(val x: Double, val y: Double) {
 
-data class Rectangle(val x: Double, val y: Double, val width: Double, val height: Double)
+    constructor(x: Int, y: Int) : this(x.toDouble(), y.toDouble())
+
+    override fun toString(): String {
+        return "$x, $y"
+    }
+}
+
+data class Rectangle(val x: Double, val y: Double, val width: Double, val height: Double) {
+
+    constructor(x: Int, y: Int, width: Int, height: Int) : this(x.toDouble(), y.toDouble(), width.toDouble(), height.toDouble())
+}
 

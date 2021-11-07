@@ -1464,6 +1464,28 @@ class KImageApplication : Application() {
                             }
                         }
                     }
+                    is ScriptPointArg -> {
+                        hbox(SPACING) {
+                            val argProperty = remember(SimpleStringProperty())
+                            argProperty.addListener { _, _, value ->
+                                argumentsProperty[argument.name] = value
+                            }
+                            children += textfield {
+                                tooltip = Tooltip(argument.tooltip())
+                                //textFormatter = textFormatter(argument.default, argument.min, argument.max)
+                                textProperty().bindBidirectional(argProperty)
+                                setupValidation(this, textProperty(), argument, argProperty)
+                                setupEnabledWhen(argument, this.disableProperty())
+                            }
+                            argument.unit?.let {
+                                children += label(it)
+                            }
+                            setupHints(argument, argProperty)
+                            toPointValue(initialValue, argument.default)?.let {
+                                argProperty.set(it.toString())
+                            }
+                        }
+                    }
                     else -> {
                         hbox {
                             val argProperty = remember(SimpleStringProperty())
@@ -1511,6 +1533,16 @@ class KImageApplication : Application() {
         return toStringValue(*values)?.toDouble()
     }
 
+    private fun toPointValue(vararg values: Any?): Point? {
+        val string = toStringValue(*values)
+        return if (string != null) {
+            val parts = string.split(",")
+            Point(parts[0].toDouble(), parts[1].toDouble())
+        } else {
+            null;
+        }
+    }
+
     private fun <T> remember(obj: T): T {
         // prevent instances from being garbage collected
         rememberedObjects.add(obj!!)
@@ -1534,6 +1566,14 @@ class KImageApplication : Application() {
                 children += button("Take Y") {
                     onAction = EventHandler {
                         argProperty.set(zoomCenterYProperty.get().toString())
+                    }
+                    setupEnabledWhen(argument, this.disableProperty())
+                }
+            }
+            Hint.ImageXY -> {
+                children += button("Take XY") {
+                    onAction = EventHandler {
+                        argProperty.set("${zoomCenterXProperty.get()}, ${zoomCenterYProperty.get()}")
                     }
                     setupEnabledWhen(argument, this.disableProperty())
                 }
