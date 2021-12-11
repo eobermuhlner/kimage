@@ -40,7 +40,7 @@ kimage(0.1) {
                 A value of 1.0 means to not exaggerate
                 """
             default = 2.0
-            min = 0
+            min = 0.0
         }
     }
 
