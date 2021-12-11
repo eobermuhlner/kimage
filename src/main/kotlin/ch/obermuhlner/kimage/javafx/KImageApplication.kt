@@ -1467,14 +1467,46 @@ class KImageApplication : Application() {
                     is ScriptPointArg -> {
                         hbox(SPACING) {
                             val argProperty = remember(SimpleStringProperty())
+                            val argXProperty = remember(SimpleStringProperty())
+                            val argYProperty = remember(SimpleStringProperty())
+                            val xyListener = {
+                                val xString = argXProperty.valueSafe
+                                val yString = argYProperty.valueSafe
+                                if (xString == "" && yString == "") {
+                                    argProperty.set("");
+                                } else {
+                                    val x = if (xString == "") 0.0 else xString.toDouble()
+                                    val y = if (yString == "") 0.0 else yString.toDouble()
+                                    argProperty.set("$x, $y");
+                                }
+                            }
+                            argXProperty.addListener { _, _, _ -> xyListener() }
+                            argYProperty.addListener { _, _, _ -> xyListener() }
                             argProperty.addListener { _, _, value ->
                                 argumentsProperty[argument.name] = value
+                                if (value == null || value == "") {
+                                    argXProperty.set("")
+                                    argYProperty.set("")
+                                } else {
+                                    val point = toPointValue(value)
+                                    argXProperty.set(point?.x.toString())
+                                    argYProperty.set(point?.y.toString())
+                                }
                             }
                             children += textfield {
                                 tooltip = Tooltip(argument.tooltip())
-                                //textFormatter = textFormatter(argument.default, argument.min, argument.max)
-                                textProperty().bindBidirectional(argProperty)
-                                setupValidation(this, textProperty(), argument, argProperty)
+                                prefWidth = 100.0
+                                textFormatter = textFormatter(argument.default?.x, argument.min?.x, argument.max?.x)
+                                textProperty().bindBidirectional(argXProperty)
+                                //setupValidation(this, textProperty(), argument, argProperty)
+                                setupEnabledWhen(argument, this.disableProperty())
+                            }
+                            children += textfield {
+                                tooltip = Tooltip(argument.tooltip())
+                                prefWidth = 100.0
+                                textFormatter = textFormatter(argument.default?.y, argument.min?.y, argument.max?.y)
+                                textProperty().bindBidirectional(argYProperty)
+                                //setupValidation(this, textProperty(), argument, argProperty)
                                 setupEnabledWhen(argument, this.disableProperty())
                             }
                             argument.unit?.let {
@@ -1679,27 +1711,29 @@ class KImageApplication : Application() {
         Thread.sleep(sleepMillis)
         synchronized(this) {
             if (!finished) {
-                val progressBar = ProgressBar()
-                val dialogContent = vbox(SPACING) {
-                    padding = Insets(10.0)
-                    children += node(progressBar) {
-                        prefWidth = 200.0
+                Platform.runLater {
+                    val progressBar = ProgressBar()
+                    val dialogContent = vbox(SPACING) {
+                        padding = Insets(10.0)
+                        children += node(progressBar) {
+                            prefWidth = 200.0
+                        }
+                        children += label(message)
                     }
-                    children += label(message)
-                }
-                progress.totalProperty.addListener { _, _, value ->
-                    progressBar.progress = progress.progressPercent()
-                }
-                progress.stepProperty.addListener { _, _, value ->
-                    progressBar.progress = progress.progressPercent()
-                }
-                if (progress.totalProperty.get() > 0) {
-                    progressBar.progress = progress.progressPercent()
-                }
+                    progress.totalProperty.addListener { _, _, value ->
+                        progressBar.progress = progress.progressPercent()
+                    }
+                    progress.stepProperty.addListener { _, _, value ->
+                        progressBar.progress = progress.progressPercent()
+                    }
+                    if (progress.totalProperty.get() > 0) {
+                        progressBar.progress = progress.progressPercent()
+                    }
 
-                progressDialog = ProgressDialog(dialogContent, title)
+                    progressDialog = ProgressDialog(dialogContent, title)
 
-                progressDialog?.show()
+                    progressDialog?.show()
+                }
             }
         }
     }
