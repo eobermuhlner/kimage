@@ -6,6 +6,7 @@ import ch.obermuhlner.kimage.image.crop
 import ch.obermuhlner.kimage.math.clamp
 import ch.obermuhlner.kimage.io.ImageReader
 import ch.obermuhlner.kimage.io.ImageWriter
+import ch.obermuhlner.kimage.math.SplineInterpolator
 import ch.obermuhlner.kotlin.javafx.*
 import com.vladsch.flexmark.html.HtmlRenderer
 import com.vladsch.flexmark.parser.Parser
@@ -1518,6 +1519,31 @@ class KImageApplication : Application() {
                             }
                         }
                     }
+                    is ScriptListArg -> {
+                        hbox {
+//                            if (argument.hint == Hint.Curve) {
+//                                children += createCurveEditor(argument, argumentsProperty)
+//                            } else {
+                                val argProperty = remember(SimpleStringProperty())
+                                argProperty.addListener { _, _, value ->
+                                    argumentsProperty[argument.name] = value
+                                }
+                                children += textfield(argProperty) {
+                                    tooltip = Tooltip(argument.tooltip())
+                                    textProperty().bindBidirectional(argProperty)
+                                    setupValidation(this, textProperty(), argument, argProperty)
+                                    setupEnabledWhen(argument, this.disableProperty())
+                                }
+                                argument.unit?.let {
+                                    children += label(it)
+                                }
+                                setupHints(argument, argProperty)
+                                toStringValue(initialValue, argument.default?.toString())?.let {
+                                    argProperty.set(it)
+                                }
+//                            }
+                        }
+                    }
                     else -> {
                         hbox {
                             val argProperty = remember(SimpleStringProperty())
@@ -1534,7 +1560,7 @@ class KImageApplication : Application() {
                                 children += label(it)
                             }
                             setupHints(argument, argProperty)
-                            toStringValue(initialValue)?.let {
+                            toStringValue(initialValue, argument)?.let {
                                 argProperty.set(it)
                             }
                         }
@@ -1542,6 +1568,49 @@ class KImageApplication : Application() {
                 }
             }
         }
+    }
+
+    private fun createCurveEditor(argument: ScriptListArg, argProperty: StringProperty): Node {
+        val canvas = Canvas(200.0, 200.0)
+
+        argProperty.addListener { _, _, value ->
+            val curve = argument.toListValue(value) as List<Point>
+            drawCurve(canvas, curve)
+        }
+
+        return canvas
+    }
+
+    private fun drawCurve(canvas: Canvas, curve: List<Point>) {
+        val gc = canvas.graphicsContext2D
+
+        val background = Color.WHITE
+        gc.fill = background
+        gc.fillRect(0.0, 0.0, canvas.width, canvas.height)
+        gc.lineWidth = 1.0
+
+        val curvePointsX = mutableListOf<Double>()
+        val curvePointsY = mutableListOf<Double>()
+
+        for (point in curve) {
+            curvePointsX.add(point.x)
+            curvePointsY.add(point.y)
+        }
+
+        val spline: SplineInterpolator = SplineInterpolator.createMonotoneCubicSpline(curvePointsX, curvePointsY)
+        var lastPixelX = 0.0
+        var lastPixelY = 0.0
+        for (pixelX in 0 .. canvas.width.toInt()) {
+            val x = pixelX / canvas.width
+            val y = spline.interpolate(x)
+            val pixelY = y * canvas.height
+
+            gc.strokeLine(lastPixelX, canvas.height - lastPixelY, pixelX.toDouble(), canvas.height - pixelY)
+
+            lastPixelX = pixelX.toDouble()
+            lastPixelY = pixelY
+        }
+
     }
 
     private fun toStringValue(vararg values: Any?): String? {
@@ -1639,6 +1708,9 @@ class KImageApplication : Application() {
                     }
                     setupEnabledWhen(argument, this.disableProperty())
                 }
+            }
+            Hint.Curve -> {
+                children += createCurveEditor(argument as ScriptListArg, argProperty)
             }
             else -> {
                 // do nothing
