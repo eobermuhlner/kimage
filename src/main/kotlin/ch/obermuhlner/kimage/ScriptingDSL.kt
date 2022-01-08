@@ -433,6 +433,7 @@ enum class Hint {
     ImageXY,
     ImageDeltaX,
     ImageDeltaY,
+    Curve,
     ImageWidth,
     ImageHeight,
     ColorCurveX,
@@ -845,7 +846,7 @@ open class ScriptPointArg(mandatory: Boolean = true) : ScriptArg("point", mandat
     }
 
     private fun toPointValue(string: String): Point {
-        val parts = string.split(",")
+        val parts = string.split(":")
         return Point(parts[0].toDouble(), parts[1].toDouble())
     }
 }
@@ -898,7 +899,7 @@ open class ScriptListArg(override val arguments: MutableList<ScriptArg> = mutabl
 
         val values = mutableListOf<Any>()
         val scriptArg = arguments[0]
-        val stringElements = anyValue.toString().split(',')
+        val stringElements = anyValue.toString().trim('[', ']').split(',')
 
         min?.let {
             if (stringElements.size < it) {
