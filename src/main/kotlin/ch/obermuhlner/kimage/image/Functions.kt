@@ -128,6 +128,24 @@ operator fun Image.div(value: Double): Image {
     }
 }
 
+operator fun Image.plus(value: Double): Image {
+    return MatrixImage(
+        this.width,
+        this.height,
+        this.channels) { channel, _, _ ->
+        this[channel] elementPlus value
+    }
+}
+
+operator fun Image.minus(value: Double): Image {
+    return MatrixImage(
+        this.width,
+        this.height,
+        this.channels) { channel, _, _ ->
+        this[channel] elementMinus value
+    }
+}
+
 fun max(image1: Image, image2: Image): Image {
     return MatrixImage(
         image1.width,
