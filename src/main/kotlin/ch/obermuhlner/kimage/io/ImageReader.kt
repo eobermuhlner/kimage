@@ -72,55 +72,104 @@ object ImageReader {
         val fits = Fits(file)
         val hdu = fits.getHDU(0)
         if (hdu is ImageHDU) {
-            // TODO use bScale, bZero ?
-            // TODO handle 2D (hdu.axes.size == 2) as gray images
-
-            val channels = hdu.axes[0]
-            val height = hdu.axes[1]
-            val width = hdu.axes[2]
-
             val matrices = mutableListOf<Matrix>()
-            for (channelIndex in 0 until channels) {
-                val matrix = FloatMatrix(width, height)
+            var width: Int = 0
+            var height: Int = 0
+            when (hdu.axes.size) {
+                2 -> {
+                    height = hdu.axes[0]
+                    width = hdu.axes[1]
 
-                matrices += when (hdu.bitPix) {
-                    BasicHDU.BITPIX_BYTE -> {
-                        val data = hdu.kernel as Array<Array<ByteArray>>
-                        matrix.onEach { x, y, _ ->
-                            scaleFitsValue(data[channelIndex][y][x].toDouble(), hdu)
+                    val matrix = FloatMatrix(width, height)
+
+                    matrices += when (hdu.bitPix) {
+                        BasicHDU.BITPIX_BYTE -> {
+                            val data = hdu.kernel as Array<ByteArray>
+                            matrix.onEach { x, y, _ ->
+                                scaleFitsValue(data[y][x].toDouble(), hdu)
+                            }
+                        }
+                        BasicHDU.BITPIX_SHORT -> {
+                            val data = hdu.kernel as Array<ShortArray>
+                            matrix.onEach { x, y, _ ->
+                                scaleFitsValue(data[y][x].toDouble(), hdu)
+                            }
+                        }
+                        BasicHDU.BITPIX_INT -> {
+                            val data = hdu.kernel as Array<IntArray>
+                            matrix.onEach { x, y, _ ->
+                                scaleFitsValue(data[y][x].toDouble(), hdu)
+                            }
+                        }
+                        BasicHDU.BITPIX_LONG -> {
+                            val data = hdu.kernel as Array<LongArray>
+                            matrix.onEach { x, y, _ ->
+                                scaleFitsValue(data[y][x].toDouble(), hdu)
+                            }
+                        }
+                        BasicHDU.BITPIX_FLOAT -> {
+                            val data = hdu.kernel as Array<FloatArray>
+                            matrix.onEach { x, y, _ ->
+                                scaleFitsValue(data[y][x].toDouble(), hdu)
+                            }
+                        }
+                        BasicHDU.BITPIX_DOUBLE -> {
+                            val data = hdu.kernel as Array<DoubleArray>
+                            matrix.onEach { x, y, _ ->
+                                scaleFitsValue(data[y][x], hdu)
+                            }
+                        }
+                        else -> throw IllegalArgumentException("Unknown bits per pixel: ${hdu.bitPix}")
+                    }
+                }
+                3 -> {
+                    val channels = hdu.axes[0]
+                    height = hdu.axes[1]
+                    width = hdu.axes[2]
+
+                    for (channelIndex in 0 until channels) {
+                        val matrix = FloatMatrix(width, height)
+
+                        matrices += when (hdu.bitPix) {
+                            BasicHDU.BITPIX_BYTE -> {
+                                val data = hdu.kernel as Array<Array<ByteArray>>
+                                matrix.onEach { x, y, _ ->
+                                    scaleFitsValue(data[channelIndex][y][x].toDouble(), hdu)
+                                }
+                            }
+                            BasicHDU.BITPIX_SHORT -> {
+                                val data = hdu.kernel as Array<Array<ShortArray>>
+                                matrix.onEach { x, y, _ ->
+                                    scaleFitsValue(data[channelIndex][y][x].toDouble(), hdu)
+                                }
+                            }
+                            BasicHDU.BITPIX_INT -> {
+                                val data = hdu.kernel as Array<Array<IntArray>>
+                                matrix.onEach { x, y, _ ->
+                                    scaleFitsValue(data[channelIndex][y][x].toDouble(), hdu)
+                                }
+                            }
+                            BasicHDU.BITPIX_LONG -> {
+                                val data = hdu.kernel as Array<Array<LongArray>>
+                                matrix.onEach { x, y, _ ->
+                                    scaleFitsValue(data[channelIndex][y][x].toDouble(), hdu)
+                                }
+                            }
+                            BasicHDU.BITPIX_FLOAT -> {
+                                val data = hdu.kernel as Array<Array<FloatArray>>
+                                matrix.onEach { x, y, _ ->
+                                    scaleFitsValue(data[channelIndex][y][x].toDouble(), hdu)
+                                }
+                            }
+                            BasicHDU.BITPIX_DOUBLE -> {
+                                val data = hdu.kernel as Array<Array<DoubleArray>>
+                                matrix.onEach { x, y, _ ->
+                                    scaleFitsValue(data[channelIndex][y][x], hdu)
+                                }
+                            }
+                            else -> throw IllegalArgumentException("Unknown bits per pixel: ${hdu.bitPix}")
                         }
                     }
-                    BasicHDU.BITPIX_SHORT -> {
-                        val data = hdu.kernel as Array<Array<ShortArray>>
-                        matrix.onEach { x, y, _ ->
-                            scaleFitsValue(data[channelIndex][y][x].toDouble(), hdu)
-                        }
-                    }
-                    BasicHDU.BITPIX_INT -> {
-                        val data = hdu.kernel as Array<Array<IntArray>>
-                        matrix.onEach { x, y, _ ->
-                            scaleFitsValue(data[channelIndex][y][x].toDouble(), hdu)
-                        }
-                    }
-                    BasicHDU.BITPIX_LONG -> {
-                        val data = hdu.kernel as Array<Array<LongArray>>
-                        matrix.onEach { x, y, _ ->
-                            scaleFitsValue(data[channelIndex][y][x].toDouble(), hdu)
-                        }
-                    }
-                    BasicHDU.BITPIX_FLOAT -> {
-                        val data = hdu.kernel as Array<Array<FloatArray>>
-                        matrix.onEach { x, y, _ ->
-                            scaleFitsValue(data[channelIndex][y][x].toDouble(), hdu)
-                        }
-                    }
-                    BasicHDU.BITPIX_DOUBLE -> {
-                        val data = hdu.kernel as Array<Array<DoubleArray>>
-                        matrix.onEach { x, y, _ ->
-                            scaleFitsValue(data[channelIndex][y][x], hdu)
-                        }
-                    }
-                    else -> throw IllegalArgumentException("Unknown bits per pixel: ${hdu.bitPix}")
                 }
             }
 
@@ -147,7 +196,15 @@ object ImageReader {
         return if (hdu.minimumValue != hdu.maximumValue) {
             hdu.bZero + (value - hdu.minimumValue) / (hdu.maximumValue - hdu.minimumValue) * hdu.bScale
         } else {
-            hdu.bZero + value * hdu.bScale
+            val scaledValue = hdu.bZero + value * hdu.bScale
+            when (hdu.bitPix) {
+                BasicHDU.BITPIX_BYTE -> scaledValue / (256.0 - 1)
+                BasicHDU.BITPIX_SHORT -> scaledValue / (65536.0 - 1)
+                BasicHDU.BITPIX_INT -> scaledValue / (4294967296.0 - 1)
+                BasicHDU.BITPIX_LONG -> scaledValue / (18446744073709551616.0 - 1)
+                BasicHDU.BITPIX_FLOAT -> scaledValue
+                else -> throw RuntimeException("Unknown bitpix: " + hdu.bitPix)
+            }
         }
     }
 
