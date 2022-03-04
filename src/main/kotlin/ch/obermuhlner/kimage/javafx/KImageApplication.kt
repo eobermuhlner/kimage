@@ -129,6 +129,26 @@ class KImageApplication : Application() {
 
     private val zoomDeltaFactorProperty = SimpleDoubleProperty()
 
+    private val zoomInputMinRedProperty = SimpleDoubleProperty()
+    private val zoomInputMinGreenProperty = SimpleDoubleProperty()
+    private val zoomInputMinBlueProperty = SimpleDoubleProperty()
+    private val zoomInputMaxRedProperty = SimpleDoubleProperty()
+    private val zoomInputMaxGreenProperty = SimpleDoubleProperty()
+    private val zoomInputMaxBlueProperty = SimpleDoubleProperty()
+    private val zoomInputMedianRedProperty = SimpleDoubleProperty()
+    private val zoomInputMedianGreenProperty = SimpleDoubleProperty()
+    private val zoomInputMedianBlueProperty = SimpleDoubleProperty()
+
+    private val zoomOutputMinRedProperty = SimpleDoubleProperty()
+    private val zoomOutputMinGreenProperty = SimpleDoubleProperty()
+    private val zoomOutputMinBlueProperty = SimpleDoubleProperty()
+    private val zoomOutputMaxRedProperty = SimpleDoubleProperty()
+    private val zoomOutputMaxGreenProperty = SimpleDoubleProperty()
+    private val zoomOutputMaxBlueProperty = SimpleDoubleProperty()
+    private val zoomOutputMedianRedProperty = SimpleDoubleProperty()
+    private val zoomOutputMedianGreenProperty = SimpleDoubleProperty()
+    private val zoomOutputMedianBlueProperty = SimpleDoubleProperty()
+
     private val inputDirectoryProperty = SimpleStringProperty(Paths.get(".").toString())
     private val useInputDirectoryAsOutputDirectoryProperty = SimpleBooleanProperty(true)
     private val outputDirectoryProperty = SimpleStringProperty(Paths.get(".").toString())
@@ -390,7 +410,7 @@ class KImageApplication : Application() {
                 }
                 cell {
                     node(infoTabPane) {
-                        prefHeight = 400.0
+                        prefHeight = 500.0
 
                         tabClosingPolicy = TabPane.TabClosingPolicy.UNAVAILABLE
                         tabs += tab("Log") {
@@ -674,6 +694,123 @@ class KImageApplication : Application() {
                     //outputHistogramImageView
                 }
             }
+            row {
+                cell {
+                    hbox {
+                        children += label("Min:")
+                        children += textfield(zoomInputMinRedProperty) {
+                            prefWidth = 60.0
+                            isEditable = false
+                        }
+                        children += textfield(zoomInputMinGreenProperty) {
+                            prefWidth = 60.0
+                            isEditable = false
+                        }
+                        children += textfield(zoomInputMinBlueProperty) {
+                            prefWidth = 60.0
+                            isEditable = false
+                        }
+                    }
+                }
+                cell {
+                    label("")
+                }
+                cell {
+                    hbox {
+                        children += label("Min:")
+                        children += textfield(zoomOutputMinRedProperty) {
+                            prefWidth = 80.0
+                            isEditable = false
+                        }
+                        children += textfield(zoomOutputMinGreenProperty) {
+                            prefWidth = 80.0
+                            isEditable = false
+                        }
+                        children += textfield(zoomOutputMinBlueProperty) {
+                            prefWidth = 80.0
+                            isEditable = false
+                        }
+                    }
+                }
+            }
+            row {
+                cell {
+                    hbox {
+                        children += label("Max:")
+                        children += textfield(zoomInputMaxRedProperty) {
+                            prefWidth = 60.0
+                            isEditable = false
+                        }
+                        children += textfield(zoomInputMaxGreenProperty) {
+                            prefWidth = 60.0
+                            isEditable = false
+                        }
+                        children += textfield(zoomInputMaxBlueProperty) {
+                            prefWidth = 60.0
+                            isEditable = false
+                        }
+                    }
+                }
+                cell {
+                    label("")
+                }
+                cell {
+                    hbox {
+                        children += label("Max:")
+                        children += textfield(zoomOutputMaxRedProperty) {
+                            prefWidth = 80.0
+                            isEditable = false
+                        }
+                        children += textfield(zoomOutputMaxGreenProperty) {
+                            prefWidth = 80.0
+                            isEditable = false
+                        }
+                        children += textfield(zoomOutputMaxBlueProperty) {
+                            prefWidth = 80.0
+                            isEditable = false
+                        }
+                    }
+                }
+            }
+            row {
+                cell {
+                    hbox {
+                        children += label("Median:")
+                        children += textfield(zoomInputMedianRedProperty) {
+                            prefWidth = 60.0
+                            isEditable = false
+                        }
+                        children += textfield(zoomInputMedianGreenProperty) {
+                            prefWidth = 60.0
+                            isEditable = false
+                        }
+                        children += textfield(zoomInputMedianBlueProperty) {
+                            prefWidth = 60.0
+                            isEditable = false
+                        }
+                    }
+                }
+                cell {
+                    label("")
+                }
+                cell {
+                    hbox {
+                        children += label("Median:")
+                        children += textfield(zoomOutputMedianRedProperty) {
+                            prefWidth = 80.0
+                            isEditable = false
+                        }
+                        children += textfield(zoomOutputMedianGreenProperty) {
+                            prefWidth = 80.0
+                            isEditable = false
+                        }
+                        children += textfield(zoomOutputMedianBlueProperty) {
+                            prefWidth = 80.0
+                            isEditable = false
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -761,7 +898,7 @@ class KImageApplication : Application() {
                 column<String>("Type", { file -> ReadOnlyStringWrapper(file.extension) }) {
                     this.prefWidth = 60.0
                 }
-                column<Number>("Size", { file -> ReadOnlyLongWrapper(Files.size(file.toPath())) }) {
+                column<Number>("Size", { file -> ReadOnlyLongWrapper(fileSize(file)) }) {
                     this.prefWidth = 100.0
                 }
 
@@ -770,6 +907,16 @@ class KImageApplication : Application() {
                 }
                 selectedInputFiles = selectionModel.selectedItems
             }
+        }
+    }
+
+    private fun fileSize(file: File): Long {
+        try {
+            println(file.toPath())
+            return Files.size(file.toPath())
+        } catch (ex: Exception) {
+            ex.printStackTrace();
+            return -1;
         }
     }
 
@@ -1950,6 +2097,26 @@ class KImageApplication : Application() {
             }
         }
 
+        zoomInputMinRedProperty.value = inputZoomHistogram.minRed()
+        zoomInputMinGreenProperty.value = inputZoomHistogram.minGreen()
+        zoomInputMinBlueProperty.value = inputZoomHistogram.minBlue()
+        zoomInputMaxRedProperty.value = inputZoomHistogram.maxRed()
+        zoomInputMaxGreenProperty.value = inputZoomHistogram.maxGreen()
+        zoomInputMaxBlueProperty.value = inputZoomHistogram.maxBlue()
+        zoomInputMedianRedProperty.value = inputZoomHistogram.estimateMedianRed()
+        zoomInputMedianGreenProperty.value = inputZoomHistogram.estimateMedianGreen()
+        zoomInputMedianBlueProperty.value = inputZoomHistogram.estimateMedianBlue()
+
+        zoomOutputMinRedProperty.value = outputZoomHistogram.minRed()
+        zoomOutputMinGreenProperty.value = outputZoomHistogram.minGreen()
+        zoomOutputMinBlueProperty.value = outputZoomHistogram.minBlue()
+        zoomOutputMaxRedProperty.value = outputZoomHistogram.maxRed()
+        zoomOutputMaxGreenProperty.value = outputZoomHistogram.maxGreen()
+        zoomOutputMaxBlueProperty.value = outputZoomHistogram.maxBlue()
+        zoomOutputMedianRedProperty.value = outputZoomHistogram.estimateMedianRed()
+        zoomOutputMedianGreenProperty.value = outputZoomHistogram.estimateMedianGreen()
+        zoomOutputMedianBlueProperty.value = outputZoomHistogram.estimateMedianBlue()
+
         drawHistogram(inputZoomHistogram, inputZoomHistogramCanvas)
         drawHistogram(outputZoomHistogram, outputZoomHistogramCanvas)
     }
@@ -1962,7 +2129,7 @@ class KImageApplication : Application() {
         gc.fillRect(0.0, 0.0, histogramCanvas.width, histogramCanvas.height)
         gc.lineWidth = 1.0
 
-        val max = histogram.max()
+        val max = histogram.maxCount()
 
         val h = histogramCanvas.height.toInt()
 
@@ -1995,23 +2162,81 @@ class KImageApplication : Application() {
         private val countR = IntArray(n)
         private val countG = IntArray(n)
         private val countB = IntArray(n)
+        private var entryCount = 0
+
+        private var rMin = Double.MAX_VALUE
+        private var gMin = Double.MAX_VALUE
+        private var bMin = Double.MAX_VALUE
+
+        private var rMax = -Double.MAX_VALUE
+        private var gMax = -Double.MAX_VALUE
+        private var bMax = -Double.MAX_VALUE
 
         fun add(color: Color) {
+            rMin = min(rMin, color.red)
+            gMin = min(gMin, color.green)
+            bMin = min(bMin, color.blue)
+            rMax = max(rMax, color.red)
+            gMax = max(gMax, color.green)
+            bMax = max(bMax, color.blue)
             val r = (color.red * (n-1)).toInt()
             val g = (color.green * (n-1)).toInt()
             val b = (color.blue * (n-1)).toInt()
             countR[r]++
             countG[g]++
             countB[b]++
+            entryCount++
         }
 
-        fun max(): Int {
+        fun maxCount(): Int {
             return max(max(countR.maxOrNull()!!, countG.maxOrNull()!!), countB.maxOrNull()!!)
         }
 
         fun red(index: Int): Int = countR[index]
         fun green(index: Int): Int = countG[index]
         fun blue(index: Int): Int = countB[index]
+
+        fun minRed(): Double = rMin
+        fun minGreen(): Double = gMin
+        fun minBlue(): Double = bMin
+
+        fun maxRed(): Double = rMax
+        fun maxGreen(): Double = gMax
+        fun maxBlue(): Double = bMax
+
+        fun estimateMeanRed(): Double = estimateMean(countR)
+        fun estimateMeanGreen(): Double = estimateMean(countG)
+        fun estimateMeanBlue(): Double = estimateMean(countB)
+
+        fun estimateMedianRed(): Double = estimatePercentile(0.5, countR)
+        fun estimateMedianGreen(): Double = estimatePercentile(0.5, countG)
+        fun estimateMedianBlue(): Double = estimatePercentile(0.5, countB)
+
+        private fun estimatePercentile(percentile: Double, arr: IntArray): Double {
+            val nPercentile = (entryCount * percentile).toInt()
+            var cumulativeN = 0
+            for (i in arr.indices) {
+                if (cumulativeN + arr[i] >= nPercentile) {
+                    val lowerLimit = i.toDouble() / (arr.size - 1).toDouble()
+                    val width = 1.0 / (arr.size - 1).toDouble()
+                    return if (arr[i] == 0) {
+                        0.0
+                    } else {
+                        lowerLimit + (nPercentile - cumulativeN) / arr[i].toDouble() * width
+                    }
+                }
+                cumulativeN += arr[i]
+            }
+            return 0.0
+        }
+
+        private fun estimateMean(arr: IntArray): Double {
+            var sum = 0.0
+            for (i in countR.indices) {
+                sum += arr[i] * (i.toDouble() + 0.5) / (arr.size - 1).toDouble()
+            }
+            return sum / entryCount
+        }
     }
 
     private fun updateFinalZoom() {
@@ -2081,7 +2306,7 @@ class KImageApplication : Application() {
 
     fun openImageFiles(initialDirectory: File, title: String = "Open Images"): List<File>? {
         val fileChooser = FileChooser()
-        fileChooser.initialDirectory = initialDirectory
+        fileChooser.initialDirectory = ensureDirectoryExists(initialDirectory)
         fileChooser.title = title
         fileChooser.extensionFilters.add(FileChooser.ExtensionFilter("Image", "*.tif", "*.tiff", "*.png", "*.jpg", "*.jpeg", "*.fits", "*.fit", "*.rwz", "*.rw2", "*.cr2", "*.cr3", "*.nrw", "*.eip", "*.raf", "*.erf", "*.arw", "*.k25", "*.dng", "*.srf", "*.dcr", "*.raw", "*.crf", "*.bay"))
         fileChooser.extensionFilters.add(FileChooser.ExtensionFilter("Bitmap Image", "*.tif", "*.tiff", "*.png", "*.jpg", "*.jpeg", "*.fits", "*.fit"))
@@ -2093,14 +2318,23 @@ class KImageApplication : Application() {
 
     fun openFile(initialDirectory: File, title: String = "Select File"): File? {
         val fileChooser = FileChooser()
-        fileChooser.initialDirectory = initialDirectory
+        fileChooser.initialDirectory = ensureDirectoryExists(initialDirectory)
         fileChooser.title = title
         return fileChooser.showOpenDialog(primaryStage)
     }
 
+    private fun ensureDirectoryExists(initialDirectory: File): File {
+        var directory = initialDirectory
+        while (!directory.isDirectory) {
+            val parent = directory.parent ?: return File(".")
+            directory = File(parent)
+        }
+        return directory
+    }
+
     fun openDir(initialDirectory: File, title: String = "Select Directory"): File? {
         val directoryChooser = DirectoryChooser()
-        directoryChooser.initialDirectory = initialDirectory
+        directoryChooser.initialDirectory = ensureDirectoryExists(initialDirectory)
         directoryChooser.title = title
         return directoryChooser.showDialog(primaryStage)
     }
