@@ -336,6 +336,14 @@ interface Matrix : Iterable<Double> {
         return this
     }
 
+    fun forEach(func: (x: Int, y: Int, value: Double) -> Unit) {
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                func.invoke(x, y, this[x, y])
+            }
+        }
+    }
+
     fun accumulate(func: (acc: Double, value: Double) -> Double): Double {
         var result = this[0]
 
