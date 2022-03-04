@@ -30,6 +30,14 @@ class MatrixImage(
             : this(width, height, channels.map { it.first }, channels.map { it.second })
 
     constructor(
+        gray: Matrix)
+            : this(gray.width, gray.height, Channel.Red to gray, Channel.Green to gray, Channel.Blue to gray)
+
+    constructor(
+        red: Matrix, green: Matrix, blue: Matrix)
+            : this(red.width, red.height, Channel.Red to red, Channel.Green to green, Channel.Blue to blue)
+
+    constructor(
             width: Int,
             height: Int,
             channels: List<Channel>,
