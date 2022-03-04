@@ -10,6 +10,7 @@ import ch.obermuhlner.kimage.io.*
 import ch.obermuhlner.kimage.math.*
 import ch.obermuhlner.kimage.matrix.*
 import ch.obermuhlner.util.StreamGobbler
+import org.apache.commons.imaging.Imaging
 import org.apache.commons.math3.fitting.*
 import org.apache.commons.math3.fitting.PolynomialCurveFitter
 import org.apache.commons.math3.fitting.WeightedObservedPoints
@@ -27,11 +28,38 @@ object TestScript {
     fun main(args: Array<String>) {
         KImageManager.addScriptDirectory(File("src/main/dist"))
 
-        val orionImages = arrayOf("images/align/orion1.png", "images/align/orion2.png", "images/align/orion3.png", "images/align/orion4.png", "images/align/orion5.png", "images/align/orion6.png")
+        val orionImages = arrayOf(
+            "images/align/orion1.png",
+            "images/align/orion2.png",
+            "images/align/orion3.png",
+            "images/align/orion4.png",
+            "images/align/orion5.png",
+            "images/align/orion6.png"
+        )
         val orion2Images = arrayOf("images/align/orion1.png", "images/align/orion2.png")
-        val alignedOrionImages = arrayOf("images/align/aligned_orion1.png", "images/align/aligned_orion2.png", "images/align/aligned_orion3.png", "images/align/aligned_orion4.png", "images/align/aligned_orion5.png", "images/align/aligned_orion6.png")
+        val alignedOrionImages = arrayOf(
+            "images/align/aligned_orion1.png",
+            "images/align/aligned_orion2.png",
+            "images/align/aligned_orion3.png",
+            "images/align/aligned_orion4.png",
+            "images/align/aligned_orion5.png",
+            "images/align/aligned_orion6.png"
+        )
         //val hdrImages = arrayOf("images/hdr/hdr1.jpg", "images/hdr/hdr2.jpg", "images/hdr/hdr3.jpg", "images/hdr/hdr4.jpg")
-        val hdrImages = arrayOf("images/hdr/HDRI_Sample_Scene_Window_-_01.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_02.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_03.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_04.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_05.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_06.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_07.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_08.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_09.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_10.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_11.jpg", "images/hdr/HDRI_Sample_Scene_Window_-_12.jpg")
+        val hdrImages = arrayOf(
+            "images/hdr/HDRI_Sample_Scene_Window_-_01.jpg",
+            "images/hdr/HDRI_Sample_Scene_Window_-_02.jpg",
+            "images/hdr/HDRI_Sample_Scene_Window_-_03.jpg",
+            "images/hdr/HDRI_Sample_Scene_Window_-_04.jpg",
+            "images/hdr/HDRI_Sample_Scene_Window_-_05.jpg",
+            "images/hdr/HDRI_Sample_Scene_Window_-_06.jpg",
+            "images/hdr/HDRI_Sample_Scene_Window_-_07.jpg",
+            "images/hdr/HDRI_Sample_Scene_Window_-_08.jpg",
+            "images/hdr/HDRI_Sample_Scene_Window_-_09.jpg",
+            "images/hdr/HDRI_Sample_Scene_Window_-_10.jpg",
+            "images/hdr/HDRI_Sample_Scene_Window_-_11.jpg",
+            "images/hdr/HDRI_Sample_Scene_Window_-_12.jpg"
+        )
 
         //runScript(scriptAlign(), mapOf("centerX" to "447", "centerY" to "517", "checkRadius" to "20", "searchRadius" to "100", "medianRadius" to "0", "subPixelStep" to "0", "sort" to "false"), *orion2Images)
         //runScript(scriptAlign(), mapOf("sort" to "false"), *orion2Images)
@@ -77,8 +105,360 @@ object TestScript {
         //runScript(scriptSharpen(), mapOf(), "images/sharpen/moon.tif")
         //runScript(scriptFindDirt(), mapOf(), "images/dirt/IMG_3194.JPG")
 
-        runScript(scriptTransformSaturationBrightness(), mapOf(), "images/animal.png")
+        //runScript(scriptTransformSaturationBrightness(), mapOf(), "images/animal.png")
+
+        //runScript(scriptColorStretchCurve2(), mapOf(), "images/animal.png")
+
+        //runScript(scriptStatistics(), mapOf(), "images/animal.png")
+
+        runScript(scriptFindStars(), mapOf(), "images/find_stars/M46_M47_stacked.tif")
+        //runScript(scriptFindStars(), mapOf(), "images/align/orion1.png")
     }
+
+    private fun scriptFindStars(): Script =
+        kimage(0.1) {
+            name = "find-stars"
+            title = "Find stars."
+            description = """
+                Finds stars in an image.
+                """
+            arguments {
+            }
+
+            single {
+                val medianRadius = 0
+                val blurStartRadius = 1
+                val blurCount = 4
+
+                var matrix = inputImage[Channel.Gray]
+                if (medianRadius > 0) {
+                    matrix = matrix.medianFilter(medianRadius)
+                }
+                val median = matrix.median()
+                matrix = matrix - DoubleMatrix(matrix.width, matrix.height) { _, _ ->
+                    median
+                }
+
+                val diffMatrices = mutableListOf<Matrix>()
+                val diffRadii = mutableListOf<Int>()
+                val diffFactors = mutableListOf<Int>()
+
+                var lastBlurMatrix = matrix
+                var blurRadius = blurStartRadius
+                var diffFactor = 1
+                for (blurIndex in 0 until blurCount) {
+                    val scaleFactor = 1.0 / diffFactor.toDouble()
+                    val blurMatrix = matrix.gaussianBlurFilter(blurRadius).scaleBy(scaleFactor, scaleFactor)
+                    var diffMatrix = lastBlurMatrix - blurMatrix
+                    ImageWriter.write(MatrixImage(blurMatrix), File("blur_$blurIndex.png"))
+                    ImageWriter.write(MatrixImage(diffMatrix), File("diff_$blurIndex.png"))
+
+                    diffMatrices += diffMatrix
+                    diffRadii += blurRadius
+                    diffFactors += diffFactor
+                    blurRadius *= 2
+                    diffFactor *= 2
+                    lastBlurMatrix = blurMatrix.scaleBy(0.5, 0.5)
+                }
+
+                val stars = DoubleMatrix(matrix.width, matrix.height)
+
+                for (diffIndex in diffMatrices.indices.reversed()) {
+                    var max = -Double.MAX_VALUE
+                    var maxIndex = 0
+                    var maxX = 0
+                    var maxY = 0
+                    diffMatrices[diffIndex].forEach { x, y, value ->
+                        if (value > max) {
+                            max = value
+                            maxX = x * diffFactors[diffIndex]
+                            maxY = y * diffFactors[diffIndex]
+                            maxIndex = diffIndex
+                        }
+                    }
+
+                    val lowerLimit = 0.1 // max * 0.1
+
+                    while (max > lowerLimit) {
+                        val starRadius = diffRadii[maxIndex]
+                        println("STAR in matrix index $maxIndex radius $starRadius at $maxX, $maxY with value $max")
+
+                        for (dy in -starRadius .. starRadius) {
+                            for (dx in -starRadius .. starRadius) {
+                                if (dx*dx+dy*dy < starRadius*starRadius) {
+                                    for (diffIndex in diffMatrices.indices) {
+                                        diffMatrices[diffIndex][(maxX+dx) / diffFactors[diffIndex], (maxY+dy) / diffFactors[diffIndex]] = 0.0
+                                    }
+                                    stars[maxX+dx, maxY+dy] = 1.0
+                                }
+                            }
+                        }
+
+                        //ImageWriter.write(MatrixImage(stars), File("stars$debugIndex.png"))
+                        //debugIndex++
+
+                        max = -Double.MAX_VALUE
+                        diffMatrices[diffIndex].forEach { x, y, value ->
+                            if (value > max) {
+                                max = value
+                                maxX = x * diffFactors[diffIndex]
+                                maxY = y * diffFactors[diffIndex]
+                                maxIndex = diffIndex
+                            }
+                        }
+
+                        ImageWriter.write(MatrixImage(diffMatrices[diffIndex]), File("cleaned_diff_$diffIndex.png"))
+                    }
+                }
+
+                MatrixImage(stars)
+            }
+        }
+
+    private fun scriptShowMinClamped(): Script =
+        kimage(0.1) {
+            name = "show-min-clamped"
+            title = "Show all pixels with value 0."
+            description = """
+                Creates a false color image showing all pixels with a value of 0.
+                """
+            arguments {
+            }
+
+            single {
+                val channelMatrices = mutableMapOf<Channel, Matrix>()
+                for (channel in inputImage.channels) {
+                    val matrix = inputImage[channel].copy()
+                    matrix.onEach { v ->
+                        if (v <= 0.0) {
+                            1.0
+                        } else {
+                            0.0
+                        }
+                    }
+                    channelMatrices[channel] = matrix
+                }
+
+                MatrixImage(inputImage.width, inputImage.height, inputImage.channels) { channel, _, _ ->
+                    channelMatrices[channel]!!
+                }
+            }
+        }
+
+    private fun scriptStatistics(): Script =
+        kimage(0.1) {
+            name = "statistics"
+            title = "Print statistical info about images"
+            arguments {
+            }
+
+            multi {
+                println(String.format("%-40s %8s %8s %8s %8s %8s %8s %8s", "Name", "Low#", "High#", "Min", "Max", "Median", "Stddev", "NormStddev"))
+                for (file in inputFiles) {
+                    print(String.format("%-40s ", file.name))
+                    if (file.isFile) {
+                        try {
+                            val image = ImageReader.read(file)
+
+                            val clampLow = image.values().count { v -> v <= 0.0 }
+                            val clampHigh = image.values().count { v -> v >= 1.0 }
+                            val min = image.values().min()
+                            val max = image.values().max()
+                            val median = image.values().median()
+                            val stddev = image.values().stddev()
+
+                            val normalizedImage = image / (median / 0.5)
+                            val normalizedStddev = normalizedImage.values().stddev()
+
+                            print(
+                                String.format(
+                                    "%8d %8d %8.5f %8.5f %8.5f %8.5f %8.5f",
+                                    clampLow,
+                                    clampHigh,
+                                    min,
+                                    max,
+                                    median,
+                                    stddev,
+                                    normalizedStddev
+                                )
+                            )
+                        } catch (ex: Exception) {
+                            // ignore
+                        }
+                    }
+                    println()
+                }
+            }
+        }
+
+    private fun scriptRenameFile(): Script =
+        kimage(0.1) {
+            name = "rename-file"
+            title = "Copy and rename files into another directory"
+            description = """
+                Rename images.
+                """
+            arguments {
+                file("target") {
+                    description = """
+                        The target directory to move the image file into.
+                        """
+                    isDirectory = true
+                }
+                boolean("keepExtension") {
+                    default = true
+                }
+            }
+
+            multi {
+                val target: File by arguments
+                val keepExtension: Boolean by arguments
+
+                if (!target.exists()) {
+                    target.mkdirs()
+                }
+
+                fun expandFileName(fileName: String, varName: String, expander : () -> String): String {
+                    val varNameToReplace = "{$varName}"
+                    return if (fileName.contains(varNameToReplace)) {
+                        fileName.replace(varNameToReplace, expander())
+                    } else {
+                        fileName
+                    }
+                }
+
+                for (inputFile in inputFiles) {
+                    println("Moving $inputFile into $target directory")
+                    var name = if(keepExtension) inputFile.nameWithoutExtension else inputFile.name
+                    val extension = inputFile.extension
+
+                    name = expandFileName(name, "name") {
+                        inputFile.nameWithoutExtension
+                    }
+                    name = expandFileName(name, "extension") {
+                        inputFile.extension
+                    }
+
+                    val metadata = Imaging.getMetadata(inputFile)
+                    if (metadata != null) {
+                    }
+
+                    val newName = if(keepExtension) "$name.$extension" else name
+                    Files.move(inputFile.toPath(), File(target, newName).toPath())
+                }
+            }
+        }
+
+
+    private fun scriptColorStretchCurve2(): Script =
+        kimage(0.1) {
+            name = "color-stretch-curve"
+            title = "Stretch the colors non-linearly to fill the entire value range"
+            description = """
+                The colors are first brightened using a power function and then a curve is applied.
+                
+                The idea for this script is based on https://clarkvision.com/articles/astrophotography-rnc-color-stretch/
+                """
+            arguments {
+                double("brightness") {
+                    description = """
+                        The power value of the brightness increase.
+                        
+                        - A power value > 1 increases the brightness.
+                        - A power value = 0 does not change the brightness.
+                        - A power value < 1 increases the brightness.
+                        """
+                    min = 0.0
+                    default = 2.0
+                }
+                list("curve") {
+                    description = """
+                        The curve shape used to modify the contrast.
+                        """
+                    point {
+                        min = Point(0.0, 0.0)
+                        max = Point(1.0, 1.0)
+                    }
+                    hint = Hint.Curve
+                    default = listOf(Point(0.0, 0.0), Point(0.2, 0.1), Point(0.8, 0.9), Point(1.0, 1.0))
+                }
+            }
+
+            single {
+                val brightness: Double by arguments
+                val curve: List<Point> by arguments
+
+                val histogramWidth = 256
+                val histogramHeight = 150
+
+                val (power1, power2) = if (brightness < 1000.0) {
+                    Pair(brightness, 1.0)
+                } else {
+                    Pair(brightness.pow(1.0 / 5.0), 5.0)
+                }
+
+                var image = inputImage
+
+                if (debugMode) {
+                    println("Input image - average: ${image.values().average()}")
+                    println("Input image - median: ${image.values().fastMedian()}")
+                    println("Input image - stddev: ${image.values().stddev()}")
+
+                    val histogramInputFile = inputFile.prefixName(outputDirectory, "hist_input_")
+                    println("Saving $histogramInputFile for manual analysis")
+                    ImageWriter.write(image.histogramImage(histogramWidth, histogramHeight), histogramInputFile)
+                    println()
+                }
+
+                if (power1 != 1.0) {
+                    image = image.onEach { v -> v.pow(1.0 / power1) }
+                }
+                if (power2 != 1.0) {
+                    image = image.onEach { v -> v.pow(1.0 / power2) }
+                }
+
+                if (debugMode) {
+                    println("After brightness correction - average: ${image.values().average()}")
+                    println("After brightness correction - median: ${image.values().fastMedian()}")
+                    println("After brightness correction - stddev: ${image.values().stddev()}")
+
+                    val histogramBrightnessFile = inputFile.prefixName(outputDirectory, "hist_brightness_")
+                    println("Saving $histogramBrightnessFile (after brightness correction) for manual analysis")
+                    ImageWriter.write(image.histogramImage(histogramWidth, histogramHeight), histogramBrightnessFile)
+                    println()
+                }
+
+                val curvePointsX = mutableListOf<Double>()
+                val curvePointsY = mutableListOf<Double>()
+
+                for (point in curve) {
+                    curvePointsX.add(point.x)
+                    curvePointsY.add(point.y)
+                }
+
+                println("Curve Points:")
+                println("  X: $curvePointsX")
+                println("  Y: $curvePointsY")
+                println()
+
+                val spline: SplineInterpolator = SplineInterpolator.createMonotoneCubicSpline(curvePointsX, curvePointsY)
+
+                image = image.onEach { v -> spline.interpolate(v) }
+
+                if (debugMode) {
+                    println("After curve correction - average: ${image.values().average()}")
+                    println("After curve correction - median: ${image.values().fastMedian()}")
+                    println("After curve correction - stddev: ${image.values().stddev()}")
+
+                    val histogramOutputFile = inputFile.prefixName(outputDirectory, "hist_output_")
+                    println("Saving $histogramOutputFile (after curve correction) for manual analysis")
+                    ImageWriter.write(image.histogramImage(histogramWidth, histogramHeight), histogramOutputFile)
+                    println()
+                }
+
+                image
+            }
+        }
 
     private fun scriptTransformSaturationBrightness(): Script =
         kimage(0.1) {
