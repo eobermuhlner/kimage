@@ -16,6 +16,18 @@ kimage(0.1) {
                 The idea for this script is based on https://clarkvision.com/articles/astrophotography-rnc-color-stretch/
                 """
     arguments {
+        double("low") {
+            description = "Low value level for linear stretching."
+            min = 0.0
+            max = 1.0
+            default = 0.0
+        }
+        double("high") {
+            description = "High value level for linear stretching."
+            min = 0.001
+            max = 1.0
+            default = 1.0
+        }
         double("brightness") {
             description = """
                         The power value of the brightness increase.
@@ -69,6 +81,8 @@ kimage(0.1) {
     }
 
     single {
+        val low: Double by arguments
+        val high: Double by arguments
         val brightness: Double by arguments
         val curve: String by arguments
         val custom1X: Double by arguments
@@ -99,10 +113,10 @@ kimage(0.1) {
         }
 
         if (power1 != 1.0) {
-            image = image.onEach { v -> v.pow(1.0 / power1) }
+            image = image.onEach { v -> (v/high - low).pow(1.0 / power1) }
         }
         if (power2 != 1.0) {
-            image = image.onEach { v -> v.pow(1.0 / power2) }
+            image = image.onEach { v -> (v/high - low).pow(1.0 / power2) }
         }
 
         if (debugMode) {
