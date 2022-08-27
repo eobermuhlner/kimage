@@ -17,6 +17,7 @@ import javafx.scene.layout.GridPane
 import javafx.scene.layout.HBox
 import javafx.scene.layout.VBox
 import javafx.scene.shape.Circle
+import javafx.scene.shape.Line
 import javafx.scene.shape.Rectangle
 import javafx.util.converter.DoubleStringConverter
 import javafx.util.converter.IntegerStringConverter
@@ -189,6 +190,9 @@ fun imageview(initializer: ImageView.() -> Unit)
 
 fun rectangle(width: Double, height: Double, initializer: Rectangle.() -> Unit)
         = Rectangle(width, height).apply(initializer)
+
+fun line(startX: Double, startY: Double, endX: Double, endY: Double, initializer: Line.() -> Unit)
+        = Line(startX, startY, endX, endY).apply(initializer)
 
 fun circle(radius: Double, initializer: Circle.() -> Unit)
         = Circle(radius).apply(initializer)
