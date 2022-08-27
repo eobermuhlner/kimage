@@ -1,5 +1,7 @@
 import ch.obermuhlner.kimage.*
 import ch.obermuhlner.kimage.align.*
+import ch.obermuhlner.kimage.astro.StarDetector
+import ch.obermuhlner.kimage.awt.drawAwt
 import ch.obermuhlner.kimage.fft.Complex
 import ch.obermuhlner.kimage.fft.ComplexMatrix
 import ch.obermuhlner.kimage.fft.FFT
@@ -76,6 +78,7 @@ object TestScript {
 
         //runScript(scriptRemoveVignette(), mapOf(), "images/vignette/flat_large.tif")
         //runScript(scriptRemoveVignette(), mapOf("mode" to "rgb"), "images/vignette/IMG_6800.TIF")
+        runScript(scriptRemoveVignette(), mapOf("mode" to "rgb"), "images/vignette/debayer_MasterFlat_ISO100.tif")
 
         //runScript(scriptRemoveOutliers(), mapOf("kappa" to "10"), "images/outlier-pixels/bias_10s_ISO1600.tiff")
         //runScript(scriptRemoveOutliers(), mapOf("low" to "0", "high" to "0.5"), "images/outlier-pixels/bias_10s_ISO1600.tiff")
@@ -111,11 +114,143 @@ object TestScript {
 
         //runScript(scriptStatistics(), mapOf(), "images/animal.png")
 
-        runScript(scriptFindStars(), mapOf(), "images/find_stars/M46_M47_stacked.tif")
+        //runScript(scriptFindStars(), mapOf(), "images/find_stars/M46_M47_stacked.png")
+        //runScript(scriptFindStars(), mapOf(), "images/find_stars/M46_M47_stacked_small.png")
         //runScript(scriptFindStars(), mapOf(), "images/align/orion1.png")
+
+        //runScript(scriptRemoveBackgroundGradient(), mapOf(), "images/find_stars/M46_M47_stacked.png")
     }
 
+    private fun scriptValueMask(): Script =
+        kimage(0.1) {
+            name = "value-mask"
+            title = "Create a value range mask."
+            description = """
+                Create a mask image based on a value range.
+                """
+            arguments {
+                double("low") {
+                    min = 0.0
+                    max = 1.0
+                    default = 0.0
+                }
+                double("high") {
+                    min = 0.0
+                    max = 1.0
+                    default = 1.0
+                }
+                int("blur") {
+                    min = 0
+                    default = 0
+                }
+                boolean("invert") {
+                    default = false
+                }
+            }
+
+            single {
+                val low: Double by arguments
+                val high: Double by arguments
+                val blur: Int by arguments
+                val invert: Boolean by arguments
+
+                var matrix = inputImage[Channel.Gray]
+                matrix.onEach { _, _, value ->
+                    if (value < low) {
+                        0.0
+                    } else if (value > high) {
+                        0.0
+                    } else {
+                        value
+                    }
+                }
+
+                if (blur > 0) {
+                    matrix = matrix.gaussianBlurFilter(blur)
+                }
+                if (invert) {
+                    matrix.onEach { _, _, value ->
+                        1.0 - value
+                    }
+                }
+
+                MatrixImage(matrix)
+            }
+        }
+
     private fun scriptFindStars(): Script =
+        kimage(0.1) {
+            name = "find-stars"
+            title = "Find stars."
+            description = """
+                Finds stars in an image.
+                """
+            arguments {
+            }
+
+            single {
+                var matrix = inputImage[Channel.Gray]
+                val detector = StarDetector(matrix)
+                val stars = detector.detectPotentialStars()
+                println("Found ${stars.size} stars")
+
+                val analyzedStars = detector.analyzePotentialStars(stars)
+
+                if (debugMode) {
+                    val red = matrix.copy()
+                    val green = matrix.copy()
+                    val blue = matrix.copy()
+                    analyzedStars.forEach {
+                        val starRadius = it.radius.toInt()
+                        val x = (it.x + 0.5).toInt()
+                        val y = (it.y + 0.5).toInt()
+                        if (it.valid) {
+                            for (dy in -starRadius .. starRadius) {
+                                for (dx in -starRadius .. starRadius) {
+                                    if (dx*dx+dy*dy < starRadius*starRadius) {
+                                        blue[x+dx, y+dy] = 1.0
+                                    }
+                                }
+                            }
+                        }
+                        red[x, y] = if (it.valid) 0.0 else 1.0
+                        green[x, y] = if (it.valid) 1.0 else 0.0
+                        blue[x, y] = 0.0
+                    }
+                    val image = MatrixImage(red, green, blue)
+
+                    val starDebugFile = inputFile.prefixName(outputDirectory, "star_debug_")
+                    println("Saving $starDebugFile for manual analysis")
+                    ImageWriter.write(image, starDebugFile)
+                    println()
+                }
+
+
+                val red = DoubleMatrix(matrix.width, matrix.height)
+                val green = DoubleMatrix(matrix.width, matrix.height)
+                val blue = DoubleMatrix(matrix.width, matrix.height)
+                analyzedStars.forEach {
+                    val starRadius = it.radius.toInt()
+                    val x = (it.x + 0.5).toInt()
+                    val y = (it.y + 0.5).toInt()
+                    if (it.valid) {
+                        for (dy in -starRadius .. starRadius) {
+                            for (dx in -starRadius .. starRadius) {
+                                if (dx*dx+dy*dy < starRadius*starRadius) {
+                                    red[x+dx, y+dy] = 1.0
+                                    green[x+dx, y+dy] = 1.0
+                                    blue[x+dx, y+dy] = 1.0
+                                }
+                            }
+                        }
+                    }
+                }
+                MatrixImage(red, green, blue)
+            }
+        }
+
+
+    private fun scriptFindStarsPOC(): Script =
         kimage(0.1) {
             name = "find-stars"
             title = "Find stars."
@@ -149,7 +284,7 @@ object TestScript {
                 for (blurIndex in 0 until blurCount) {
                     val scaleFactor = 1.0 / diffFactor.toDouble()
                     val blurMatrix = matrix.gaussianBlurFilter(blurRadius).scaleBy(scaleFactor, scaleFactor)
-                    var diffMatrix = lastBlurMatrix - blurMatrix
+                    val diffMatrix = lastBlurMatrix - blurMatrix
                     ImageWriter.write(MatrixImage(blurMatrix), File("blur_$blurIndex.png"))
                     ImageWriter.write(MatrixImage(diffMatrix), File("diff_$blurIndex.png"))
 
@@ -3317,6 +3452,9 @@ object TestScript {
                         """
                     default = 5
                 }
+                int("radius") {
+                    default = 100
+                }
                 double("kappa") {
                     description = """
                         The kappa factor is used in sigma-clipping of the grid to ignore grid points that do not contain enough background.
@@ -3337,9 +3475,9 @@ object TestScript {
                     return grid
                 }
 
-                fun sigmaClipPointGrid(image: Image, grid: List<Pair<Int, Int>>, kappa: Double = 0.5): List<Pair<Int, Int>> {
+                fun sigmaClipPointGrid(image: Image, grid: List<Pair<Int, Int>>, radius: Int, kappa: Double = 0.5): List<Pair<Int, Int>> {
                     val gridWithMedian = grid.map {
-                        val median = image.cropCenter(100, it.first, it.second).values().fastMedian()
+                        val median = image.cropCenter(radius, it.first, it.second).values().fastMedian()
                         Pair(it, median)
                     }
                     val gridMedian = gridWithMedian.map { it.second }.median()
@@ -3353,10 +3491,26 @@ object TestScript {
 
                 val removePercent: Double by arguments
                 val gridSize: Int by arguments
+                val radius: Int by arguments
                 val kappa: Double by arguments
 
                 val grid = pointGrid(inputImage.width, inputImage.height, gridSize, gridSize)
-                val clippedGrid = sigmaClipPointGrid(inputImage, grid, kappa)
+                val clippedGrid = sigmaClipPointGrid(inputImage, grid, radius, kappa)
+                if (debugMode) {
+                    val gridFile = inputFile.prefixName(outputDirectory, "grid_")
+                    val gridImage = inputImage.drawAwt { gc ->
+                        gc.paint = java.awt.Color.RED
+                        for (pair in grid) {
+                            gc.drawRect(pair.first-radius/2, pair.second-radius/2, radius, radius)
+                        }
+                        gc.paint = java.awt.Color.GREEN
+                        for (pair in clippedGrid) {
+                            gc.drawRect(pair.first-radius/2, pair.second-radius/2, radius, radius)
+                        }
+                    }
+                    println("Writing $gridFile")
+                    ImageWriter.write(gridImage, gridFile)
+                }
                 if (verboseMode) {
                     println("The ${grid.size} points of the grid have been reduced to ${clippedGrid.size} by sigma-clipping")
                 }
@@ -3423,7 +3577,7 @@ object TestScript {
                     description = """
                         The kappa factor is used in sigma-clipping of sample values to determine the vignette effect.
                         """
-                    default = 2.0
+                    default = 100.0
                 }
             }
             single {
@@ -4084,8 +4238,8 @@ object TestScript {
     }
 
     fun runScript(script: Script, arguments: Map<String, String>, files: List<File>) {
-        KImageManager.executeScript(script, arguments, files, true, true, true , "output", ".")
-        KImageManager.executeScript(script, arguments, files, false, true, true , "output", ".")
+        KImageManager.executeScript(script, arguments, files, true, true, true , null, "output", ".")
+        KImageManager.executeScript(script, arguments, files, false, true, true , null, "output", ".")
     }
 
     private fun runSingleModeScript(filepath: String) {
