@@ -3,6 +3,8 @@ package ch.obermuhlner.kimage
 import ch.obermuhlner.kimage.image.*
 import ch.obermuhlner.kimage.io.ImageWriter
 import ch.obermuhlner.kimage.javafx.KImageApplication
+import ch.obermuhlner.kimage.javafx.KImageApplication2
+import ch.obermuhlner.kimage.matrix.Matrix
 import com.xenomachina.argparser.ArgParser
 import com.xenomachina.argparser.default
 import com.xenomachina.argparser.mainBody
@@ -65,6 +67,11 @@ class KimageCli(parser: ArgParser) {
         help = "UI mode"
     ).default(false)
 
+    private val ui2Mode by parser.flagging(
+        "--ui2",
+        help = "New UI mode"
+    ).default(false)
+
     private val scriptDirectory: String by parser.storing(
         "--script-dir",
         help = "script directory"
@@ -74,6 +81,12 @@ class KimageCli(parser: ArgParser) {
     private val outputPrefix: String by parser.storing(
         "-o", "--output-prefix",
         help = "output prefix"
+    )
+        .default("")
+
+    private val outputFile: String by parser.storing(
+        "-f", "--output-file",
+        help = "output file"
     )
         .default("")
 
@@ -107,6 +120,10 @@ class KimageCli(parser: ArgParser) {
 
         if (uiMode) {
             Application.launch(KImageApplication::class.java)
+            return
+        }
+        if (ui2Mode) {
+            Application.launch(KImageApplication2::class.java)
             return
         }
 
@@ -144,16 +161,35 @@ class KimageCli(parser: ArgParser) {
 
             val script = KImageManager.script(command)
 
-            KImageManager.executeScript(
-                script,
-                parametersMap,
-                fileNames.map { File(it) },
-                helpMode,
-                verboseMode,
-                debugMode,
-                if (outputPrefix == "") commandName else outputPrefix,
-                outputDirectory
-            )
+            if (outputFile != "") {
+                KImageManager.executeScript(
+                    script,
+                    parametersMap,
+                    fileNames.map { File(it) },
+                    helpMode,
+                    verboseMode,
+                    debugMode,
+                    null, // TODO MASK MATRIX
+                    if (outputPrefix == "") commandName else outputPrefix,
+                    outputDirectory,
+                    outputHandler = { inputFile, output ->
+                        KImageManager.defaultOutputHandler(
+                            KImageManager.outputFileExplicitName(inputFile, outputFile, outputDirectory),
+                            output
+                        )
+                    })
+            } else {
+                KImageManager.executeScript(
+                    script,
+                    parametersMap,
+                    fileNames.map { File(it) },
+                    helpMode,
+                    verboseMode,
+                    debugMode,
+                    null, // TODO MASK MATRIX
+                    if (outputPrefix == "") commandName else outputPrefix,
+                    outputDirectory)
+            }
         }
     }
 }
@@ -259,13 +295,14 @@ object KImageManager {
         helpMode: Boolean,
         verboseMode: Boolean,
         debugMode: Boolean,
+        maskMatrix: Matrix?,
         outputPrefix: String,
         outputDirectory: String,
         progress: Progress = object : Progress {
             override fun addTotal(totalStepCount: Int, message: String) {}
             override fun step(stepCount: Int, message: String) {}
         },
-        outputHandler: (inputFile: File, output: Any?) -> Unit = { inputFile, output -> defaultOutputHandler(outputFile(inputFile, outputPrefix, outputDirectory), output) }
+        outputHandler: (inputFile: File, output: Any?) -> Unit = { inputFile, output -> defaultOutputHandler(outputFileWithPrefix(inputFile, outputPrefix, outputDirectory), output) }
     ) {
         if (helpMode) {
             when (script) {
@@ -276,7 +313,7 @@ object KImageManager {
         } else {
             when (script) {
                 is ScriptV0_1 -> {
-                    script.execute(inputFiles, arguments, verboseMode, debugMode, progress, File(outputDirectory), outputHandler)
+                    script.execute(inputFiles, arguments, verboseMode, debugMode, maskMatrix, progress, File(outputDirectory), outputHandler)
                 }
             }
         }
@@ -297,7 +334,7 @@ object KImageManager {
         }
     }
 
-    fun outputFile(imageFile: File, prefix: String, directoryName: String): File {
+    fun outputFileWithPrefix(imageFile: File, prefix: String, directoryName: String): File {
         val directoryFile = when {
             directoryName != "" -> File(directoryName)
             imageFile.parent != null -> File(imageFile.parent)
@@ -311,6 +348,19 @@ object KImageManager {
             index++
         }
         return file
+    }
+
+    fun outputFileExplicitName(imageFile: File, outputFileName: String, directoryName: String): File {
+        val directoryFile = when {
+            directoryName != "" -> File(directoryName)
+            imageFile.parent != null -> File(imageFile.parent)
+            else -> File(".")
+        }
+
+        val outputFile = File(outputFileName)
+        val nameWithoutExtension = outputFile.nameWithoutExtension
+        val extension = if (outputFile.extension != "") outputFile.extension else imageFile.extension
+        return File(directoryFile, "${nameWithoutExtension}.$extension")
     }
 
     private fun createScript(command: String, engine: ScriptEngine, code: String): Script {
