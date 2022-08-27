@@ -1,9 +1,13 @@
 package ch.obermuhlner.kimage
 
+import ch.obermuhlner.kimage.image.Channel
 import ch.obermuhlner.kimage.image.Image
 import ch.obermuhlner.kimage.image.MatrixImage
 import ch.obermuhlner.kimage.io.ImageReader
 import ch.obermuhlner.kimage.io.ImageReader.read
+import ch.obermuhlner.kimage.math.clamp
+import ch.obermuhlner.kimage.matrix.DoubleMatrix
+import ch.obermuhlner.kimage.matrix.Matrix
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.PrintStream
@@ -118,15 +122,14 @@ class ScriptV0_1 : Script(0.1) {
         }
 
         when (arg) {
+            is ScriptBooleanArg -> {
+            }
             is ScriptIntArg -> {
                 if (arg.min != null) {
                     println("${indent}- Minimum value: ${arg.min}")
                 }
                 if (arg.max != null) {
                     println("${indent}- Maximum value: ${arg.max}")
-                }
-                if (arg.default != null) {
-                    println("${indent}- Default value: ${arg.default}")
                 }
             }
             is ScriptDoubleArg -> {
@@ -135,9 +138,6 @@ class ScriptV0_1 : Script(0.1) {
                 }
                 if (arg.max != null) {
                     println("${indent}- Maximum value: ${arg.max}")
-                }
-                if (arg.default != null) {
-                    println("${indent}- Default value: ${arg.default}")
                 }
             }
             is ScriptStringArg -> {
@@ -149,9 +149,6 @@ class ScriptV0_1 : Script(0.1) {
                 }
                 if (arg.regex != null) {
                     println("${indent}- Must match regular expression: `${arg.regex}`")
-                }
-                if (arg.default != null) {
-                    println("${indent}- Default value: `${arg.default}`")
                 }
             }
             is ScriptFileArg -> {
@@ -170,14 +167,8 @@ class ScriptV0_1 : Script(0.1) {
                         println("${indent}  - `${allowed}`")
                     }
                 }
-                if (arg.default != null) {
-                    println("${indent}- Default path: `${arg.default}`")
-                }
             }
             is ScriptImageArg -> {
-                if (arg.default != null) {
-                    println("${indent}- Default path: `${arg.default}`")
-                }
             }
             is ScriptPointArg -> {
                 if (arg.min != null) {
@@ -185,9 +176,6 @@ class ScriptV0_1 : Script(0.1) {
                 }
                 if (arg.max != null) {
                     println("${indent}- Maximum value: ${arg.max}")
-                }
-                if (arg.default != null) {
-                    println("${indent}- Default value: ${arg.default}")
                 }
             }
             is ScriptListArg -> {
@@ -201,9 +189,6 @@ class ScriptV0_1 : Script(0.1) {
                 if (arg.max != null) {
                     println("${indent}- Maximum length: ${arg.max}")
                 }
-                if (arg.default != null) {
-                    println("${indent}- Default values: ${arg.default}")
-                }
             }
             is ScriptRecordArg -> {
                 println("${indent}- Record Elements:")
@@ -212,6 +197,11 @@ class ScriptV0_1 : Script(0.1) {
                 }
             }
         }
+
+        if (arg.hasDefault) {
+            println("${indent}- Default value: ${arg.toValue(null)}")
+        }
+
         println()
     }
 
@@ -220,6 +210,7 @@ class ScriptV0_1 : Script(0.1) {
         arguments: Map<String, Any>,
         verboseMode: Boolean,
         debugMode: Boolean,
+        maskMatrix: Matrix?,
         progress: Progress,
         outputDirectory: File,
         outputHandler: (File, Any?) -> Unit
@@ -238,7 +229,7 @@ class ScriptV0_1 : Script(0.1) {
                     executeMulti(inputFiles, arguments, verboseMode, debugMode, progress, outputDirectory, outputHandler)
                 }
                 scriptSingle != null -> {
-                    executeSingle(inputFiles, arguments, verboseMode, debugMode, progress, outputDirectory, outputHandler)
+                    executeSingle(inputFiles, arguments, verboseMode, debugMode, maskMatrix, progress, outputDirectory, outputHandler)
                 }
                 else -> {
                     throw java.lang.RuntimeException("Script has no execution block.")
@@ -256,6 +247,7 @@ class ScriptV0_1 : Script(0.1) {
         arguments: Map<String, Any>,
         verboseMode: Boolean,
         debugMode: Boolean,
+        maskMatrix: Matrix?,
         progress: Progress,
         outputDirectory: File,
         outputHandler: (File, Any?) -> Unit
@@ -272,6 +264,7 @@ class ScriptV0_1 : Script(0.1) {
                     arguments,
                     verboseMode,
                     debugMode,
+                    maskMatrix,
                     progress,
                     outputDirectory,
                     outputHandler
@@ -1035,6 +1028,7 @@ sealed class AbstractScript {
             false,
             verboseMode,
             debugMode,
+            null, // TODO MASK MATRIX
             name,
             outputDirectory
         )
@@ -1056,6 +1050,7 @@ class ScriptSingle(val executable: ScriptSingle.() -> Any?) : AbstractScript() {
         rawArguments: Map<String, Any>,
         verboseMode: Boolean,
         debugMode: Boolean,
+        maskMatrix: Matrix?,
         progress: Progress,
         outputDirectory: File,
         outputHandler: (File, Any?) -> Unit
@@ -1076,7 +1071,26 @@ class ScriptSingle(val executable: ScriptSingle.() -> Any?) : AbstractScript() {
 
         printExecution()
 
-        val output = executable()
+        var output = executable()
+        if (output is Image && maskMatrix != null) {
+            println("Applying mask.")
+            val invertedMaskMatrix = DoubleMatrix(maskMatrix.width, maskMatrix.height) { _, _ -> 1.0 } - maskMatrix
+            val channelMatrices = mutableMapOf<Channel, Matrix>()
+            for (channel in output.channels) {
+                //val matrix = output[channel] elementTimes maskMatrix + inputImage[channel] elementTimes invertedMaskMatrix
+                val outputMatrix = output[channel]
+                val inputMatrix = inputImage[channel]
+                val matrix = DoubleMatrix(output.width, output.height) { x, y ->
+                    val v = outputMatrix[x, y] * maskMatrix[x, y] + inputMatrix[x, y] * invertedMaskMatrix[x, y]
+                    clamp(v, 0.0, 1.0)
+                }
+                channelMatrices[channel] = matrix
+            }
+
+            output = MatrixImage(inputImage.width, inputImage.height, inputImage.channels) { channel, _, _ ->
+                channelMatrices[channel]!!
+            }
+        }
         outputHandler(inputFile, output)
     }
 }
