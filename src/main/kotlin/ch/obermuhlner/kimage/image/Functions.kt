@@ -271,6 +271,19 @@ fun Image.scaleTo(
     }
 }
 
+fun Image.scaleToKeepRatio(
+    newWidth: Int,
+    newHeight: Int,
+    offsetX: Double = 0.0,
+    offsetY: Double = 0.0,
+    scaling: Scaling = Scaling.Bicubic
+): Image {
+    val ratio = this.width.toDouble() / this.height
+    val correctedNewWidth = min(newWidth, (newHeight*ratio).toInt())
+    val correctedNewHeight = min(newHeight, (newWidth/ratio).toInt())
+    return scaleTo(correctedNewWidth, correctedNewHeight, offsetX, offsetY, scaling)
+}
+
 fun Image.interpolate(fixPoints: List<Pair<Int, Int>>, medianRadius: Int = min(width, height) / max(sqrt(fixPoints.size.toDouble()).toInt()+1, 2), power: Double = estimatePowerForInterpolation(fixPoints.size)): Image {
     return MatrixImage(
         width,
