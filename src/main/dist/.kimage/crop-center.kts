@@ -57,7 +57,7 @@ kimage(0.1) {
             x = Optional.of(inputImage.width / 2)
         }
         if (!y.isPresent) {
-            y = Optional.of(inputImage.width / 2)
+            y = Optional.of(inputImage.height / 2)
         }
 
         if (radius.isPresent) {
