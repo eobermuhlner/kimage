@@ -1,12 +1,15 @@
 package ch.obermuhlner.kimage.javafx
 
 import ch.obermuhlner.kimage.*
+import ch.obermuhlner.kimage.image.Channel
 import ch.obermuhlner.kimage.image.Image
 import ch.obermuhlner.kimage.image.crop
 import ch.obermuhlner.kimage.math.clamp
 import ch.obermuhlner.kimage.io.ImageReader
 import ch.obermuhlner.kimage.io.ImageWriter
 import ch.obermuhlner.kimage.math.SplineInterpolator
+import ch.obermuhlner.kimage.matrix.DoubleMatrix
+import ch.obermuhlner.kimage.matrix.Matrix
 import ch.obermuhlner.kotlin.javafx.*
 import com.vladsch.flexmark.html.HtmlRenderer
 import com.vladsch.flexmark.parser.Parser
@@ -167,6 +170,13 @@ class KImageApplication : Application() {
     private val tempInputDirectory = Files.createTempDirectory("kimage_in_").toFile()
     private val tempOutputDirectory = Files.createTempDirectory("kimage_out_").toFile()
 
+    private val maskFileProperty = SimpleObjectProperty<File>(null)
+    private val maskMatrixProperty = SimpleObjectProperty<Matrix>(null)
+    private val maskInvertedMatrixProperty = SimpleObjectProperty<Matrix>(null)
+    private val maskActiveProperty = SimpleBooleanProperty(false)
+    private val maskShowProperty = SimpleBooleanProperty(false)
+    private val maskInvertProperty = SimpleBooleanProperty(false)
+
     init {
         tempInputDirectory.deleteOnExit()
         tempOutputDirectory.deleteOnExit()
@@ -219,6 +229,12 @@ class KImageApplication : Application() {
         zoomDeltaFactorProperty.addListener { _, _, _ ->
             updateZoom()
         }
+        maskShowProperty.addListener { _, _, _ ->
+            updateZoom()
+        }
+        maskInvertProperty.addListener { _, _, _ ->
+            updateZoom()
+        }
 
         primaryStage.scene = scene
         primaryStage.show()
@@ -248,6 +264,7 @@ class KImageApplication : Application() {
                                 listview(scriptNames) {
                                     selectionModel.selectedItemProperty().addListener { _, _, selected ->
                                         selected?.let {
+                                            previewModeProperty.value = false
                                             loadCommandPresets(it)
                                             showCommandEditor(it, mapOf<String, Any>())
                                         }
@@ -1179,27 +1196,31 @@ class KImageApplication : Application() {
     ) {
         val items = mutableMapOf<String, String>()
 
-        val metadata: ImageMetadata? = Imaging.getMetadata(file)
-        if (metadata is GenericImageMetadata) {
-            for (item in metadata.items) {
-                if (item is GenericImageMetadata.GenericImageMetadataItem) {
-                    items[item.keyword] = item.text
+        try {
+            val metadata: ImageMetadata? = Imaging.getMetadata(file)
+            if (metadata is GenericImageMetadata) {
+                for (item in metadata.items) {
+                    if (item is GenericImageMetadata.GenericImageMetadataItem) {
+                        items[item.keyword] = item.text
+                    }
+                }
+            } else if (metadata is JpegImageMetadata) {
+                for (item in metadata.exif.items) {
+                    if (item is GenericImageMetadata.GenericImageMetadataItem) {
+                        items[item.keyword] = item.text
+                    }
                 }
             }
-        } else if (metadata is JpegImageMetadata) {
-            for (item in metadata.exif.items) {
-                if (item is GenericImageMetadata.GenericImageMetadataItem) {
-                    items[item.keyword] = item.text
-                }
-            }
-        }
 
-        imageModelProperty.set(items["Model"]?.trim('\''))
-        imageLensModelProperty.set(items["LensModel"]?.trim('\''))
-        imageExposureTimeProperty.set(items["ExposureTime"])
-        imagePhotographicSensitivityProperty.set(items["PhotographicSensitivity"])
-        imageApertureValueProperty.set(items["ApertureValue"])
-        imageBitsPerSampleProperty.set(items["BitsPerSample"])
+            imageModelProperty.set(items["Model"]?.trim('\''))
+            imageLensModelProperty.set(items["LensModel"]?.trim('\''))
+            imageExposureTimeProperty.set(items["ExposureTime"])
+            imagePhotographicSensitivityProperty.set(items["PhotographicSensitivity"])
+            imageApertureValueProperty.set(items["ApertureValue"])
+            imageBitsPerSampleProperty.set(items["BitsPerSample"])
+        } catch (ex: Exception) {
+            ex.printStackTrace()
+        }
     }
 
     private fun showCommandEditor(command: String, initialArgumentValues: Map<String, Any>) {
@@ -1261,6 +1282,50 @@ class KImageApplication : Application() {
                             }
                         }
 
+                        children += hbox(SPACING) {
+                            children += label("Mask:")
+                            children += textfield {
+                                isEditable = false
+                                text = maskFileProperty.value?.name
+                                maskFileProperty.addListener { _, _, value ->
+                                    this.text = value.name
+                                }
+                            }
+                            children += button(FontIcon()) {
+                                id = "file-icon"
+                                tooltip = Tooltip("Select the mask image file.")
+                                onAction = EventHandler {
+                                    val file = openFile(File(inputDirectoryProperty.get()))
+                                    file?.let {
+                                        maskFileProperty.value = it
+                                        runWithProgressDialog("Load Mask Image", "Loading mask image $file", 200) {
+                                            try {
+                                                val image = ImageReader.read(file)
+                                                val matrix = image[Channel.Gray]
+                                                maskMatrixProperty.value = matrix
+                                                maskInvertedMatrixProperty.value = DoubleMatrix(matrix.width, matrix.height) { x, y ->
+                                                    1.0 - matrix[x, y]
+                                                }
+                                                maskActiveProperty.value = true
+                                            } catch (ex: Exception) {
+                                                ex.printStackTrace()
+                                                // ignore
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            children += checkbox(maskActiveProperty) {
+                                text = "Active"
+                            }
+                            children += checkbox(maskShowProperty) {
+                                text = "Show"
+                            }
+                            children += checkbox(maskInvertProperty) {
+                                text = "Invert"
+                            }
+                        }
+
                         children += button(FontIcon()) {
                             id = "play-icon"
                             tooltip = Tooltip("Run the ${script.name} script.")
@@ -1298,6 +1363,7 @@ class KImageApplication : Application() {
                                             false,
                                             verboseModeProperty.get(),
                                             debugModeProperty.get(),
+                                            getMaskMatrix(),
                                             command,
                                             outputDirectoryProperty.get(),
                                             progress
@@ -1334,6 +1400,18 @@ class KImageApplication : Application() {
                     }
                 }
             }
+        }
+    }
+
+    private fun getMaskMatrix(): Matrix? {
+        return if (maskActiveProperty.get()) {
+            if (maskInvertProperty.value) {
+                maskInvertedMatrixProperty.value
+            } else {
+                maskMatrixProperty.value
+            }
+        } else {
+            null
         }
     }
 
@@ -1374,6 +1452,7 @@ class KImageApplication : Application() {
                     false,
                     false,
                     false,
+                    getMaskMatrix(),
                     command,
                     tempOutputDirectory.path
                 ) { _, output ->
@@ -2078,11 +2157,19 @@ class KImageApplication : Application() {
         val inputZoomHistogram = Histogram(256)
         val outputZoomHistogram = Histogram(256)
 
+        val maskMatrix = getMaskMatrix()
+
         for (y in 0 until ZOOM_HEIGHT) {
             for (x in 0 until ZOOM_WIDTH) {
                 val xInput = clamp(x/zoomFactor + inputCenterX - zoomWidthHalf, 0, inputImageWidth)
                 val yInput = clamp(y/zoomFactor + inputCenterY - zoomHeightHalf, 0, inputImageHeight)
-                val rgbInput = inputImage.pixelReader.getColor(xInput, yInput)
+                var rgbInput = inputImage.pixelReader.getColor(xInput, yInput)
+                if (maskShowProperty.value && maskMatrix != null) {
+                    val maskValue = maskMatrix[xInput, yInput]
+                    if (maskValue > 0) {
+                        rgbInput = Color(maskValue + (1.0-maskValue) * rgbInput.red, (1.0-maskValue) * rgbInput.green, (1.0-maskValue) * rgbInput.green, 1.0)
+                    }
+                }
                 inputZoomImage.pixelWriter.setColor(x, y, rgbInput)
                 inputZoomHistogram.add(rgbInput)
 
