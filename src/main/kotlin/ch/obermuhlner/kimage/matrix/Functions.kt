@@ -84,6 +84,30 @@ fun Matrix.rotateRight(): Matrix {
     return m
 }
 
+fun Matrix.mirrorX(): Matrix {
+    val m = create(height, width)
+
+    for (y in 0 until height) {
+        for (x in 0 until width) {
+            m[width - x - 1, y] = this[x, y]
+        }
+    }
+
+    return m
+}
+
+fun Matrix.mirrorY(): Matrix {
+    val m = create(height, width)
+
+    for (y in 0 until height) {
+        for (x in 0 until width) {
+            m[x, height - y - 1] = this[x, y]
+        }
+    }
+
+    return m
+}
+
 fun Matrix.stretchClassic(min: Double, max: Double, func: (value: Double) -> Double = { it }): Matrix {
     val denom = func(max - min)
     return this.copy().onEach { value ->

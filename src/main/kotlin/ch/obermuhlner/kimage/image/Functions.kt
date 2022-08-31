@@ -182,6 +182,24 @@ fun Image.rotateRight(): Image {
     }
 }
 
+fun Image.mirrorX(): Image {
+    return MatrixImage(
+        this.width,
+        this.height,
+        this.channels) { channel, _, _ ->
+        this[channel].mirrorX()
+    }
+}
+
+fun Image.mirrorY(): Image {
+    return MatrixImage(
+        this.width,
+        this.height,
+        this.channels) { channel, _, _ ->
+        this[channel].mirrorY()
+    }
+}
+
 fun Image.stretchClassic(min: Double, max: Double, func: (value: Double) -> Double = { it }): Image {
     return MatrixImage(
         this.width,
