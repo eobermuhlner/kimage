@@ -76,6 +76,7 @@ kimage(0.1) {
             "bggr" -> listOf(blueMatrix, greenMatrix, greenMatrix, redMatrix)
             "gbrg" -> listOf(greenMatrix, blueMatrix, greenMatrix, redMatrix)
             "grbg" -> listOf(greenMatrix, redMatrix, greenMatrix, blueMatrix)
+            else -> throw java.lang.IllegalArgumentException("Unknown pattern: $pattern")
         }
 
         for (y in 0 until height) {
