@@ -86,6 +86,24 @@ operator fun Image.minus(other: Image): Image {
     }
 }
 
+fun Image.elementPlus(value: Double): Image {
+    return MatrixImage(
+        this.width,
+        this.height,
+        this.channels) { channel, _, _ ->
+        this[channel].elementPlus(value)
+    }
+}
+
+fun Image.elementMinus(value: Double): Image {
+    return MatrixImage(
+        this.width,
+        this.height,
+        this.channels) { channel, _, _ ->
+        this[channel].elementMinus(value)
+    }
+}
+
 // pixel-wise multiplication
 operator fun Image.times(other: Image): Image {
     return MatrixImage(
