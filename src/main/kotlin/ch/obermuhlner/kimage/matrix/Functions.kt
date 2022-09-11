@@ -65,7 +65,7 @@ fun Matrix.rotateLeft(): Matrix {
 
     for (y in 0 until height) {
         for (x in 0 until width) {
-            m[x, height - y - 1] = this[y, x]
+            m[y, width - x - 1] = this[x, y]
         }
     }
 
@@ -77,7 +77,7 @@ fun Matrix.rotateRight(): Matrix {
 
     for (y in 0 until height) {
         for (x in 0 until width) {
-            m[width - x - 1, y] = this[y, x]
+            m[height - y - 1, x] = this[x, y]
         }
     }
 
@@ -85,7 +85,7 @@ fun Matrix.rotateRight(): Matrix {
 }
 
 fun Matrix.mirrorX(): Matrix {
-    val m = create(height, width)
+    val m = create(width, height)
 
     for (y in 0 until height) {
         for (x in 0 until width) {
@@ -97,7 +97,7 @@ fun Matrix.mirrorX(): Matrix {
 }
 
 fun Matrix.mirrorY(): Matrix {
-    val m = create(height, width)
+    val m = create(width, height)
 
     for (y in 0 until height) {
         for (x in 0 until width) {
