@@ -78,6 +78,13 @@ kimage(0.1) {
             enabledWhen = Reference("curve").isEqual("custom2", "all")
             default = 0.99
         }
+        int("repeat") {
+            description = """
+                How many times the color stretching is repeated.
+                """
+            min = 1
+            default = 1
+        }
     }
 
     single {
@@ -89,6 +96,7 @@ kimage(0.1) {
         val custom1Y: Double by arguments
         val custom2X: Double by arguments
         val custom2Y: Double by arguments
+        val repeat: Int by arguments
 
         val histogramWidth = 256
         val histogramHeight = 150
@@ -138,85 +146,98 @@ kimage(0.1) {
         }
 
         for (curve in curves) {
-            val (curvePointsX, curvePointsY) = when(curve) {
+            val (curvePointsX, curvePointsY) = when (curve) {
                 "linear" -> {
                     Pair(
                         listOf(0.0, 1.0),
                         listOf(0.0, 1.0)
                     )
                 }
+
                 "s-curve" -> {
                     Pair(
                         listOf(0.0, 0.3, 0.7, 1.0),
                         listOf(0.0, 0.2, 0.8, 1.0)
                     )
                 }
+
                 "s-curve-bright" -> {
                     Pair(
-                        listOf(0.0, 0.2,  0.7, 1.0),
+                        listOf(0.0, 0.2, 0.7, 1.0),
                         listOf(0.0, 0.18, 0.8, 1.0)
                     )
                 }
+
                 "s-curve-dark" -> {
                     Pair(
                         listOf(0.0, 0.3, 0.7, 1.0),
                         listOf(0.0, 0.2, 0.72, 1.0)
                     )
                 }
+
                 "s-curve-strong" -> {
                     Pair(
                         listOf(0.0, 0.2, 0.8, 1.0),
                         listOf(0.0, 0.1, 0.9, 1.0)
                     )
                 }
+
                 "s-curve-super-strong" -> {
                     Pair(
                         listOf(0.0, 0.2, 0.8, 1.0),
                         listOf(0.0, 0.05, 0.95, 1.0)
                     )
                 }
+
                 "s-curve-extreme" -> {
                     Pair(
                         listOf(0.0, 0.2, 0.8, 1.0),
                         listOf(0.0, 0.01, 0.99, 1.0)
                     )
                 }
+
                 "bright+" -> {
                     Pair(
                         listOf(0.0, 0.6, 1.0),
                         listOf(0.0, 0.7, 1.0)
                     )
                 }
+
                 "dark+" -> {
                     Pair(
                         listOf(0.0, 0.4, 1.0),
                         listOf(0.0, 0.5, 1.0)
                     )
                 }
+
                 "bright-" -> {
                     Pair(
                         listOf(0.0, 0.6, 1.0),
                         listOf(0.0, 0.5, 1.0)
                     )
                 }
+
                 "dark-" -> {
                     Pair(
                         listOf(0.0, 0.4, 1.0),
                         listOf(0.0, 0.3, 1.0)
                     )
                 }
+
                 "custom1" -> {
                     Pair(
                         listOf(0.0, custom1X, 1.0),
                         listOf(0.0, custom1Y, 1.0)
                     )
                 }
+
                 "custom2" -> {
                     Pair(
                         listOf(0.0, custom1X, custom2X, 1.0),
                         listOf(0.0, custom1Y, custom2Y, 1.0)
                     )
                 }
+
                 else -> throw IllegalArgumentException("Unknown curve: $curve")
             }
 
@@ -225,9 +246,12 @@ kimage(0.1) {
             println("  Y: $curvePointsY")
             println()
 
-            val spline: SplineInterpolator = SplineInterpolator.createMonotoneCubicSpline(curvePointsX, curvePointsY)
+            for (i in 1 .. repeat) {
+                val spline: SplineInterpolator =
+                    SplineInterpolator.createMonotoneCubicSpline(curvePointsX, curvePointsY)
 
-            image = image.onEach { v -> spline.interpolate(v) }
+                image = image.onEach { v -> spline.interpolate(v) }
+            }
 
             if (debugMode) {
                 println("After curve correction - average: ${image.values().average()}")
