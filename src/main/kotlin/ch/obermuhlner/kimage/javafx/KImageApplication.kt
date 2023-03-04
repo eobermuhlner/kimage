@@ -51,6 +51,7 @@ import java.text.DecimalFormat
 import java.util.*
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.sqrt
 import ch.obermuhlner.kimage.math.clamp as clamp
 
 
@@ -141,6 +142,9 @@ class KImageApplication : Application() {
     private val zoomInputMedianRedProperty = SimpleDoubleProperty()
     private val zoomInputMedianGreenProperty = SimpleDoubleProperty()
     private val zoomInputMedianBlueProperty = SimpleDoubleProperty()
+    private val zoomInputStddevRedProperty = SimpleDoubleProperty()
+    private val zoomInputStddevGreenProperty = SimpleDoubleProperty()
+    private val zoomInputStddevBlueProperty = SimpleDoubleProperty()
 
     private val zoomOutputMinRedProperty = SimpleDoubleProperty()
     private val zoomOutputMinGreenProperty = SimpleDoubleProperty()
@@ -151,6 +155,9 @@ class KImageApplication : Application() {
     private val zoomOutputMedianRedProperty = SimpleDoubleProperty()
     private val zoomOutputMedianGreenProperty = SimpleDoubleProperty()
     private val zoomOutputMedianBlueProperty = SimpleDoubleProperty()
+    private val zoomOutputStddevRedProperty = SimpleDoubleProperty()
+    private val zoomOutputStddevGreenProperty = SimpleDoubleProperty()
+    private val zoomOutputStddevBlueProperty = SimpleDoubleProperty()
 
     private val inputDirectoryProperty = SimpleStringProperty(Paths.get(".").toString())
     private val useInputDirectoryAsOutputDirectoryProperty = SimpleBooleanProperty(true)
@@ -715,17 +722,14 @@ class KImageApplication : Application() {
                 cell {
                     hbox {
                         children += label("Min:")
-                        children += textfield(zoomInputMinRedProperty) {
-                            prefWidth = 60.0
-                            isEditable = false
+                        children += label(zoomInputMinRedProperty) {
+                            prefWidth = 80.0
                         }
-                        children += textfield(zoomInputMinGreenProperty) {
-                            prefWidth = 60.0
-                            isEditable = false
+                        children += label(zoomInputMinGreenProperty) {
+                            prefWidth = 80.0
                         }
-                        children += textfield(zoomInputMinBlueProperty) {
-                            prefWidth = 60.0
-                            isEditable = false
+                        children += label(zoomInputMinBlueProperty) {
+                            prefWidth = 80.0
                         }
                     }
                 }
@@ -735,17 +739,14 @@ class KImageApplication : Application() {
                 cell {
                     hbox {
                         children += label("Min:")
-                        children += textfield(zoomOutputMinRedProperty) {
+                        children += label(zoomOutputMinRedProperty) {
                             prefWidth = 80.0
-                            isEditable = false
                         }
-                        children += textfield(zoomOutputMinGreenProperty) {
+                        children += label(zoomOutputMinGreenProperty) {
                             prefWidth = 80.0
-                            isEditable = false
                         }
-                        children += textfield(zoomOutputMinBlueProperty) {
+                        children += label(zoomOutputMinBlueProperty) {
                             prefWidth = 80.0
-                            isEditable = false
                         }
                     }
                 }
@@ -754,17 +755,14 @@ class KImageApplication : Application() {
                 cell {
                     hbox {
                         children += label("Max:")
-                        children += textfield(zoomInputMaxRedProperty) {
-                            prefWidth = 60.0
-                            isEditable = false
+                        children += label(zoomInputMaxRedProperty) {
+                            prefWidth = 80.0
                         }
-                        children += textfield(zoomInputMaxGreenProperty) {
-                            prefWidth = 60.0
-                            isEditable = false
+                        children += label(zoomInputMaxGreenProperty) {
+                            prefWidth = 80.0
                         }
-                        children += textfield(zoomInputMaxBlueProperty) {
-                            prefWidth = 60.0
-                            isEditable = false
+                        children += label(zoomInputMaxBlueProperty) {
+                            prefWidth = 80.0
                         }
                     }
                 }
@@ -774,17 +772,14 @@ class KImageApplication : Application() {
                 cell {
                     hbox {
                         children += label("Max:")
-                        children += textfield(zoomOutputMaxRedProperty) {
+                        children += label(zoomOutputMaxRedProperty) {
                             prefWidth = 80.0
-                            isEditable = false
                         }
-                        children += textfield(zoomOutputMaxGreenProperty) {
+                        children += label(zoomOutputMaxGreenProperty) {
                             prefWidth = 80.0
-                            isEditable = false
                         }
-                        children += textfield(zoomOutputMaxBlueProperty) {
+                        children += label(zoomOutputMaxBlueProperty) {
                             prefWidth = 80.0
-                            isEditable = false
                         }
                     }
                 }
@@ -793,17 +788,14 @@ class KImageApplication : Application() {
                 cell {
                     hbox {
                         children += label("Median:")
-                        children += textfield(zoomInputMedianRedProperty) {
-                            prefWidth = 60.0
-                            isEditable = false
+                        children += label(zoomInputMedianRedProperty) {
+                            prefWidth = 80.0
                         }
-                        children += textfield(zoomInputMedianGreenProperty) {
-                            prefWidth = 60.0
-                            isEditable = false
+                        children += label(zoomInputMedianGreenProperty) {
+                            prefWidth = 80.0
                         }
-                        children += textfield(zoomInputMedianBlueProperty) {
-                            prefWidth = 60.0
-                            isEditable = false
+                        children += label(zoomInputMedianBlueProperty) {
+                            prefWidth = 80.0
                         }
                     }
                 }
@@ -813,17 +805,47 @@ class KImageApplication : Application() {
                 cell {
                     hbox {
                         children += label("Median:")
-                        children += textfield(zoomOutputMedianRedProperty) {
-                            prefWidth = 80.0
-                            isEditable = false
+                        children += label(zoomOutputMedianRedProperty) {
+                            prefWidth = 60.0
                         }
-                        children += textfield(zoomOutputMedianGreenProperty) {
-                            prefWidth = 80.0
-                            isEditable = false
+                        children += label(zoomOutputMedianGreenProperty) {
+                            prefWidth = 60.0
                         }
-                        children += textfield(zoomOutputMedianBlueProperty) {
+                        children += label(zoomOutputMedianBlueProperty) {
+                            prefWidth = 60.0
+                        }
+                    }
+                }
+            }
+            row {
+                cell {
+                    hbox {
+                        children += label("Stddev:")
+                        children += label(zoomInputStddevRedProperty) {
                             prefWidth = 80.0
-                            isEditable = false
+                        }
+                        children += label(zoomInputStddevGreenProperty) {
+                            prefWidth = 80.0
+                        }
+                        children += label(zoomInputStddevBlueProperty) {
+                            prefWidth = 80.0
+                        }
+                    }
+                }
+                cell {
+                    label("")
+                }
+                cell {
+                    hbox {
+                        children += label("Stddev:")
+                        children += label(zoomOutputStddevRedProperty) {
+                            prefWidth = 80.0
+                        }
+                        children += label(zoomOutputStddevGreenProperty) {
+                            prefWidth = 80.0
+                        }
+                        children += label(zoomOutputStddevBlueProperty) {
+                            prefWidth = 80.0
                         }
                     }
                 }
@@ -2193,6 +2215,9 @@ class KImageApplication : Application() {
         zoomInputMedianRedProperty.value = inputZoomHistogram.estimateMedianRed()
         zoomInputMedianGreenProperty.value = inputZoomHistogram.estimateMedianGreen()
         zoomInputMedianBlueProperty.value = inputZoomHistogram.estimateMedianBlue()
+        zoomInputStddevRedProperty.value = inputZoomHistogram.estimateStddevRed()
+        zoomInputStddevGreenProperty.value = inputZoomHistogram.estimateStddevGreen()
+        zoomInputStddevBlueProperty.value = inputZoomHistogram.estimateStddevBlue()
 
         zoomOutputMinRedProperty.value = outputZoomHistogram.minRed()
         zoomOutputMinGreenProperty.value = outputZoomHistogram.minGreen()
@@ -2203,6 +2228,9 @@ class KImageApplication : Application() {
         zoomOutputMedianRedProperty.value = outputZoomHistogram.estimateMedianRed()
         zoomOutputMedianGreenProperty.value = outputZoomHistogram.estimateMedianGreen()
         zoomOutputMedianBlueProperty.value = outputZoomHistogram.estimateMedianBlue()
+        zoomOutputStddevRedProperty.value = outputZoomHistogram.estimateStddevRed()
+        zoomOutputStddevGreenProperty.value = outputZoomHistogram.estimateStddevGreen()
+        zoomOutputStddevBlueProperty.value = outputZoomHistogram.estimateStddevBlue()
 
         drawHistogram(inputZoomHistogram, inputZoomHistogramCanvas)
         drawHistogram(outputZoomHistogram, outputZoomHistogramCanvas)
@@ -2299,6 +2327,10 @@ class KImageApplication : Application() {
         fun estimateMedianGreen(): Double = estimatePercentile(0.5, countG)
         fun estimateMedianBlue(): Double = estimatePercentile(0.5, countB)
 
+        fun estimateStddevRed(): Double = estimateStddev(countR)
+        fun estimateStddevGreen(): Double = estimateStddev(countG)
+        fun estimateStddevBlue(): Double = estimateStddev(countB)
+
         private fun estimatePercentile(percentile: Double, arr: IntArray): Double {
             val nPercentile = (entryCount * percentile).toInt()
             var cumulativeN = 0
@@ -2319,10 +2351,25 @@ class KImageApplication : Application() {
 
         private fun estimateMean(arr: IntArray): Double {
             var sum = 0.0
+            val width = 1.0 / (arr.size - 1).toDouble()
             for (i in countR.indices) {
-                sum += arr[i] * (i.toDouble() + 0.5) / (arr.size - 1).toDouble()
+                val mid = (i.toDouble() + 0.5) / width
+                sum += arr[i] * mid
             }
             return sum / entryCount
+        }
+
+        private fun estimateStddev(arr: IntArray): Double {
+            val mean = estimateMean(arr)
+            val nMinus1 = (arr.size - 1).toDouble()
+            val width = 1.0 / nMinus1
+            var sum = 0.0
+            for (i in countR.indices) {
+                val mid = (i.toDouble() + 0.5) / width
+                val diff = mid - mean
+                sum += arr[i] * diff*diff / (entryCount-1)
+            }
+            return sqrt(sum)
         }
     }
 
@@ -2427,7 +2474,7 @@ class KImageApplication : Application() {
     }
 
     companion object {
-        private const val SPACING = 4.0
+        private const val SPACING = 2.0
 
         private const val IMAGE_WIDTH = 400
         private const val IMAGE_HEIGHT = 400
