@@ -13,8 +13,11 @@ import ch.obermuhlner.kimage.math.*
 import ch.obermuhlner.kimage.matrix.Matrix
 import ch.obermuhlner.kimage.matrix.contentToString
 import java.io.File
+import java.util.*
+import kotlin.math.E
+import kotlin.math.PI
 import kotlin.math.abs
-import kotlin.random.Random
+import kotlin.math.sqrt
 
 object TestMain {
     @JvmStatic
@@ -41,7 +44,10 @@ object TestMain {
         //exampleFFT("animal.png")
 
         //exampleConvoluteFFT()
-        exampleDeconvoluteFFT()
+        //exampleDeconvoluteFFT()
+
+        //exampleStatistics()
+        exampleDenoise()
     }
 
     private fun exampleConvoluteFFT() {
@@ -845,6 +851,78 @@ object TestMain {
             val cropped = image.crop(width3, height3, width3, height3, false)
             AverageFilter(3, Shape.Square).filter(cropped)
         }
+    }
+
+    fun DoubleArray.weightedMedian(): Double {
+        val median = this.median()
+        val sigma = this.stddev()
+        return this.weightedAverage({ _, v ->
+            val x = abs(v - median) / sigma
+            1 / (sqrt(x + 1))
+        })
+    }
+    private fun exampleStatistics() {
+        val arr = createRandomArray(Random(), 5)
+        val kappa = 2.0
+
+        println("Average: ${arr.average()}")
+        println("Median:  ${arr.median()}")
+        println("Stddev:  ${arr.stddev()}")
+
+        println("SigmaClipMedian: ${arr.sigmaClip(kappa).median()}")
+        println("SigmaClipAverage: ${arr.sigmaClip(kappa).average()}")
+        println("SigmaWinsorizeMedian: ${arr.sigmaWinsorize(kappa).median()}")
+        println("SigmaWinsorizeAverage: ${arr.sigmaWinsorize(kappa).average()}")
+        println("WeightedMedian: ${arr.weightedMedian()}")
+        println("SigmaClipWeightedMedian: ${arr.sigmaClip(kappa).weightedMedian()}")
+    }
+
+    private fun exampleDenoise() {
+        val kappa = 2.0
+
+        denoise("median") { arr -> arr.median() }
+        denoise("average") { arr -> arr.average() }
+        denoise("weightedMedian") { arr -> arr.weightedMedian() }
+        denoise("sigmaClip-median") { arr -> arr.sigmaClip(kappa).median() }
+        denoise("sigmaClip-weightedMedian") { arr -> arr.sigmaClip(kappa).weightedMedian() }
+        denoise("sigmaWinsorize-median") { arr -> arr.sigmaWinsorize(kappa).median() }
+        denoise("sigmaWinsorize-weightedMedian") { arr -> arr.sigmaWinsorize(kappa).weightedMedian() }
+    }
+
+    private fun denoise(name: String, func: (DoubleArray) -> Double) {
+        val random = Random()
+        val output = mutableListOf<Double>()
+        val nValues = 10000
+
+        for (i in 0 until nValues) {
+            val arr = createRandomArray(random, 100, 1)
+            val value = func(arr)
+            output += value
+        }
+
+        println("Denoise $nValues values using: $name")
+        println("Average: ${output.average()}")
+        println("Median:  ${output.median()}")
+        println("Stddev:  ${output.stddev()}")
+        println()
+    }
+
+    private fun createRandomArray(
+        random: Random,
+        n: Int = 5,
+        nOutliers: Int = 1,
+        randomBase: Double = 100.0,
+        randomStddev: Double = 10.0,
+        outlier: Double = 5555.0): DoubleArray {
+
+        val arr = DoubleArray(n) { i ->
+            if (i < nOutliers) {
+                outlier
+            } else {
+                random.nextGaussian() * randomStddev + randomBase
+            }
+        }
+        return arr
     }
 
     private fun example(name: String, imageName: String = "untitled.png", func: () -> Image): Image {

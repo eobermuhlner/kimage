@@ -78,7 +78,7 @@ object TestScript {
 
         //runScript(scriptRemoveVignette(), mapOf(), "images/vignette/flat_large.tif")
         //runScript(scriptRemoveVignette(), mapOf("mode" to "rgb"), "images/vignette/IMG_6800.TIF")
-        runScript(scriptRemoveVignette(), mapOf("mode" to "rgb"), "images/vignette/debayer_MasterFlat_ISO100.tif")
+        //runScript(scriptRemoveVignette(), mapOf("mode" to "rgb"), "images/vignette/debayer_MasterFlat_ISO100.tif")
 
         //runScript(scriptRemoveOutliers(), mapOf("kappa" to "10"), "images/outlier-pixels/bias_10s_ISO1600.tiff")
         //runScript(scriptRemoveOutliers(), mapOf("low" to "0", "high" to "0.5"), "images/outlier-pixels/bias_10s_ISO1600.tiff")
@@ -119,7 +119,72 @@ object TestScript {
         //runScript(scriptFindStars(), mapOf(), "images/align/orion1.png")
 
         //runScript(scriptRemoveBackgroundGradient(), mapOf(), "images/find_stars/M46_M47_stacked.png")
+        runScript(scriptMerge(), mapOf("operation" to "grainextract"), "images/keyfob_orig.png", "images/layer-mode-mask1.jpg")
     }
+
+    private fun scriptMerge(): Script =
+        kimage(0.1) {
+            name = "layer"
+            title = "Merge multiple images"
+            description = """
+                Merge multiple images.
+                The first image is the main image to merge, all other images are the mask to apply successively.
+                This function is usually used with two input images. 
+                """
+            arguments {
+                string("operation") {
+                    description = """
+                        The operation to use for merging.
+                    """
+                    allowed = listOf("plus", "minus", "multiply", "divide", "min", "max", "screen", "avg", "overlay", "dodge", "burn", "hardlight", "softlight", "grainextract", "grainmerge", "difference")
+                    default = "screen"
+                }
+            }
+
+            multi {
+                val operation: String by arguments
+
+                println("Loading base image ${inputFiles[0]}")
+                var baseImage = ImageReader.read(inputFiles[0])
+                println()
+
+                for (i in 1 until inputFiles.size) {
+                    val inputFile = inputFiles[i]
+                    println("Loading image ${inputFile}")
+                    val image = ImageReader.read(inputFile).crop(0, 0, baseImage.width, baseImage.height, false)
+
+                    val func: (Double, Double) -> Double = when(operation) {
+                        "plus" -> { a, b -> a + b }
+                        "minus" -> { a, b -> a - b }
+                        "multiply" -> { a, b -> a * b }
+                        "divide" -> { a, b -> if (b == 0.0) 1.0 else a / b }
+                        "min" -> { a, b -> min(a, b) }
+                        "max" -> { a, b -> max(a, b) }
+                        "screen" -> { a, b -> 1.0 - (1.0 - a) * (1.0 - b) }
+                        "avg" -> { a, b -> (a + b) / 2.0 }
+                        "overlay" -> { a, b -> a * (a + 2*b + (1.0 - a)) }
+                        "dodge" -> { a, b ->  if (b == 0.0) 1.0 else a / (1.0 - b) }
+                        "burn" -> { a, b ->  if (b == 0.0) 1.0 else 1.0 - (1.0 - a) / b }
+                        "hardlight" -> { a, b ->  if (b > 0.5) (1.0 - (1.0 - 2*(b-0.5)) * (1.0-a)) else (2*a*b) }
+                        "softlight" -> { a, b ->
+                            val r = 1.0 - (1.0 - a) * (1.0 - b)
+                            ((1.0 - a) * b + r) * a
+                        }
+                        "grainextract" -> { a, b -> a - b + 0.5 }
+                        "grainmerge" -> { a, b -> a + b - 0.5 }
+                        "difference" -> { a, b -> abs(a - b) }
+                        else -> throw IllegalArgumentException("Unknown operation: $operation")
+                    }
+
+
+                    baseImage = MatrixImage(baseImage.width, baseImage.height, baseImage.channels) { channel, width, height ->
+                        DoubleMatrix(width, height) { x, y -> clamp(func(baseImage[channel][x, y], image[channel][x, y]), 0.0, 1.0) }
+                    }
+                }
+
+                baseImage
+            }
+        }
 
     private fun scriptValueMask(): Script =
         kimage(0.1) {
@@ -3000,14 +3065,14 @@ object TestScript {
                     description = """
                         Method used to calculate the stacked image.                        
                         """
-                    allowed = listOf("median", "average", "max", "min", "sigma-clip-median", "sigma-clip-average", "sigma-winsorize-median", "sigma-winsorize-average", "winsorized-sigma-clip-median", "winsorized-sigma-clip-average", "all")
+                    allowed = listOf("median", "average", "max", "min", "sigma-clip-median", "sigma-clip-average", "sigma-winsorize-median", "sigma-winsorize-average", "winsorized-sigma-clip-median", "winsorized-sigma-clip-average", "sigma-clip-weighted-median", "all")
                     default = "sigma-clip-median"
                 }
                 double("kappa") {
                     description = """
                         The kappa factor is used in sigma-clipping to define how far from the center the outliers are allowed to be.
                         """
-                    enabledWhen = Reference("method").isEqual("sigma-clip-median", "sigma-clip-average", "sigma-winsorize-median", "sigma-winsorize-average", "winsorized-sigma-clip-median", "winsorized-sigma-clip-average", "all")
+                    enabledWhen = Reference("method").isEqual("sigma-clip-median", "sigma-clip-average", "sigma-winsorize-median", "sigma-winsorize-average", "winsorized-sigma-clip-median", "winsorized-sigma-clip-average", "sigma-clip-weighted-median", "all")
                     min = 0.0
                     default = 2.0
                 }
@@ -3015,7 +3080,7 @@ object TestScript {
                     description = """
                         The number of iterations used in sigma-clipping to remove outliers.
                         """
-                    enabledWhen = Reference("method").isEqual("sigma-clip-median", "sigma-clip-average", "winsorized-sigma-clip-median", "winsorized-sigma-clip-average", "all")
+                    enabledWhen = Reference("method").isEqual("sigma-clip-median", "sigma-clip-average", "winsorized-sigma-clip-median", "winsorized-sigma-clip-average", "sigma-clip-weighted-median", "all")
                     min = 0
                     default = 10
                 }
@@ -3051,7 +3116,7 @@ object TestScript {
                 println()
 
                 val methods = if (method == "all") {
-                    listOf("median", "average", "max", "min", "sigma-clip-median", "sigma-clip-average", "sigma-winsorize-median", "sigma-winsorize-average", "winsorized-sigma-clip-median", "winsorized-sigma-clip-average")
+                    listOf("median", "average", "max", "min", "sigma-clip-median", "sigma-clip-average", "sigma-winsorize-median", "sigma-winsorize-average", "winsorized-sigma-clip-median", "winsorized-sigma-clip-average", "sigma-clip-weighted-median")
                 } else {
                     listOf(method)
                 }
@@ -3069,8 +3134,7 @@ object TestScript {
                             array.medianInplace(0, clippedLength)
                         }
                         "sigma-clip-average" -> { array ->
-                            val clippedLength = array.sigmaClipInplace(kappa.toFloat(), iterations, histogram = sigmaClipHistogram
-                            )
+                            val clippedLength = array.sigmaClipInplace(kappa.toFloat(), iterations, histogram = sigmaClipHistogram)
                             array.average(0, clippedLength)
                         }
                         "sigma-winsorize-median" -> { array ->
@@ -3088,6 +3152,17 @@ object TestScript {
                         "winsorized-sigma-clip-average" -> { array ->
                             val clippedLength = array.huberWinsorizedSigmaClipInplace(kappa = kappa.toFloat(), iterations, histogram = sigmaClipHistogram)
                             array.average(0, clippedLength)
+                        }
+                        "sigma-clip-weighted-median" -> { array ->
+                            val clippedLength = array.sigmaClipInplace(kappa.toFloat(), iterations, histogram = sigmaClipHistogram)
+                            val median = array.median(0, clippedLength)
+                            val sigma = array.stddev(StandardDeviation.Population, 0, clippedLength)
+                            val factor = 1 / (sqrt(2 * PI))
+                            array.weightedAverage({ _, v ->
+                                val x = abs(v - median) / sigma
+                                1 / (sqrt(x + 1))
+                                //(factor * pow(E, 0.5 * x * x)).toFloat()
+                            }, 0, clippedLength)
                         }
                         else -> throw IllegalArgumentException("Unknown method: " + method)
                     }
