@@ -34,7 +34,7 @@ kimage(0.1) {
             description = """
                         Method used to calculate the stacked image.                        
                         """
-            allowed = listOf("median", "average", "max", "min", "sigma-clip-median", "sigma-clip-average", "sigma-winsorize-median", "sigma-winsorize-average", "winsorized-sigma-clip-median", "winsorized-sigma-clip-average", "all")
+            allowed = listOf("median", "average", "max", "min", "sigma-clip-median", "sigma-clip-average", "sigma-winsorize-median", "sigma-winsorize-average", "winsorized-sigma-clip-median", "winsorized-sigma-clip-average", "sigma-clip-weighted-median", "all")
             default = "sigma-clip-median"
         }
         double("kappa") {
@@ -85,7 +85,7 @@ kimage(0.1) {
         println()
 
         val methods = if (method == "all") {
-            listOf("median", "average", "max", "min", "sigma-clip-median", "sigma-clip-average", "sigma-winsorize-median", "sigma-winsorize-average", "winsorized-sigma-clip-median", "winsorized-sigma-clip-average")
+            listOf("median", "average", "max", "min", "sigma-clip-median", "sigma-clip-average", "sigma-winsorize-median", "sigma-winsorize-average", "winsorized-sigma-clip-median", "winsorized-sigma-clip-average", "sigma-clip-weighted-median")
         } else {
             listOf(method)
         }
@@ -103,8 +103,7 @@ kimage(0.1) {
                     array.medianInplace(0, clippedLength)
                 }
                 "sigma-clip-average" -> { array ->
-                    val clippedLength = array.sigmaClipInplace(kappa.toFloat(), iterations, histogram = sigmaClipHistogram
-                    )
+                    val clippedLength = array.sigmaClipInplace(kappa.toFloat(), iterations, histogram = sigmaClipHistogram)
                     array.average(0, clippedLength)
                 }
                 "sigma-winsorize-median" -> { array ->
@@ -122,6 +121,17 @@ kimage(0.1) {
                 "winsorized-sigma-clip-average" -> { array ->
                     val clippedLength = array.huberWinsorizedSigmaClipInplace(kappa = kappa.toFloat(), iterations, histogram = sigmaClipHistogram)
                     array.average(0, clippedLength)
+                }
+                "sigma-clip-weighted-median" -> { array ->
+                    val clippedLength = array.sigmaClipInplace(kappa.toFloat(), iterations, histogram = sigmaClipHistogram)
+                    val median = array.median(0, clippedLength)
+                    val sigma = array.stddev(StandardDeviation.Population, 0, clippedLength)
+                    val factor = 1 / (sqrt(2 * PI))
+                    array.weightedAverage({ _, v ->
+                        val x = abs(v - median) / sigma
+                        1 / (sqrt(x + 1))
+                        //(factor * pow(E, 0.5 * x * x)).toFloat()
+                    }, 0, clippedLength)
                 }
                 else -> throw IllegalArgumentException("Unknown method: " + method)
             }
