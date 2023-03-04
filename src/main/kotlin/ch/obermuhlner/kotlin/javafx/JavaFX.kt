@@ -59,6 +59,27 @@ fun label(text: String)
 fun label(text: String, initializer: Label.() -> Unit)
         = Label(text).apply(initializer)
 
+fun label(textProperty: StringProperty)
+    = label(textProperty) {}
+
+fun label(textProperty: StringProperty, initializer: Label.() -> Unit): Label {
+    val label = label(initializer)
+    label.textProperty().bindBidirectional(textProperty)
+    return label
+}
+
+fun label(integerProperty: IntegerProperty, format: Format = KImageApplication.INTEGER_FORMAT, initializer: Label.() -> Unit): Label {
+    val label = label(initializer)
+    label.textProperty().bindBidirectional(integerProperty, format)
+    return label
+}
+
+fun label(doubleProperty: DoubleProperty, format: Format = KImageApplication.DOUBLE_FORMAT, initializer: Label.() -> Unit): Label {
+    val label = label(initializer)
+    label.textProperty().bindBidirectional(doubleProperty, format)
+    return label
+}
+
 
 fun button(initializer: Button.() -> Unit)
         = Button().apply(initializer)
