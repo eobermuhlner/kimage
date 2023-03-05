@@ -11,7 +11,7 @@ import java.io.*
 import kotlin.math.*
 
 kimage(0.1) {
-    name = "layer"
+    name = "merge"
     title = "Merge multiple images"
     description = """
                 Merge multiple images.
