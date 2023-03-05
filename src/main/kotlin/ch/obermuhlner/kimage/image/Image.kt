@@ -34,16 +34,55 @@ interface Image {
 
     fun convertPixelToChannel(x: Int, y: Int, toChannel: Channel): Double {
         return when (toChannel) {
-            Channel.Luminance -> 0.2126 * getPixel(x, y, Channel.Red) + 0.7152 * getPixel(x, y, Channel.Green) +  0.0722 * getPixel(x, y, Channel.Blue)
+            Channel.Luminance -> 0.2126 * getPixel(x, y, Channel.Red) + 0.7152 * getPixel(x, y, Channel.Green) + 0.0722 * getPixel(x, y, Channel.Blue)
             Channel.Gray -> (getPixel(x, y, Channel.Red) + getPixel(x, y, Channel.Green) + getPixel(x, y, Channel.Blue)) / 3.0
             Channel.Alpha -> 1.0
             Channel.Hue -> convertRGBtoHSB(getPixel(x, y, Channel.Red), getPixel(x, y, Channel.Green), getPixel(x, y, Channel.Blue))[0]
             Channel.Saturation -> convertRGBtoHSB(getPixel(x, y, Channel.Red), getPixel(x, y, Channel.Green), getPixel(x, y, Channel.Blue))[1]
             Channel.Brightness -> convertRGBtoHSB(getPixel(x, y, Channel.Red), getPixel(x, y, Channel.Green), getPixel(x, y, Channel.Blue))[2]
-            Channel.Red -> convertHSBtoRGB(getPixel(x, y, Channel.Hue), getPixel(x, y, Channel.Saturation), getPixel(x, y, Channel.Brightness))[0]
-            Channel.Green -> convertHSBtoRGB(getPixel(x, y, Channel.Hue), getPixel(x, y, Channel.Saturation), getPixel(x, y, Channel.Brightness))[1]
-            Channel.Blue -> convertHSBtoRGB(getPixel(x, y, Channel.Hue), getPixel(x, y, Channel.Saturation), getPixel(x, y, Channel.Brightness))[2]
+            Channel.Red -> toRed(x, y)
+            Channel.Green -> toGreen(x, y)
+            Channel.Blue -> toBlue(x, y)
+            Channel.Y -> 0.299 * getPixel(x, y, Channel.Red) + 0.587 * getPixel(x, y, Channel.Green) + 0.114 * getPixel(x, y, Channel.Blue)
+            Channel.U -> -0.147 * getPixel(x, y, Channel.Red) - 0.289 * getPixel(x, y, Channel.Green) + 0.436 * getPixel(x, y, Channel.Blue)
+            Channel.V -> 0.615 * getPixel(x, y, Channel.Red) - 0.515 * getPixel(x, y, Channel.Green) - 0.100 * getPixel(x, y, Channel.Blue)
             else -> 0.0
+        }
+    }
+
+    private fun toRed(x: Int, y: Int): Double {
+        return if (channels.contains(Channel.Gray)){
+            getPixel(x, y, Channel.Gray)
+        } else if (channels.containsAll(listOf(Channel.Y, Channel.U, Channel.V))) {
+            getPixel(x, y, Channel.Y) + 1.14 * getPixel(x, y, Channel.V)
+        } else if (channels.containsAll(listOf(Channel.Hue, Channel.Saturation, Channel.Brightness))) {
+            convertHSBtoRGB(getPixel(x, y, Channel.Hue), getPixel(x, y, Channel.Saturation), getPixel(x, y, Channel.Brightness))[0]
+        } else {
+            0.0
+        }
+    }
+
+    private fun toGreen(x: Int, y: Int): Double {
+        return if (channels.contains(Channel.Gray)){
+            getPixel(x, y, Channel.Gray)
+        } else if (channels.containsAll(listOf(Channel.Y, Channel.U, Channel.V))) {
+            getPixel(x, y, Channel.Y) - 0.395 * getPixel(x, y, Channel.U) - 0.581 * getPixel(x, y, Channel.V)
+        } else if (channels.containsAll(listOf(Channel.Hue, Channel.Saturation, Channel.Brightness))) {
+            convertHSBtoRGB(getPixel(x, y, Channel.Hue), getPixel(x, y, Channel.Saturation), getPixel(x, y, Channel.Brightness))[1]
+        } else {
+            0.0
+        }
+    }
+
+    private fun toBlue(x: Int, y: Int): Double {
+        return if (channels.contains(Channel.Gray)){
+            getPixel(x, y, Channel.Gray)
+        } else if (channels.containsAll(listOf(Channel.Y, Channel.U, Channel.V))) {
+            getPixel(x, y, Channel.Y) - 2.032 * getPixel(x, y, Channel.U)
+        } else if (channels.containsAll(listOf(Channel.Hue, Channel.Saturation, Channel.Brightness))) {
+            convertHSBtoRGB(getPixel(x, y, Channel.Hue), getPixel(x, y, Channel.Saturation), getPixel(x, y, Channel.Brightness))[2]
+        } else {
+            0.0
         }
     }
 
