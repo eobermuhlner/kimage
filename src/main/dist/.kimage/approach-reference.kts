@@ -20,7 +20,7 @@ kimage(0.1) {
                 If all sub-frames are processed like this a video can be created that is the quality of the stack image but shows the details of the sub-frames. 
                 """
     arguments {
-        file("reference") {
+        image("reference") {
             description = """
                         The reference image to approach.
                     """
@@ -55,15 +55,13 @@ kimage(0.1) {
     }
 
     single {
-        val reference: File by arguments
+        val reference: Image by arguments
         val function: String by arguments
         val power: Double by arguments
         val midpoint: Double by arguments
         val channel: String by arguments
 
-        val referenceImage = ImageReader.read(reference)
-
-        val croppedImage = inputImage.crop(0, 0, referenceImage.width, referenceImage.height, false)
+        val croppedImage = inputImage.crop(0, 0, reference.width, reference.height, false)
 
         val constFunc: (Double) -> Double = { x ->
             power
@@ -120,21 +118,21 @@ kimage(0.1) {
 
         if (channel2 == null) {
             // all channels
-            MatrixImage(referenceImage.width, referenceImage.height, referenceImage.channels) { channel, width, height ->
+            MatrixImage(reference.width, reference.height, reference.channels) { channel, width, height ->
                 DoubleMatrix(width, height) { x, y ->
-                    val diff = croppedImage[channel][x, y] - referenceImage[channel][x, y]
+                    val diff = croppedImage[channel][x, y] - reference[channel][x, y]
                     val factor = factorFunc(abs(diff)) * sign(diff)
-                    clamp(approachFunc(referenceImage[channel][x, y], croppedImage[channel][x, y], factor), 0.0, 1.0)
+                    clamp(approachFunc(reference[channel][x, y], croppedImage[channel][x, y], factor), 0.0, 1.0)
                 }
             }
         } else {
-            val referenceMatrix = referenceImage[channel2]
+            val referenceMatrix = reference[channel2]
             val imageMatrix = croppedImage[channel2]
-            MatrixImage(referenceImage.width, referenceImage.height, referenceImage.channels) { channel, width, height ->
+            MatrixImage(reference.width, reference.height, reference.channels) { channel, width, height ->
                 DoubleMatrix(width, height) { x, y ->
                     val diff = imageMatrix[x, y] - referenceMatrix[x, y]
                     val factor = factorFunc(abs(diff)) * sign(diff)
-                    clamp(approachFunc(referenceImage[channel][x, y], croppedImage[channel][x, y], factor), 0.0, 1.0)
+                    clamp(approachFunc(reference[channel][x, y], croppedImage[channel][x, y], factor), 0.0, 1.0)
                 }
             }
         }
