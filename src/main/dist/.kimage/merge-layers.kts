@@ -11,10 +11,9 @@ import java.io.*
 import kotlin.math.*
 
 kimage(0.1) {
-    name = "merge"
-    title = "Merge multiple images"
+    name = "merge-layers"
+    title = "Merge multiple images as layers"
     description = """
-                Merge multiple images.
                 The first image is the main image to merge, all other images are the mask to apply successively.
                 This function is usually used with two input images.
                 See: https://docs.gimp.org/2.8/en/gimp-concepts-layer-modes.html
@@ -24,7 +23,7 @@ kimage(0.1) {
             description = """
                         The operation to use for merging.
                     """
-            allowed = listOf("plus", "minus", "multiply", "divide", "min", "max", "screen", "avg", "overlay", "dodge", "burn", "hardlight", "softlight", "grainextract", "grainmerge", "difference")
+            allowed = listOf("plus", "minus", "multiply", "divide", "min", "max", "screen", "avg", "overlay", "dodge", "burn", "hardlight", "softlight", "grainextract", "grainmerge", "difference", "approach")
             default = "screen"
         }
     }
@@ -61,6 +60,11 @@ kimage(0.1) {
                 "grainextract" -> { a, b -> a - b + 0.5 }
                 "grainmerge" -> { a, b -> a + b - 0.5 }
                 "difference" -> { a, b -> abs(a - b) }
+                "approach" -> { a, b ->
+                    val diff = b - a
+                    val f = diff * diff
+                    a + f * sign(diff)
+                }
                 else -> throw IllegalArgumentException("Unknown operation: $operation")
             }
 
