@@ -1631,7 +1631,8 @@ class KImageApplication : Application() {
                                 if (value.isNullOrEmpty()) {
                                     argumentsProperty.remove(argument.name)
                                 } else {
-                                    val file = File(inputDirectoryProperty.get(), value)
+                                    //val file = File(inputDirectoryProperty.get(), value)
+                                    val file = File(value)
                                     argumentsProperty[argument.name] = file
                                 }
                             }
@@ -1656,12 +1657,14 @@ class KImageApplication : Application() {
                                     if (argument.isDirectory == true) {
                                         val file = openDir(File(inputDirectoryProperty.get()))
                                         file?.let {
-                                            argProperty.set(it.toRelativeString(File(inputDirectoryProperty.get())))
+                                            //argProperty.set(it.toRelativeString(File(inputDirectoryProperty.get())))
+                                            argProperty.set(file.toString())
                                         }
                                     } else {
                                         val file = openFile(File(inputDirectoryProperty.get()))
                                         file?.let {
-                                            argProperty.set(it.toRelativeString(File(inputDirectoryProperty.get())))
+                                            //argProperty.set(it.toRelativeString(File(inputDirectoryProperty.get())))
+                                            argProperty.set(file.toString())
                                         }
                                     }
                                 }
@@ -1700,7 +1703,8 @@ class KImageApplication : Application() {
                                 onAction = EventHandler {
                                     val file = openFile(File(inputDirectoryProperty.get()))
                                     file?.let {
-                                        argProperty.set(it.toRelativeString(File(inputDirectoryProperty.get())))
+                                        //argProperty.set(it.toRelativeString(File(inputDirectoryProperty.get())))
+                                        argProperty.set(file.toString())
                                     }
                                 }
                             }
@@ -1858,7 +1862,35 @@ class KImageApplication : Application() {
             lastPixelX = pixelX.toDouble()
             lastPixelY = pixelY
         }
+    }
 
+    private fun drawFunction(canvas: Canvas, func: (Double) -> Double, xStart: Double = 0.0, xEnd: Double = 1.0, yStart: Double = 0.0, yEnd: Double = 0.0) {
+        val gc = canvas.graphicsContext2D
+
+        val background = Color.WHITE
+        gc.fill = background
+        gc.fillRect(0.0, 0.0, canvas.width, canvas.height)
+        gc.lineWidth = 1.0
+
+        var firstPixel = true
+        var lastPixelX = 0.0
+        var lastPixelY = 0.0
+        var pixelX = 0.0
+        while (pixelX < canvas.width) {
+            val x = pixelX * (xEnd - xStart) + xStart
+            val y = func(x)
+            val pixelY = y * (yEnd - yStart) + yStart
+
+            if (!firstPixel) {
+                gc.strokeLine(lastPixelX, canvas.height - lastPixelY, pixelX, canvas.height - pixelY)
+            }
+
+            lastPixelX = pixelX
+            lastPixelY = pixelY
+
+            firstPixel = false
+            pixelX += 1.0;
+        }
     }
 
     private fun toStringValue(vararg values: Any?): String? {
