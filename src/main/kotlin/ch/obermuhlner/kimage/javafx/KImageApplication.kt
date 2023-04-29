@@ -1708,6 +1708,22 @@ class KImageApplication : Application() {
                                     }
                                 }
                             }
+                            children += button("View") {
+                                id = "file-icon"
+                                tooltip = Tooltip("View image in explorer.")
+                                onAction = EventHandler {
+                                    argProperty.value?.let {
+                                        val file = File(it)
+                                        if (file.exists()) {
+                                            Desktop.getDesktop().open(file)
+                                        }
+                                    }
+                                }
+                                argProperty.addListener { _, _, value ->
+                                    this.visibleProperty().set(!value.isNullOrEmpty())
+                                }
+                                this.isVisible = false
+                            }
                             argument.unit?.let {
                                 children += label(it)
                             }
