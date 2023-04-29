@@ -24,7 +24,7 @@ kimage(0.1) {
             stacked = if (stacked == null) {
                 image
             } else {
-                max(stacked, image.cropCenter(0, 0, stacked.width, stacked.height))
+                max(stacked, image.crop(0, 0, stacked.width, stacked.height))
             }
         }
 
