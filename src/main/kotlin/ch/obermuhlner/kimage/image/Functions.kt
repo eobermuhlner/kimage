@@ -271,7 +271,7 @@ fun Image.cropCenter(radius: Int, croppedCenterX: Int = width / 2, croppedCenter
 }
 
 fun Image.cropCenter(radiusX: Int, radiusY: Int, croppedCenterX: Int = width / 2, croppedCenterY: Int = height / 2, strictClipping: Boolean = true): Image {
-    return crop(croppedCenterX - radiusX, croppedCenterY - radiusY, radiusX*2+1, radiusY*2+1, strictClipping)
+    return crop(croppedCenterX - radiusX, croppedCenterY - radiusY, radiusX*2, radiusY*2, strictClipping)
 }
 
 fun Image.copy(): Image {
