@@ -28,12 +28,23 @@ kimage(0.1) {
                         """
             default = 300
         }
+        string("scaleY") {
+            allowed = listOf("linear", "log")
+            default = "log"
+        }
     }
 
     single {
         val width: Int by arguments
         val height: Int by arguments
+        val scaleY: String by arguments
 
-        inputImage.histogramImage(width, height)
+        val scaleYFunction: (Double) -> Double = when (scaleY) {
+            "linear" -> { x -> x }
+            "log" -> { x -> if (x <= 0.0) -1.0 else log10(x) }
+            else -> throw IllegalArgumentException("Unknown scaleY: $scaleY")
+        }
+
+        inputImage.histogramImage(width, height, scaleYFunction)
     }
 }
