@@ -9,7 +9,7 @@ fun formatDegreesToHMS(degrees: Double): String {
     val m = (totalSeconds % 3600).toLong() / 60
     val s = totalSeconds % 60
 
-    return String.format(Locale.US, "%02dh%02dm%03.1fs", h, m, s)
+    return String.format(Locale.US, "%02dh%02dm%04.1fs", h, m, s)
 }
 
 fun formatDegreesToDMS(degrees: Double): String {
@@ -19,5 +19,5 @@ fun formatDegreesToDMS(degrees: Double): String {
     val s = totalSeconds % 60
     val sign = if (degrees > 0.0) '+' else '-'
 
-    return String.format(Locale.US, "%s%02d°%02d'%03.1f\"", sign, d, m, s)
+    return String.format(Locale.US, "%s%02d°%02d'%04.1f\"", sign, d, m, s)
 }
