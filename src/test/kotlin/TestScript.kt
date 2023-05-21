@@ -1,3 +1,6 @@
+import ch.obermuhlner.astro.DeepSkyObjects
+import ch.obermuhlner.astro.formatDegreesToHMS
+import ch.obermuhlner.astro.formatDegreesToDMS
 import ch.obermuhlner.kimage.*
 import ch.obermuhlner.kimage.align.*
 import ch.obermuhlner.kimage.astro.StarDetector
@@ -8,20 +11,28 @@ import ch.obermuhlner.kimage.fft.FFT
 import ch.obermuhlner.kimage.filter.*
 import ch.obermuhlner.kimage.huge.*
 import ch.obermuhlner.kimage.image.*
+import ch.obermuhlner.kimage.image.Image
 import ch.obermuhlner.kimage.io.*
+import ch.obermuhlner.kimage.javafx.AwtImageUtil
 import ch.obermuhlner.kimage.math.*
 import ch.obermuhlner.kimage.matrix.*
+import ch.obermuhlner.util.SimpleTokenizer
 import ch.obermuhlner.util.StreamGobbler
+import ch.obermuhlner.util.WCSConverter
+import ch.obermuhlner.util.WCSParser
 import org.apache.commons.imaging.Imaging
 import org.apache.commons.math3.fitting.*
 import org.apache.commons.math3.fitting.PolynomialCurveFitter
 import org.apache.commons.math3.fitting.WeightedObservedPoints
+import java.awt.Font
+import java.awt.Graphics2D
 
 import java.io.*
 import java.lang.Math.toRadians
 import java.nio.file.*
 import java.util.*
 import java.util.concurrent.Executors
+import java.util.regex.Pattern
 import kotlin.math.*
 
 object TestScript {
@@ -120,8 +131,776 @@ object TestScript {
 
         //runScript(scriptRemoveBackgroundGradient(), mapOf(), "images/find_stars/M46_M47_stacked.png")
         //runScript(scriptMerge(), mapOf("operation" to "grainextract"), "images/keyfob_orig.png", "images/layer-mode-mask1.jpg")
-        runScript(scriptMergeRGBL(), mapOf("operation" to "grainextract"), "images/keyfob_orig.png", "images/layer-mode-mask1.jpg")
+        //runScript(scriptMergeRGBL(), mapOf("operation" to "grainextract"), "images/keyfob_orig.png", "images/layer-mode-mask1.jpg")
+
+        //runScript(scriptAnnotate(), mapOf("annotation" to "images/annotations1.txt"), "images/lena512.png")
+
+        runScript(scriptAnnotateWcs(), mapOf("wcs" to "C:/Temp/brixia/stack(sigma-clip-median)_brixia_0001.wcs", "thumbnailSize" to "200", "markerStyle" to "square"), "C:/Temp/brixia/color-stretch-s-curve_1_stack(sigma-clip-median)_brixia_0001.tif")
+        //runScript(scriptAnnotateWcs(), mapOf("wcs" to "C:/Temp/brixia2/Autosave_291x10s_ISO3200_flats_flatdarks_darks_bias.wcs"/*, "magnitude" to "20"*/), "C:/Temp/brixia2/color-stretch-s-curve_remove-background-gradient-manual4_Autosave_291x10s_ISO3200_flats_flatdarks_darks_bias.png")
+        //runScript(scriptAnnotateWcs(), mapOf("wcs" to "C:/Temp/brixia2/Autosave_ThorsHelmet.wcs"/*, "magnitude" to "20"*/), "C:/Temp/brixia2/color-stretch-s-curve_remove-background-gradient-manual4_Autosave_ThorsHelmet.png")
+        //runScript(scriptAnnotateWcs(), mapOf("wcs" to "C:/Temp/brixia2/Whirlpool.wcs"/*, "magnitude" to "20"*/), "C:/Temp/brixia2/Whirlpool.JPG")
+        //runScript(scriptAnnotateWcs(), mapOf("wcs" to "C:/Temp/brixia2/remove-background-gradient-manual4_M13.wcs", "thumbnailSize" to "800"), "C:/Temp/brixia2/remove-background-gradient-manual4_M13.tif")
     }
+
+    private fun scriptAnnotateWcs(): Script =
+        kimage(0.1) {
+            name = "annotate-platesolve"
+            title = "Annotate an image using platesolving."
+            description = """
+                Annotate an image using wcs platesolving result file in wcs format (for example from astap).
+                """
+            arguments {
+                file("wcs") {
+                    description = """
+                The wcs file with the platesolve result.
+                See script `platesolve-annotate`.
+                """
+                }
+                optionalDouble("magnitude") {
+                    description = """
+                The limit of the magnitude of deep sky objects to show.
+                If no magnitude is specified then all objects are shown.
+                """
+                }
+                string("markerStyle") {
+                    description = """
+                The style of the object marker in the annotated image.
+                """
+                    allowed = listOf("square", "circle", "rect", "oval", "none")
+                    default = "square"
+                }
+                string("markerLabelStyle") {
+                    description = """
+                The style of the object marker label in the annotated image.
+                """
+                    allowed = listOf("index", "name", "none")
+                    default = "index"
+                }
+                int("minObjectSize") {
+                    description = """
+                The minimum size of the zoomed object in pixels.
+                """
+                    default = 50
+                    unit = "px"
+                }
+                int("thumbnailSize") {
+                    description = """
+                The size of the thumbnails in pixels.
+                """
+                    default = 400
+                    unit = "px"
+                }
+                int("thumbnailMargin") {
+                    description = """
+                The margin between the thumbnails in pixels.
+                """
+                    default = 20
+                    unit = "px"
+                }
+                double("markerIndexFontSize") {
+                    description = """
+                The size of the base fonts in pixels.
+                """
+                    default = 50.0
+                    unit = "px"
+                }
+                double("thumbnailIndexFontSize") {
+                    description = """
+                The size of the base fonts in pixels.
+                """
+                    default = 50.0
+                    unit = "px"
+                }
+                double("thumbnailLabelFontSize") {
+                    description = """
+                The size of the base fonts in pixels.
+                """
+                    default = 60.0
+                    unit = "px"
+                }
+                double("strokeSize") {
+                    description = """
+                The size of the line stroke in pixels.
+                """
+                    default = 3.0
+                    unit = "px"
+                }
+                string("markerRectColor") {
+                    description = """
+                The color of the marker rectangle as hexstring in the form RRGGBB.
+                """
+                    default = "008800"
+                }
+                string("markerIndexColor") {
+                    description = """
+                The color of the marker index label as hexstring in the form RRGGBB.
+                """
+                    default = "00cc00"
+                }
+                string("thumbnailRectColor") {
+                    description = """
+                The color of the thumbnail label as hexstring in the form RRGGBB.
+                """
+                    default = "ffffff"
+                }
+                string("thumbnailLabelColor") {
+                    description = """
+                The color of the thumbnail label as hexstring in the form RRGGBB.
+                """
+                    default = "88ff88"
+                }
+                string("thumbnailIndexColor") {
+                    description = """
+                The color of the thumbnail label as hexstring in the form RRGGBB.
+                """
+                    default = "00cc00"
+                }
+            }
+
+            single {
+                val wcs: File by arguments
+                val magnitude: Optional<Double> by arguments
+                val minObjectSize: Int by arguments
+                val markerStyle: String by arguments
+                val markerLabelStyle: String by arguments
+                val thumbnailSize: Int by arguments
+                val thumbnailMargin: Int by arguments
+                val markerIndexFontSize: Double by arguments
+                val thumbnailLabelFontSize: Double by arguments
+                val thumbnailIndexFontSize: Double by arguments
+                val strokeSize: Double by arguments
+                val markerRectColor: String by arguments
+                val markerIndexColor: String by arguments
+                val thumbnailRectColor: String by arguments
+                val thumbnailLabelColor: String by arguments
+                val thumbnailIndexColor: String by arguments
+
+                val thumbnailInfoFontSize = thumbnailLabelFontSize * 0.5
+                val thumbnailInfoColor = thumbnailIndexColor
+
+                val wcsData = WCSParser.parse(wcs)
+                val wcsConverter = WCSConverter(wcsData)
+
+                val filteredNGCs = mutableListOf<DeepSkyObjects.NGC>()
+                for (ngc in DeepSkyObjects.all()) {
+                    val (x, y) = wcsConverter.convertRADecToXY(ngc.ra, ngc.dec)
+                    if (x in 0.0..inputImage.width.toDouble() && y in 0.0..inputImage.height.toDouble()) {
+                        filteredNGCs += ngc
+                    }
+                }
+                if (magnitude.isPresent) {
+                    filteredNGCs.removeIf { ngc ->
+                        val mag = ngc.mag
+                        mag == null || mag > magnitude.get()
+                    }
+                }
+                filteredNGCs.removeIf { ngc -> ngc.type == "*" || ngc.type == "Other" }
+                filteredNGCs.sortBy { it.mag ?: Double.MAX_VALUE }
+
+                var thumbnailLabelFontHeight = 0
+                var thumbnailInfoFontHeight = 0
+                AwtImageUtil.graphics(inputImage, 0, 0, 0, 0) { graphics, width, height ->
+                    graphics.font = graphics.font.deriveFont(thumbnailLabelFontSize.toFloat())
+                    thumbnailLabelFontHeight = graphics.fontMetrics.height
+
+                    graphics.font = graphics.font.deriveFont(thumbnailInfoFontSize.toFloat())
+                    thumbnailInfoFontHeight = graphics.fontMetrics.height
+                }
+
+                val thumbnailStartX = thumbnailMargin
+                val thumbnailStartY = inputImage.height + thumbnailMargin + thumbnailLabelFontHeight + thumbnailInfoFontHeight + thumbnailInfoFontHeight
+                val thumbnailColWidth = thumbnailSize + thumbnailMargin
+                val thumbnailRowHeight = thumbnailSize + thumbnailMargin + thumbnailLabelFontHeight + thumbnailInfoFontHeight + thumbnailInfoFontHeight
+                val thumbnailCols = inputImage.width / thumbnailColWidth
+                val thumbnailRows = ceil(filteredNGCs.size.toDouble() / thumbnailCols).toInt()
+
+                var thumbnailX = thumbnailStartX
+                var thumbnailY = thumbnailStartY
+                var thumbnailIndex = 1
+
+                val marginBottom = thumbnailRows * thumbnailRowHeight + thumbnailMargin
+
+                fun setAdaptiveFont(graphics: Graphics2D, font: Font, text: String, maxWidth: Int) {
+                    graphics.font = font
+                    val width = graphics.fontMetrics.stringWidth(text)
+                    if (width > maxWidth) {
+                        val correctedFontSize = font.size.toDouble() * maxWidth / width
+                        graphics.font = font.deriveFont(correctedFontSize.toFloat())
+                    }
+                }
+
+                AwtImageUtil.graphics(inputImage, 0, 0, marginBottom, 0) { graphics, width, height ->
+                    graphics.stroke = java.awt.BasicStroke(strokeSize.toFloat())
+                    val markerIndexFont = graphics.font.deriveFont(markerIndexFontSize.toFloat())
+                    val thumbnailLabelFont = graphics.font.deriveFont(thumbnailLabelFontSize.toFloat())
+                    val thumbnailInfoFont = graphics.font.deriveFont(thumbnailInfoFontSize.toFloat())
+                    val thumbnailIndexFont = graphics.font.deriveFont(thumbnailIndexFontSize.toFloat())
+
+                    for (ngc in filteredNGCs) {
+                        val (x, y) = wcsConverter.convertRADecToXY(ngc.ra, ngc.dec)
+                        val name = if (ngc.messier != null) "M${ngc.messier}" else ngc.name
+                        val info1 = "${ngc.typeEnglish}" + if (ngc.mag != null) " ${ngc.mag}mag" else ""
+                        val info2 = "${formatDegreesToHMS(ngc.ra)} ${formatDegreesToDMS(ngc.dec)}"
+                        val pixelX = x.toInt()
+                        val pixelY = inputImage.height - y.toInt()
+                        val majAx = ngc?.majAx ?: ngc.minAx
+                        val minAx = ngc?.minAx ?: ngc.majAx
+                        val pixelMajAx = if (majAx != null) wcsConverter.convertDegreeToLength(majAx).absoluteValue.toInt() else minObjectSize
+                        val pixelMinAx = if (minAx != null) wcsConverter.convertDegreeToLength(minAx).absoluteValue.toInt() else minObjectSize
+                        val pixelSize = if (majAx != null && minAx != null) {
+                            max(wcsConverter.convertDegreeToLength(max(majAx, minAx)).absoluteValue.toInt(), minObjectSize)
+                        } else minObjectSize
+                        val zoomFactor = thumbnailSize.toDouble() / pixelSize.toDouble()
+
+                        println("$pixelX $pixelY $ngc")
+                        //println("zoom-center \"$name\" $pixelX $pixelY $pixelSize $zoomFactor")
+
+                        val crop = AwtImageUtil.toBufferedImage(inputImage.cropCenter(pixelSize/2, pixelX, pixelY).scaleTo(thumbnailSize, thumbnailSize))
+                        if (thumbnailX + thumbnailSize > width) {
+                            thumbnailX = thumbnailStartX
+                            thumbnailY += thumbnailRowHeight
+                        }
+                        graphics.color = java.awt.Color(markerIndexColor.toInt(16))
+                        graphics.font = markerIndexFont
+                        val markerLabel = when (markerLabelStyle) {
+                            "index" -> thumbnailIndex.toString()
+                            "name" -> name
+                            "none" -> ""
+                            else -> throw IllegalArgumentException("Unknown markerLabelStyle: $markerLabelStyle")
+                        }
+                        when (markerStyle) {
+                            "square" -> {
+                                graphics.drawString(markerLabel, pixelX-pixelSize/2, pixelY-pixelSize/2 - graphics.fontMetrics.descent)
+                            }
+                            else -> {
+                                val stringWidth = graphics.fontMetrics.stringWidth(markerLabel)
+                                graphics.drawString(markerLabel, pixelX - stringWidth/2, pixelY-pixelSize/2 - graphics.fontMetrics.descent)
+                            }
+                        }
+
+                        graphics.color = java.awt.Color(markerRectColor.toInt(16))
+                        when (markerStyle) {
+                            "square" -> {
+                                graphics.drawRect(pixelX-pixelSize/2, pixelY-pixelSize/2, pixelSize, pixelSize)
+                            }
+                            "rect" -> {
+                                //graphics.drawRect(pixelX-pixelSize/2, pixelY-pixelSize/2, pixelMajAx, pixelMinAx)
+                                val backupTransform = graphics.transform
+                                graphics.translate(pixelX, pixelY)
+                                ngc.posAngle?.let {// TODO use angle corrected to projection
+                                    graphics.rotate(toRadians(it))
+                                }
+                                graphics.drawRect(-pixelMajAx/2, -pixelMinAx/2, pixelMajAx, pixelMinAx)
+                                graphics.transform = backupTransform
+                            }
+                            "circle" -> {
+                                graphics.drawOval(pixelX-pixelSize/2, pixelY-pixelSize/2, pixelSize, pixelSize)
+                            }
+                            "oval" -> {
+                                val backupTransform = graphics.transform
+                                graphics.translate(pixelX, pixelY)
+                                ngc.posAngle?.let {// TODO use angle corrected to projection
+                                    graphics.rotate(toRadians(it))
+                                }
+                                graphics.drawOval(-pixelMajAx/2, -pixelMinAx/2, pixelMajAx, pixelMinAx)
+                                graphics.transform = backupTransform
+                            }
+                            "none" -> {}
+                            else -> throw IllegalArgumentException("Unknown markerStyle: $markerStyle")
+                        }
+
+                        graphics.drawImage(crop, thumbnailX, thumbnailY, null)
+
+                        graphics.color = java.awt.Color(thumbnailLabelColor.toInt(16))
+                        setAdaptiveFont(graphics, thumbnailLabelFont, name, thumbnailSize)
+                        graphics.drawString(name, thumbnailX, thumbnailY - thumbnailInfoFontHeight - thumbnailInfoFontHeight - graphics.fontMetrics.descent)
+
+                        graphics.color = java.awt.Color(thumbnailInfoColor.toInt(16))
+                        setAdaptiveFont(graphics, thumbnailInfoFont, info1, thumbnailSize)
+                        graphics.drawString(info1, thumbnailX, thumbnailY - graphics.fontMetrics.height - graphics.fontMetrics.descent)
+                        setAdaptiveFont(graphics, thumbnailInfoFont, info2, thumbnailSize)
+                        graphics.drawString(info2, thumbnailX, thumbnailY - graphics.fontMetrics.descent)
+
+                        if (markerLabelStyle == "index") {
+                            graphics.color = java.awt.Color(thumbnailIndexColor.toInt(16))
+                            setAdaptiveFont(graphics, thumbnailIndexFont, markerLabel, thumbnailSize/4)
+                            graphics.drawString(markerLabel, thumbnailX + strokeSize.roundToInt(), thumbnailY + strokeSize.roundToInt() + graphics.fontMetrics.height)
+                        }
+
+                        graphics.color = java.awt.Color(thumbnailRectColor.toInt(16))
+                        graphics.drawRect(thumbnailX, thumbnailY, crop.width, crop.height)
+
+                        thumbnailX += thumbnailSize + thumbnailMargin
+                        thumbnailIndex++
+                    }
+                }
+            }
+        }
+
+    private fun scriptAnnotate(): Script =
+        kimage(0.1) {
+            name = "annotate"
+            title = "Annotate an image with text and drawings."
+            description = """
+                Annotate an image with text and drawings as specified in an annotations script.
+                """
+            arguments {
+                file("annotation") {
+                    description = """
+                The commands to annotate.
+                """
+                }
+                int("marginTop") {
+                    description = """
+                The top margin.
+                """
+                    default = 0
+                }
+                int("marginLeft") {
+                    description = """
+                The left margin.
+                """
+                    default = 0
+                }
+                int("marginBottom") {
+                    description = """
+                The bottom margin.
+                """
+                    default = 0
+                }
+                int("marginRight") {
+                    description = """
+                The right margin.
+                """
+                    default = 0
+                }
+                string("backgroundColor") {
+                    description = """
+                The background color.
+                """
+                    default = "000000"
+                }
+            }
+
+            single {
+                val annotation: File by arguments
+                val marginTop: Int by arguments
+                val marginLeft: Int by arguments
+                val marginBottom: Int by arguments
+                val marginRight: Int by arguments
+                val backgroundColor: String by arguments
+
+                AwtImageUtil.graphics(inputImage, marginTop, marginLeft, marginBottom, marginRight) { graphics, width, height ->
+                    var zoomTargetStartX = 0
+                    var zoomTargetX = 0
+                    var zoomTargetY = 0
+                    var zoomTargetStep = 0
+                    var zoomTargetRowHeight = 0
+                    var zoomTargetIndex = 1
+                    for (line in annotation.readLines()) {
+                        if (line.isEmpty() || line.startsWith("#")) {
+                            continue
+                        }
+                        val tokens = SimpleTokenizer.tokenize(line)
+                        if (tokens.isNotEmpty()) {
+                            when(tokens[0]) {
+                                "color" -> {
+                                    graphics.color = java.awt.Color(tokens[1].toInt(16))
+                                }
+                                "stroke" -> {
+                                    graphics.stroke = java.awt.BasicStroke(tokens[1].toFloat())
+                                }
+                                "line" -> {
+                                    val x1 = tokens[1].toInt()
+                                    val y1 = tokens[2].toInt()
+                                    val x2 = tokens[3].toInt()
+                                    val y2 = tokens[4].toInt()
+                                    graphics.drawLine(x1, y1, x2, y2)
+                                }
+                                "rect" -> {
+                                    val x = tokens[1].toInt()
+                                    val y = tokens[2].toInt()
+                                    val w = tokens[3].toInt()
+                                    val h = tokens[4].toInt()
+                                    graphics.drawRect(x, y, w, h)
+                                }
+                                "rect-center" -> {
+                                    val x = tokens[1].toInt()
+                                    val y = tokens[2].toInt()
+                                    val radius = tokens[3].toInt()
+                                    graphics.drawRect(x-radius/2, y-radius/2, radius, radius)
+                                }
+                                "font-size" -> {
+                                    val size = tokens[1].toFloat()
+                                    graphics.font = graphics.font.deriveFont(size)
+                                }
+                                "text" -> {
+                                    val x = tokens[1].toInt()
+                                    val y = tokens[2].toInt()
+                                    val text = tokens.subList(3, tokens.size-1).joinToString(" ")
+                                    graphics.drawString(text, x, y)
+                                }
+                                "zoom-target" -> {
+                                    zoomTargetStartX = tokens[1].toInt()
+                                    zoomTargetX = zoomTargetStartX
+                                    zoomTargetY = tokens[2].toInt()
+                                    zoomTargetStep = tokens[3].toInt()
+                                }
+                                "zoom-center" -> {
+                                    val name = tokens[1]
+                                    val x = tokens[2].toInt()
+                                    val y = tokens[3].toInt()
+                                    val radius = tokens[4].toInt()
+                                    val scale = tokens[5].toDouble()
+                                    val crop = AwtImageUtil.toBufferedImage(inputImage.cropCenter(radius, x, y).scaleBy(scale, scale))
+                                    if (zoomTargetX + crop.width > width) {
+                                        zoomTargetX = zoomTargetStartX
+                                        zoomTargetY += zoomTargetRowHeight + zoomTargetStep + graphics.fontMetrics.height
+                                        zoomTargetRowHeight = 0
+                                    }
+                                    graphics.drawString(zoomTargetIndex.toString(), x-radius, y-radius)
+                                    graphics.drawRect(x-radius, y-radius, radius*2, radius*2)
+                                    graphics.drawImage(crop, zoomTargetX, zoomTargetY, null)
+                                    graphics.drawString(name, zoomTargetX, zoomTargetY)
+                                    graphics.drawString(zoomTargetIndex.toString(), zoomTargetX, zoomTargetY+graphics.fontMetrics.height)
+                                    graphics.drawRect(zoomTargetX, zoomTargetY, crop.width, crop.height)
+                                    zoomTargetX += crop.width + zoomTargetStep
+                                    zoomTargetRowHeight = max(zoomTargetRowHeight, crop.height)
+                                    zoomTargetIndex++
+                                }
+                                else ->
+                                    throw java.lang.IllegalArgumentException("Unknown annotation: $line")
+                            }
+
+                        }
+                    }
+                }
+            }
+        }
+
+    private fun scriptMultiCropZoom(): Script =
+        kimage(0.1) {
+                    name = "multi-crop-center-zoom"
+                    title = "Multiple crop and zoom centered images."
+                    description = """
+                Multiple crop and zoom centered images according the specified arguments.
+                """
+                    arguments {
+                        file("points") {
+                            description = """
+                The center points to crop and zoom.
+                """
+                        }
+                        int("radiusX") {
+                            description = """
+                The radius along the x axis to crop.
+                """
+                        }
+                        int("radiusY") {
+                            description = """
+                The radius along the y axis to crop.
+                """
+                        }
+                        double("scale") {
+                            description = """
+                The scale factor.
+                """
+                            default = 4.0
+                        }
+                        string("suffix") {
+                            description = """
+                The file format suffix.
+                """
+                            default = ".png"
+                        }
+                    }
+
+                    single {
+                        val points: File by arguments
+                        val radiusX: Int by arguments
+                        val radiusY: Int by arguments
+                        val scale: Double by arguments
+                        val suffix: String by arguments
+
+                        val outputImage = inputImage.copy()
+
+                        val pattern = Pattern.compile(" +")
+                        val xx: MutableList<Int> = mutableListOf()
+                        val yy: MutableList<Int> = mutableListOf()
+                        for (line in points.readLines()) {
+                            val tokens = line.split(pattern)
+                            xx += tokens[0].toInt()
+                            yy += tokens[1].toInt()
+                        }
+
+                        fun Image.drawRect(x1: Int, y1: Int, x2: Int, y2: Int, r: Double, g: Double, b: Double) {
+                            for (x in x1 until x2) {
+                                this[Channel.Red][x, y1] = r
+                                this[Channel.Green][x, y1] = g
+                                this[Channel.Blue][x, y1] = b
+
+                                this[Channel.Red][x, y2] = r
+                                this[Channel.Green][x, y2] = g
+                                this[Channel.Blue][x, y2] = b
+                            }
+                            for (y in y1 until y2) {
+                                this[Channel.Red][x1, y] = r
+                                this[Channel.Green][x1, y] = g
+                                this[Channel.Blue][x1, y] = b
+
+                                this[Channel.Red][x2, y] = r
+                                this[Channel.Green][x2, y] = g
+                                this[Channel.Blue][x2, y] = b
+                            }
+                        }
+
+                        for (i in 0 until xx.size) {
+                            val x = xx[i]
+                            val y = yy[i]
+
+                            outputImage.drawRect(x-radiusX, y-radiusY, x+radiusX, y+radiusY, 0.0, 1.0, 0.0)
+
+                            val zoomImage = inputImage.cropCenter(radiusX, radiusY, x, y).scaleBy(scale, scale)
+                            val zoomFile = inputFile.prefixName(outputDirectory, "zoom_${i + 1}_").suffixExtension(suffix)
+                            println("Saving $zoomFile")
+                            ImageWriter.write(zoomImage, zoomFile)
+                            println()
+                        }
+
+                        val outputFile = inputFile.prefixName(outputDirectory, "annotated_").suffixExtension(suffix)
+                        println("Saving $outputFile")
+                        ImageWriter.write(outputImage, outputFile)
+
+                        "THIS IS A TEST"
+                    }
+                }
+
+    private fun scriptColorStretchSCurve(): Script =
+        kimage(0.1) {
+            name = "color-stretch-s-curve"
+            title = "Stretch the colors non-linearly using a S-curve to fill the entire value range"
+            description = """
+                Stretch the colors non-linearly using a S-curve to fill the entire value range.
+                """
+            arguments {
+                double("power") {
+                    description = """
+                        The operation to use for merging.
+                    """
+                    default = 2.0
+                }
+                string("midpoint") {
+                    allowed = listOf("histogram", "custom")
+                    default = "histogram"
+                }
+                double("percentile") {
+                    description = """
+                        The percentile.
+                    """
+                    default = 0.5
+                }
+                double("midpointX") {
+                    description = """
+                        The midpoint on the X axis.
+                    """
+                    min = 0.0
+                    max = 1.0
+                    default = 0.5
+                }
+            }
+
+            single {
+                val power: Double by arguments
+                val midpoint: String by arguments
+                val percentile : Double by arguments
+                var midpointX: Double by arguments
+
+                midpointX = when (midpoint) {
+                    "histogram" -> {
+
+                        val histogram = Histogram()
+                        histogram.add(inputImage[Channel.Luminance])
+                        val percentileValue = histogram.estimatePercentile(percentile)
+                        percentileValue
+                    }
+                    "custom" -> midpointX
+                    else -> throw IllegalArgumentException("Unknown midpoint: $midpoint")
+                }
+
+                println("  final midpointX = $midpointX")
+
+                val r = -ln(2.0) / ln(midpointX)
+
+                val func: (Double) -> Double = { x ->
+                    //x.pow(power) / (x.pow(power) + (1.0 - x).pow(power))
+                    1.0/(1.0+(x.pow(r)/(1-x.pow(r))).pow(-power))
+                }
+
+                if (debugMode) {
+                    val curveImageSize = 1000
+                    val curveImage = MatrixImage(curveImageSize, curveImageSize)
+                    for (pixelX in 0 until curveImageSize) {
+                        val x = pixelX.toDouble() / curveImageSize
+                        val y = func(x)
+                        val pixelY = (y * curveImageSize).toInt()
+                        curveImage[Channel.Red][pixelX, pixelY] = 1.0
+                        curveImage[Channel.Green][pixelX, pixelY] = 1.0
+                        curveImage[Channel.Blue][pixelX, pixelY] = 1.0
+                    }
+
+                    val curveFile = inputFile.prefixName(outputDirectory, "curve_")
+                    println("Saving $curveFile showing the color curve")
+                    ImageWriter.write(curveImage, curveFile)
+                    println()
+                }
+
+                MatrixImage(inputImage.width, inputImage.height, inputImage.channels) { channel, width, height ->
+                    DoubleMatrix(width, height) { x, y -> clamp(func(inputImage[channel][x, y]), 0.0, 1.0) }
+                }
+            }
+        }
+
+    private fun scriptApproachReferenceSingle(): Script =
+        kimage(0.1) {
+            name = "approach-reference"
+            title = "Approaches a reference image"
+            description = """
+                Approaches an image to a reference image - using a function control how strong the difference are approaching.
+                Useful to denoise a single sub-frame by approaching the stacked (and therefore denoised) image
+                without losing image details that exist only in this frame (meteroids, asteroids).
+                If all sub-frames are processed like this a video can be created that is the quality of the stack image but shows the details of the sub-frames. 
+                """
+            arguments {
+                image("reference") {
+                    description = """
+                        The reference image to approach.
+                    """
+                }
+                double("power") {
+                    description = """
+                        The operation to use for merging.
+                    """
+                    default = 2.0
+                }
+            }
+
+            single {
+                val reference: Image by arguments
+                val power: Double by arguments
+
+                //val image = ImageReader.read(inputFile).crop(0, 0, baseImage.width, baseImage.height, false)
+                val croppedImage = inputImage.crop(0, 0, reference.width, reference.height, false)
+
+                val func: (Double, Double) -> Double = { a, b ->
+                    val diff = b - a
+                    val f = diff.pow(power)
+                    a + f * sign(diff)
+                }
+
+                MatrixImage(reference.width, reference.height, reference.channels) { channel, width, height ->
+                    DoubleMatrix(width, height) { x, y -> clamp(func(reference[channel][x, y], croppedImage[channel][x, y]), 0.0, 1.0) }
+                }
+            }
+        }
+
+    private fun scriptApproachReferenceMulti(): Script =
+        kimage(0.1) {
+            name = "approach-reference"
+            title = "Approaches a reference image"
+            description = """
+                Approaches an image to a reference image - using a function control how strong the difference are approaching.
+                Useful to denoise a single sub-frame by approaching the stacked (and therefore denoised) image
+                without losing image details that exist only in this frame (meteroids, asteroids).
+                If all sub-frames are processed like this a video can be created that is the quality of the stack image but shows the details of the sub-frames. 
+                """
+            arguments {
+                image("reference") {
+                    description = """
+                        The reference image to approach.
+                    """
+                }
+                double("power") {
+                    description = """
+                        The operation to use for merging.
+                    """
+                    default = 2.0
+                }
+            }
+
+            multi {
+                val reference: Image by arguments
+                val power: Double by arguments
+
+                println("Loading base image ${inputFiles[0]}")
+                var baseImage = ImageReader.read(inputFiles[0])
+                println()
+
+                for (i in 1 until inputFiles.size) {
+                    val inputFile = inputFiles[i]
+                    println("Loading image ${inputFile}")
+                    val image = ImageReader.read(inputFile).crop(0, 0, baseImage.width, baseImage.height, false)
+
+                    val func: (Double, Double) -> Double = { a, b ->
+                        val diff = b - a
+                        val f = diff.pow(power)
+                        a + f * sign(diff)
+                    }
+
+                    baseImage = MatrixImage(baseImage.width, baseImage.height, baseImage.channels) { channel, width, height ->
+                        DoubleMatrix(width, height) { x, y -> clamp(func(baseImage[channel][x, y], image[channel][x, y]), 0.0, 1.0) }
+                    }
+                }
+
+                baseImage
+            }
+        }
+
+    private fun scriptRenameFile(): Script =
+        kimage(0.1) {
+            name = "rename-file"
+            title = "Copy and rename files into another directory"
+            description = """
+                Rename images.
+                """
+            arguments {
+                file("target") {
+                    description = """
+                The target directory to move the image file into.
+                """
+                    isDirectory = true
+                }
+                string("name") {
+                    description = """
+                The name of the renamed file.
+                The index of the renamed file will be appended at the end of the filename.
+                """
+                }
+                int("start") {
+                    description = """
+                The target directory to move the image file into.
+                """
+                    default = 1
+                }
+            }
+
+            multi {
+                val target: File by arguments
+                val start: Int by arguments
+
+                if (!target.exists()) {
+                    target.mkdirs()
+                }
+
+                var index = 1
+                for (inputFile in inputFiles) {
+                    val outputFileName = inputFile.nameWithoutExtension + index + inputFile.extension
+                    println("Renaming $inputFile as $outputFileName into $target directory")
+                    Files.copy(inputFile.toPath(), File(inputFile.parentFile, outputFileName).toPath())
+
+                    index++
+                }
+            }
+        }
 
     private fun scriptMergeRGBL(): Script =
         kimage(0.1) {
@@ -604,7 +1383,7 @@ object TestScript {
             }
         }
 
-    private fun scriptRenameFile(): Script =
+    private fun scriptRenameFileOld(): Script =
         kimage(0.1) {
             name = "rename-file"
             title = "Copy and rename files into another directory"
