@@ -29,5 +29,7 @@ fun Image.drawAwt(func: (Graphics2D) -> Unit): Image {
         }
     }
 
+    gc.dispose()
+
     return MatrixImage(red, green, blue)
 }
