@@ -20,54 +20,25 @@ kimage(0.1) {
             description = """
                         The operation to use for merging.
                     """
-            default = 0.5
+            default = 2.0
         }
-        string("midpoint") {
-            allowed = listOf("histogram", "custom")
-            default = "histogram"
-        }
-        double("percentile") {
-            description = """
-                        The percentile.
-                    """
-            default = 0.99
-            enabledWhen = Reference("midpoint").isEqual("histogram")
-        }
-        double("midpointX") {
+        double("midpoint") {
             description = """
                         The midpoint on the X axis.
                     """
             min = 0.0
             max = 1.0
             default = 0.5
-            enabledWhen = Reference("midpoint").isEqual("custom")
         }
     }
 
     single {
         val power: Double by arguments
-        val midpoint: String by arguments
-        val percentile : Double by arguments
-        var midpointX: Double by arguments
+        var midpoint: Double by arguments
 
-        midpointX = when (midpoint) {
-            "histogram" -> {
-
-                val histogram = Histogram()
-                histogram.add(inputImage[Channel.Luminance])
-                val percentileValue = histogram.estimatePercentile(percentile)
-                percentileValue
-            }
-            "custom" -> midpointX
-            else -> throw IllegalArgumentException("Unknown midpoint: $midpoint")
-        }
-
-        println("  final midpointX = $midpointX")
-
-        val r = -ln(2.0) / ln(midpointX)
+        val r = -ln(2.0) / ln(midpoint)
 
         val func: (Double) -> Double = { x ->
-            //x.pow(power) / (x.pow(power) + (1.0 - x).pow(power))
             1.0/(1.0+(x.pow(r)/(1-x.pow(r))).pow(-power))
         }
 
