@@ -49,6 +49,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.text.DecimalFormat
 import java.util.*
+import kotlin.math.log10
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
@@ -70,6 +71,9 @@ class KImageApplication : Application() {
 
     private val inputImageView = ImageView(dummyImage)
     private val outputImageView = ImageView(dummyImage)
+
+    private val inputHistogramCanvas = Canvas(HISTOGRAM_WIDTH.toDouble(), HISTOGRAM_HEIGHT.toDouble())
+    private val outputHistogramCanvas = Canvas(HISTOGRAM_WIDTH.toDouble(), HISTOGRAM_HEIGHT.toDouble())
 
     private val inputZoomImageView = ImageView(inputZoomImage)
     private val outputZoomImageView = ImageView(outputZoomImage)
@@ -115,6 +119,11 @@ class KImageApplication : Application() {
     private val inputImageApertureValueProperty = SimpleStringProperty()
     private val inputImageBitsPerSampleProperty = SimpleStringProperty()
 
+    private val inputHistogramXProperty = SimpleDoubleProperty()
+    private val inputHistogramYRedProperty = SimpleDoubleProperty()
+    private val inputHistogramYGreenProperty = SimpleDoubleProperty()
+    private val inputHistogramYBlueProperty = SimpleDoubleProperty()
+
     private val outputImageWidthProperty = SimpleIntegerProperty()
     private val outputImageHeightProperty = SimpleIntegerProperty()
     private val outputImageModelProperty = SimpleStringProperty()
@@ -123,6 +132,11 @@ class KImageApplication : Application() {
     private val outputImagePhotographicSensitivityProperty = SimpleStringProperty()
     private val outputImageApertureValueProperty = SimpleStringProperty()
     private val outputImageBitsPerSampleProperty = SimpleStringProperty()
+
+    private val outputHistogramXProperty = SimpleDoubleProperty()
+    private val outputHistogramYRedProperty = SimpleDoubleProperty()
+    private val outputHistogramYGreenProperty = SimpleDoubleProperty()
+    private val outputHistogramYBlueProperty = SimpleDoubleProperty()
 
     private val crosshairColors = listOf(Color.YELLOW, Color.RED, Color.GREEN, Color.BLUE, Color.TRANSPARENT)
     private val crosshairColorProperty: ObjectProperty<Color> = SimpleObjectProperty(crosshairColors[0])
@@ -430,6 +444,60 @@ class KImageApplication : Application() {
                                 }
                             }
                         }
+                        tabs += tab("Histogram") {
+                            content = gridpane {
+                                row {
+                                    cell {
+                                        node(inputHistogramCanvas) {
+                                            inputHistogramCanvas.onMouseDragged = EventHandler { event: MouseEvent ->
+                                                val histogram = inputHistogramCanvas.userData as Histogram
+                                                val x = clamp(event.x.toInt(), 0, histogram.n - 1)
+                                                inputHistogramXProperty.value = x.toDouble() / histogram.n
+                                                inputHistogramYRedProperty.value = histogram.red(x).toDouble() / histogram.entries()
+                                                inputHistogramYGreenProperty.value = histogram.green(x).toDouble() / histogram.entries()
+                                                inputHistogramYBlueProperty.value = histogram.blue(x).toDouble() / histogram.entries()
+                                            }
+                                        }
+                                    }
+                                }
+                                row {
+                                    cell {
+                                        hbox {
+                                            children += label("X: ")
+                                            children += label(inputHistogramXProperty) {
+                                            }
+                                        }
+                                    }
+                                }
+                                row {
+                                    cell {
+                                        hbox {
+                                            children += label("R: ")
+                                            children += label(inputHistogramYRedProperty, PERCENT_HIGH_FORMAT) {
+                                            }
+                                        }
+                                    }
+                                }
+                                row {
+                                    cell {
+                                        hbox {
+                                            children += label("G: ")
+                                            children += label(inputHistogramYGreenProperty, PERCENT_HIGH_FORMAT) {
+                                            }
+                                        }
+                                    }
+                                }
+                                row {
+                                    cell {
+                                        hbox {
+                                            children += label("B: ")
+                                            children += label(inputHistogramYBlueProperty, PERCENT_HIGH_FORMAT) {
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
                 cell {
@@ -552,6 +620,61 @@ class KImageApplication : Application() {
                                     cell {
                                         textfield(outputImageBitsPerSampleProperty) {
                                             isEditable = false
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        tabs += tab("Histogram") {
+                            content = gridpane {
+                                row {
+                                    cell {
+                                        node(outputHistogramCanvas) {
+                                            outputHistogramCanvas.onMouseDragged = EventHandler { event: MouseEvent ->
+                                                val histogram = outputHistogramCanvas.userData as Histogram
+                                                val x = clamp(event.x.toInt(), 0, histogram.n - 1)
+                                                outputHistogramXProperty.value = x.toDouble() / histogram.n
+                                                outputHistogramYRedProperty.value = histogram.red(x).toDouble() / histogram.entries()
+                                                outputHistogramYGreenProperty.value = histogram.green(x).toDouble() / histogram.entries()
+                                                outputHistogramYBlueProperty.value = histogram.blue(x).toDouble() / histogram.entries()
+                                            }
+                                        }
+
+                                    }
+                                }
+                                row {
+                                    cell {
+                                        hbox {
+                                            children += label("X: ")
+                                            children += label(outputHistogramXProperty) {
+                                            }
+                                        }
+                                    }
+                                }
+                                row {
+                                    cell {
+                                        hbox {
+                                            children += label("R: ")
+                                            children += label(outputHistogramYRedProperty, PERCENT_HIGH_FORMAT) {
+                                            }
+                                        }
+                                    }
+                                }
+                                row {
+                                    cell {
+                                        hbox {
+                                            children += label("G: ")
+                                            children += label(outputHistogramYGreenProperty, PERCENT_HIGH_FORMAT) {
+                                            }
+                                        }
+                                    }
+                                }
+                                row {
+                                    cell {
+                                        hbox {
+                                            children += label("B: ")
+                                            children += label(outputHistogramYBlueProperty, PERCENT_HIGH_FORMAT) {
+                                            }
                                         }
                                     }
                                 }
@@ -688,7 +811,6 @@ class KImageApplication : Application() {
             row {
                 cell {
                     inputZoomHistogramCanvas
-                    //inputHistogramImageView
                 }
                 cell {
                     vbox(SPACING) {
@@ -715,7 +837,6 @@ class KImageApplication : Application() {
                 }
                 cell {
                     outputZoomHistogramCanvas
-                    //outputHistogramImageView
                 }
             }
             row {
@@ -903,7 +1024,7 @@ class KImageApplication : Application() {
                                     inputFiles.remove(it)
                                     inputFiles.add(0, it)
                                 }
-                                updateImageView(null, inputImageView, inputImageWidthProperty, inputImageHeightProperty, inputImageModelProperty, inputImageLensModelProperty, inputImageExposureTimeProperty, inputImagePhotographicSensitivityProperty, inputImageApertureValueProperty, inputImageBitsPerSampleProperty)
+                                updateImageView(null, inputImageView, inputHistogramCanvas, inputImageWidthProperty, inputImageHeightProperty, inputImageModelProperty, inputImageLensModelProperty, inputImageExposureTimeProperty, inputImagePhotographicSensitivityProperty, inputImageApertureValueProperty, inputImageBitsPerSampleProperty)
                             }
                         },
                         menuitem("Move to bottom", FontIcon()) {
@@ -914,7 +1035,7 @@ class KImageApplication : Application() {
                                     inputFiles.remove(it)
                                     inputFiles.add(it)
                                 }
-                                updateImageView(null, inputImageView, inputImageWidthProperty, inputImageHeightProperty, inputImageModelProperty, inputImageLensModelProperty, inputImageExposureTimeProperty, inputImagePhotographicSensitivityProperty, inputImageApertureValueProperty, inputImageBitsPerSampleProperty)
+                                updateImageView(null, inputImageView, inputHistogramCanvas, inputImageWidthProperty, inputImageHeightProperty, inputImageModelProperty, inputImageLensModelProperty, inputImageExposureTimeProperty, inputImagePhotographicSensitivityProperty, inputImageApertureValueProperty, inputImageBitsPerSampleProperty)
                             }
                         },
                         menuitem("Remove from list", FontIcon()) {
@@ -924,7 +1045,7 @@ class KImageApplication : Application() {
                                 items.forEach {
                                     inputFiles.remove(it)
                                 }
-                                updateImageView(null, inputImageView, inputImageWidthProperty, inputImageHeightProperty, inputImageModelProperty, inputImageLensModelProperty, inputImageExposureTimeProperty, inputImagePhotographicSensitivityProperty, inputImageApertureValueProperty, inputImageBitsPerSampleProperty)
+                                updateImageView(null, inputImageView, inputHistogramCanvas, inputImageWidthProperty, inputImageHeightProperty, inputImageModelProperty, inputImageLensModelProperty, inputImageExposureTimeProperty, inputImagePhotographicSensitivityProperty, inputImageApertureValueProperty, inputImageBitsPerSampleProperty)
                             }
                         }
                     )
@@ -942,7 +1063,7 @@ class KImageApplication : Application() {
                 }
 
                 selectionModel.selectedItemProperty().addListener { _, _, selected ->
-                    updateImageView(selected, inputImageView, inputImageWidthProperty, inputImageHeightProperty, inputImageModelProperty, inputImageLensModelProperty, inputImageExposureTimeProperty, inputImagePhotographicSensitivityProperty, inputImageApertureValueProperty, inputImageBitsPerSampleProperty)
+                    updateImageView(selected, inputImageView, inputHistogramCanvas, inputImageWidthProperty, inputImageHeightProperty, inputImageModelProperty, inputImageLensModelProperty, inputImageExposureTimeProperty, inputImagePhotographicSensitivityProperty, inputImageApertureValueProperty, inputImageBitsPerSampleProperty)
                 }
                 selectedInputFiles = selectionModel.selectedItems
             }
@@ -1127,7 +1248,7 @@ class KImageApplication : Application() {
                                         outputFiles.remove(it)
                                         it.delete()
                                     }
-                                    updateImageView(null, outputImageView, outputImageWidthProperty, outputImageHeightProperty, outputImageModelProperty, outputImageLensModelProperty, outputImageExposureTimeProperty, outputImagePhotographicSensitivityProperty, outputImageApertureValueProperty, outputImageBitsPerSampleProperty)
+                                    updateImageView(null, outputImageView, outputHistogramCanvas, outputImageWidthProperty, outputImageHeightProperty, outputImageModelProperty, outputImageLensModelProperty, outputImageExposureTimeProperty, outputImagePhotographicSensitivityProperty, outputImageApertureValueProperty, outputImageBitsPerSampleProperty)
                                 }
                             }
                         }
@@ -1157,7 +1278,7 @@ class KImageApplication : Application() {
                 }
 
                 selectionModel.selectedItemProperty().addListener { _, _, selected ->
-                    updateImageView(selected, outputImageView, outputImageWidthProperty, outputImageHeightProperty, outputImageModelProperty, outputImageLensModelProperty, outputImageExposureTimeProperty, outputImagePhotographicSensitivityProperty, outputImageApertureValueProperty, outputImageBitsPerSampleProperty)
+                    updateImageView(selected, outputImageView, outputHistogramCanvas, outputImageWidthProperty, outputImageHeightProperty, outputImageModelProperty, outputImageLensModelProperty, outputImageExposureTimeProperty, outputImagePhotographicSensitivityProperty, outputImageApertureValueProperty, outputImageBitsPerSampleProperty)
                 }
             }
         }
@@ -1166,6 +1287,7 @@ class KImageApplication : Application() {
     private fun updateImageView(
         selectedFile: File?,
         imageView: ImageView,
+        imageHistogramCanvas: Canvas,
         imageWidthProperty: SimpleIntegerProperty,
         imageHeightProperty: SimpleIntegerProperty,
         imageModelProperty: SimpleStringProperty,
@@ -1198,6 +1320,9 @@ class KImageApplication : Application() {
                             imageView.image = writableImage
                             updateZoom()
                         }
+                        Platform.runLater {
+                            updateHistogram(writableImage, imageHistogramCanvas)
+                        }
                     }
                 } catch (ex: Exception) {
                     ex.printStackTrace()
@@ -1205,6 +1330,17 @@ class KImageApplication : Application() {
                 }
             }
         }
+    }
+
+    private fun updateHistogram(image: WritableImage, histogramCanvas: Canvas) {
+        val histogram = Histogram(histogramCanvas.width.toInt())
+        for (y in 0 until image.height.toInt()) {
+            for (x in 0 until image.width.toInt()) {
+                var rgbInput = image.pixelReader.getColor(x, y)
+                histogram.add(rgbInput)
+            }
+        }
+        drawHistogram(histogram, histogramCanvas)
     }
 
     private fun loadImageMetadata(
@@ -2285,6 +2421,7 @@ class KImageApplication : Application() {
     }
 
     private fun drawHistogram(histogram: Histogram, histogramCanvas: Canvas) {
+        histogramCanvas.userData = histogram
         val gc = histogramCanvas.graphicsContext2D
 
         val background = Color.WHITE
@@ -2292,18 +2429,20 @@ class KImageApplication : Application() {
         gc.fillRect(0.0, 0.0, histogramCanvas.width, histogramCanvas.height)
         gc.lineWidth = 1.0
 
-        val max = histogram.maxCount()
+        val func: (Double) -> Double = { x -> if (x == 0.0) -1.0 else log10(x) }
 
-        val h = histogramCanvas.height.toInt()
+        val max = func(histogram.maxCount().toDouble())
 
-        var rY1 = h - (histogram.red(0) * histogramCanvas.height / max)
-        var gY1 = h - (histogram.green(0) * histogramCanvas.height / max)
-        var bY1 = h - (histogram.blue(0) * histogramCanvas.height / max)
+        val h = histogramCanvas.height
+
+        var rY1 = h - (func(histogram.red(0).toDouble()) * h / max)
+        var gY1 = h - (func(histogram.green(0).toDouble()) * h / max)
+        var bY1 = h - (func(histogram.blue(0).toDouble()) * h / max)
 
         for (x in 1 until histogram.n) {
-            val rY = h - (histogram.red(x) * histogramCanvas.height / max)
-            val gY = h - (histogram.green(x) * histogramCanvas.height / max)
-            val bY = h - (histogram.blue(x) * histogramCanvas.height / max)
+            val rY = h - (func(histogram.red(x).toDouble()) * h / max)
+            val gY = h - (func(histogram.green(x).toDouble()) * h / max)
+            val bY = h - (func(histogram.blue(x).toDouble()) * h / max)
 
             gc.stroke = red
             gc.strokeLine(x.toDouble()-1, rY1, x.toDouble(), rY)
@@ -2317,7 +2456,6 @@ class KImageApplication : Application() {
             rY1 = rY
             gY1 = gY
             bY1 = bY
-
         }
 }
 
@@ -2349,6 +2487,10 @@ class KImageApplication : Application() {
             countG[g]++
             countB[b]++
             entryCount++
+        }
+
+        fun entries(): Int {
+            return entryCount
         }
 
         fun maxCount(): Int {
@@ -2542,6 +2684,7 @@ class KImageApplication : Application() {
         val INTEGER_FORMAT = DecimalFormat("##0")
         val DOUBLE_FORMAT = DecimalFormat("##0.000")
         val PERCENT_FORMAT = DecimalFormat("##0.000%")
+        val PERCENT_HIGH_FORMAT = DecimalFormat("##0.000000%")
 
         val INVALID: PseudoClass = PseudoClass.getPseudoClass("invalid")
 
