@@ -38,6 +38,7 @@ fun exaggerate(x: Double): Double = -1/(x+0.5)+2
 fun Image.histogramImage(
     histogramWidth: Int,
     histogramHeight: Int,
+    scaleYFunction: (Double) -> Double = { x: Double -> x },
     histogramFunction: (Channel) -> Histogram = { Histogram(histogramWidth) },
     channels: List<Channel> = this.channels,
     ignoreMinMaxBins: Boolean = true
@@ -54,11 +55,12 @@ fun Image.histogramImage(
         maxCount = max(maxCount, histogram.max(ignoreMinMaxBins))
     }
 
+    val max = scaleYFunction(maxCount.toDouble())
     for (channel in channels) {
         val histogram = channelHistograms[channel]!!
 
         for (x in 0 until histogramWidth) {
-            val histY = min(histogramHeight, (histogramHeight.toDouble() * histogram[x] / maxCount).toInt())
+            val histY = min(histogramHeight, (histogramHeight.toDouble() * scaleYFunction(histogram[x].toDouble()) / max).toInt())
             for (y in (histogramHeight-histY) until histogramHeight) {
                 result[channel][x, y] = 1.0
             }
