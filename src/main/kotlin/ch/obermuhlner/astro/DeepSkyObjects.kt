@@ -5,6 +5,8 @@ import kotlin.jvm.*
 
 object DeepSkyObjects {
     data class NGC(val name: String, val type: String, val ra: Double, val dec: Double, val mag: Double?, val messier: Int?, val common: String, val majAx: Double?, val minAx: Double?, val posAngle: Double?) {
+        val messierOrName: String get() = if (messier != null) "M${messier}" else name
+
         val typeEnglish: String get() = when(type) {
             "*" -> "Star"
             "**" -> "Double Star"
