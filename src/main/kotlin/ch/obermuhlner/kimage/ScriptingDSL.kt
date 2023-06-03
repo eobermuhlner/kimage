@@ -636,7 +636,7 @@ open class ScriptStringArg(mandatory: Boolean = true) : ScriptArg("string", mand
     fun toStringValue(anyValue: Any?): String {
         if (anyValue == null || anyValue == "") {
             default?.let {
-                return toStringValue(it);
+                return it;
             }
             throw ScriptArgumentException("Argument $name is mandatory")
         }
