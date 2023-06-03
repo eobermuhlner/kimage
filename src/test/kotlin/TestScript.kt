@@ -135,12 +135,12 @@ object TestScript {
 
         //runScript(scriptAnnotate(), mapOf("annotation" to "images/annotations1.txt"), "images/lena512.png")
 
-        //runScript(scriptAnnotateWcs(), mapOf("wcsFile" to "C:/Temp/brixia/stack(sigma-clip-median)_brixia_0001.wcs", "manualMarker" to "Test", "blackList" to "M86,NGC4402"), "C:/Temp/brixia/color-stretch-s-curve_1_stack(sigma-clip-median)_brixia_0001.tif")
+        runScript(scriptAnnotateWcs(), mapOf("wcsFile" to "C:/Temp/brixia/stack(sigma-clip-median)_brixia_0001.wcs", "manualMarker" to "Test", "blackList" to "M86,NGC4402"), "C:/Temp/brixia/color-stretch-s-curve_1_stack(sigma-clip-median)_brixia_0001.tif")
         //runScript(scriptAnnotateWcs(), mapOf("wcsFile" to "C:/Temp/brixia2/Autosave_291x10s_ISO3200_flats_flatdarks_darks_bias.wcs"/*, "magnitude" to "20"*/), "C:/Temp/brixia2/color-stretch-s-curve_remove-background-gradient-manual4_Autosave_291x10s_ISO3200_flats_flatdarks_darks_bias.png")
         //runScript(scriptAnnotateWcs(), mapOf("wcsFile" to "C:/Temp/brixia2/Autosave_ThorsHelmet.wcs"/*, "magnitude" to "20"*/), "C:/Temp/brixia2/color-stretch-s-curve_remove-background-gradient-manual4_Autosave_ThorsHelmet.png")
         //runScript(scriptAnnotateWcs(), mapOf("wcsFile" to "C:/Temp/brixia2/Whirlpool.wcs"/*, "magnitude" to "20"*/), "C:/Temp/brixia2/Whirlpool.JPG")
         //runScript(scriptAnnotateWcs(), mapOf("wcsFile" to "C:/Temp/brixia2/remove-background-gradient-manual4_M13.wcs", "thumbnailSize" to "800"), "C:/Temp/brixia2/remove-background-gradient-manual4_M13.tif")
-        runScript(scriptAnnotateWcs(), mapOf("wcsFile" to "C:/Temp/brixia2/M42.wcs"), "C:/Temp/brixia2/color-stretch-s-curve_remove-background-gradient-manual4_M42.jpg")
+        //runScript(scriptAnnotateWcs(), mapOf("wcsFile" to "C:/Temp/brixia2/M42.wcs"), "C:/Temp/brixia2/color-stretch-s-curve_remove-background-gradient-manual4_M42.jpg")
     }
 
     // 2489 2210
@@ -319,6 +319,14 @@ object TestScript {
                     default = 20
                     unit = "px"
                 }
+                int("brightnessGraphSize") {
+                    description = """
+                The size of the brightness graph in pixels.
+                Set to 0 to hide the brightness graph.
+                """
+                    default = 200
+                    unit = "px"
+                }
                 double("baseFontSize") {
                     description = """
                 The size of the base font in pixels.
@@ -399,6 +407,12 @@ object TestScript {
                 """
                     default = "00cc00"
                 }
+                string("brightnessGraphColor") {
+                    description = """
+                The color of the brightness graph as hexstring in the form RRGGBB.
+                """
+                    default = "88cc88"
+                }
             }
 
             single {
@@ -415,6 +429,7 @@ object TestScript {
                 val markerLabelStyle: String by arguments
                 val thumbnailSize: Int by arguments
                 val thumbnailMargin: Int by arguments
+                val brightnessGraphSize: Int by arguments
                 val baseFontSize: Double by arguments
                 val baseStrokeSize: Double by arguments
                 val titleFontSizeFactor: Double by arguments
@@ -428,12 +443,17 @@ object TestScript {
                 val thumbnailLabelColor: String by arguments
                 val thumbnailInfoColor: String by arguments
                 val thumbnailIndexColor: String by arguments
+                val brightnessGraphColor: String by arguments
 
                 val titleFontSize = baseFontSize * titleFontSizeFactor
                 val markerIndexFontSize = baseFontSize * markerIndexFontSizeFactor
                 val thumbnailLabelFontSize = baseFontSize * thumbnailLabelFontSizeFactor
                 val thumbnailInfoFontSize = baseFontSize * thumbnailInfoFontSizeFactor
                 val thumbnailIndexFontSize = baseFontSize * thumbnailIndexFontSizeFactor
+
+                val brightnessGraphStrokeSize = baseStrokeSize * 0.5
+                val brightnessGraphGridColor = "444444"
+                val brightnessGraphGridStrokeSize = brightnessGraphStrokeSize
 
                 val wcsData = WCSParser.parse(wcsFile)
                 val wcsConverter = WCSConverter(wcsData)
@@ -503,7 +523,7 @@ object TestScript {
                 }
 
                 val thumbnailColWidth = thumbnailSize + thumbnailMargin
-                val thumbnailRowHeight = thumbnailSize + thumbnailMargin + thumbnailLabelFontHeight + thumbnailInfoFontHeight + thumbnailInfoFontHeight
+                val thumbnailRowHeight = thumbnailSize + thumbnailMargin + thumbnailLabelFontHeight + thumbnailInfoFontHeight + thumbnailInfoFontHeight + brightnessGraphSize
                 val thumbnailCols = inputImage.width / thumbnailColWidth
                 val thumbnailRows = ceil(filteredNGCs.size.toDouble() / thumbnailCols).toInt()
 
@@ -596,7 +616,8 @@ object TestScript {
                             }
                         }
 
-                        val crop = AwtImageUtil.toBufferedImage(inputImage.cropCenter(marker.size /2, marker.x, marker.y).scaleTo(thumbnailSize, thumbnailSize))
+                        val inputCrop = inputImage.cropCenter(marker.size /2, marker.x, marker.y).scaleTo(thumbnailSize, thumbnailSize)
+                        val crop = AwtImageUtil.toBufferedImage(inputCrop)
                         if (thumbnailX + thumbnailSize > width) {
                             thumbnailX = thumbnailStartX
                             thumbnailY += thumbnailRowHeight
@@ -667,6 +688,51 @@ object TestScript {
                         graphics.color = java.awt.Color(thumbnailRectColor.toInt(16))
                         graphics.drawRect(thumbnailX, thumbnailY, crop.width, crop.height)
 
+                        if (brightnessGraphSize > 0) {
+                            graphics.color = java.awt.Color(brightnessGraphGridColor.toInt(16))
+                            graphics.stroke = java.awt.BasicStroke(brightnessGraphGridStrokeSize.toFloat())
+
+                            //val inputCropChannel = inputCrop[Channel.Gray]
+                            val graphX = thumbnailX
+                            val graphY = thumbnailY + thumbnailSize
+
+                            val gridStepsX = 10
+                            val gridStepsY = 4
+                            for (step in 1 until gridStepsX) {
+                                graphics.drawLine(graphX+crop.width*step/gridStepsX, graphY, graphX+crop.width*step/gridStepsX, graphY+brightnessGraphSize)
+                            }
+                            for (step in 1 until gridStepsY) {
+                                graphics.drawLine(graphX, graphY+brightnessGraphSize*step/gridStepsY, graphX+crop.width, graphY+brightnessGraphSize*step/gridStepsY)
+                            }
+
+                            for (channel in listOf(Channel.Red, Channel.Green, Channel.Blue)) {
+                                val inputCropChannel = inputCrop[channel]
+
+                                //graphics.color = java.awt.Color(brightnessGraphColor.toInt(16))
+                                graphics.color = java.awt.Color(when (channel) {
+                                    Channel.Red -> "ff4444".toInt(16)
+                                    Channel.Green -> "44ff44".toInt(16)
+                                    Channel.Blue -> "4444ff".toInt(16)
+                                    else -> "888888".toInt(16)
+                                })
+                                graphics.stroke = java.awt.BasicStroke(brightnessGraphStrokeSize.toFloat())
+
+                                var lastY = 0
+                                for (x in 0 until crop.width) {
+                                    val value = inputCropChannel[x, crop.height/2]
+                                    val y = ((1.0 - value) * (brightnessGraphSize - baseStrokeSize) + baseStrokeSize).toInt()
+                                    if (x > 0) {
+                                        graphics.drawLine(graphX+x-1, graphY+lastY, graphX+x, graphY+y)
+                                    }
+                                    lastY = y
+                                }
+                            }
+
+                            graphics.stroke = java.awt.BasicStroke(baseStrokeSize.toFloat())
+                            graphics.color = java.awt.Color(thumbnailRectColor.toInt(16))
+                            graphics.drawRect(graphX, graphY, crop.width, brightnessGraphSize)
+                        }
+
                         thumbnailX += thumbnailSize + thumbnailMargin
                         thumbnailIndex++
                     }
@@ -684,6 +750,7 @@ object TestScript {
 
                     graphics.color = java.awt.Color(thumbnailInfoColor.toInt(16))
                     setAdaptiveFont(graphics, titleFont, subtitleText, subtitleWidth)
+                    subtitleWidth = graphics.fontMetrics.stringWidth(subtitleText)
                     graphics.drawString(subtitleText, offsetX + inputImage.width - subtitleWidth, offsetY - graphics.fontMetrics.descent)
 
                     graphics.color = java.awt.Color(thumbnailRectColor.toInt(16))
