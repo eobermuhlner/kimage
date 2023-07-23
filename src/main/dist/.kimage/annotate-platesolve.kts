@@ -240,6 +240,9 @@ kimage(0.1) {
         val thumbnailInfoFontSize = baseFontSize * thumbnailInfoFontSizeFactor
         val thumbnailIndexFontSize = baseFontSize * thumbnailIndexFontSizeFactor
 
+        val gridColor = "444444"
+        val gridStrokeSize = baseStrokeSize * 0.5
+
         val brightnessGraphStrokeSize = baseStrokeSize * 0.5
         val brightnessGraphGridColor = "444444"
         val brightnessGraphGridStrokeSize = brightnessGraphStrokeSize
@@ -356,6 +359,46 @@ kimage(0.1) {
             val thumbnailLabelFont = graphics.font.deriveFont(thumbnailLabelFontSize.toFloat())
             val thumbnailInfoFont = graphics.font.deriveFont(thumbnailInfoFontSize.toFloat())
             val thumbnailIndexFont = graphics.font.deriveFont(thumbnailIndexFontSize.toFloat())
+
+//            graphics.clipRect(offsetX, offsetY, inputImage.width, inputImage.height)
+//            graphics.color = java.awt.Color(gridColor.toInt(16))
+//            graphics.stroke = java.awt.BasicStroke(gridStrokeSize.toFloat())
+//            var raHour = 0.0
+//            var dec: Double
+//            while (raHour <= 24.0) {
+//                val ra = raHour / 24 * 360
+//                dec = -90.0
+//                var lastX = 0.0
+//                var lastY = 0.0
+//                while (dec <= 90.0) {
+//                    val (x, y) = wcsConverter.convertRADecToXY(ra, dec)
+//                    if (dec != -90.0) {
+//                        graphics.drawLine((lastX+offsetX).toInt(), (lastY+offsetY).toInt(), (x+offsetX).toInt(), (y+offsetY).toInt())
+//                    }
+//                    lastX = x
+//                    lastY = y
+//                    dec += 0.1
+//                }
+//                raHour += 0.5
+//            }
+//            dec = -90.0
+//            while (dec <= 90.0) {
+//                raHour = 0.0
+//                var lastX = 0.0
+//                var lastY = 0.0
+//                while (raHour <= 24.0) {
+//                    val ra = raHour / 24 * 360
+//                    val (x, y) = wcsConverter.convertRADecToXY(ra, dec)
+//                    if (ra != 0.0) {
+//                        graphics.drawLine((lastX+offsetX).toInt(), (lastY+offsetY).toInt(), (x+offsetX).toInt(), (y+offsetY).toInt())
+//                    }
+//                    lastX = x
+//                    lastY = y
+//                    raHour += 0.1
+//                }
+//                dec += 1.0
+//            }
+//            graphics.setClip(java.awt.Rectangle(0, 0, width, height))
 
             val markers = filteredNGCs.map { ngc ->
                 val (x, y) = wcsConverter.convertRADecToXY(ngc.ra, ngc.dec)
@@ -475,6 +518,7 @@ kimage(0.1) {
                 }
 
                 graphics.color = java.awt.Color(thumbnailRectColor.toInt(16))
+                graphics.stroke = java.awt.BasicStroke(gridStrokeSize.toFloat())
                 graphics.drawRect(thumbnailX, thumbnailY, crop.width, crop.height)
 
                 if (brightnessGraphSize > 0) {
@@ -543,6 +587,7 @@ kimage(0.1) {
             graphics.drawString(subtitleText, offsetX + inputImage.width - subtitleWidth, offsetY - graphics.fontMetrics.descent)
 
             graphics.color = java.awt.Color(thumbnailRectColor.toInt(16))
+            graphics.stroke = java.awt.BasicStroke(baseStrokeSize.toFloat())
             graphics.drawRect(offsetX, offsetY, inputImage.width, inputImage.height)
         }
     }
