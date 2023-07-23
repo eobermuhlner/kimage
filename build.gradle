@@ -29,8 +29,15 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-scripting-jsr223"
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.1'
 
-//    implementation 'com.twelvemonkeys.imageio:imageio-jpeg:3.7.0'
-//    implementation 'com.twelvemonkeys.imageio:imageio-tiff:3.7.0'
+//    implementation 'com.twelvemonkeys.common:common-image:3.9.3'
+//    implementation 'com.twelvemonkeys.common:common-io:3.9.3'
+//    implementation 'com.twelvemonkeys.common:common-lang:3.9.3'
+//    implementation 'com.twelvemonkeys.imageio:imageio-core:3.9.3'
+//    implementation 'com.twelvemonkeys.imageio:imageio-bmp:3.9.3'
+//    implementation 'com.twelvemonkeys.imageio:imageio-metadata:3.9.3'
+//    implementation 'com.twelvemonkeys.imageio:imageio-psd:3.9.3'
+//    implementation 'com.twelvemonkeys.imageio:imageio-jpeg:3.9.3'
+//    implementation 'com.twelvemonkeys.imageio:imageio-tiff:3.9.3'
 
     implementation 'com.xenomachina:kotlin-argparser:2.0.7'
 
@@ -46,10 +53,16 @@ dependencies {
     implementation 'gov.nasa.gsfc.heasarc:nom-tam-fits:1.15.2'
 
     // AI
-    compile 'org.deeplearning4j:deeplearning4j-core:1.0.0-M2'
+    compile('org.deeplearning4j:deeplearning4j-core:1.0.0-M2') {
+        exclude group: 'com.twelvemonkeys.imageio', module: 'imageio-tiff' // Java 11 has better tiff support
+    }
     compile 'org.nd4j:nd4j-native-platform:1.0.0-M2'
     //
     // compile 'org.nd4j:nd4j-cuda-11.2:1.0.0-M2'
+
+    // experiments for online platesolving
+    implementation "com.squareup.okhttp3:okhttp:4.9.1"
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.9.7")
 
     implementation 'org.slf4j:slf4j-simple:2.0.0'
 
