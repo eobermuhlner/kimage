@@ -299,4 +299,54 @@ private fun interpolate(
 
 fun estimatePowerForInterpolation(n: Int): Double = n.toDouble().pow(1.6)
 
+fun Matrix.erode(kernelRadius: Int = 1): Matrix {
+    val m = create(width, height)
 
+    for (y in 0 until height) {
+        for (x in 0 until width) {
+            var minValue = Double.MAX_VALUE
+
+            for (ky in -kernelRadius..kernelRadius) {
+                for (kx in -kernelRadius..kernelRadius) {
+                    minValue = minOf(minValue, this[x+kx, y+ky])
+                }
+            }
+
+            m[x, y] = minValue
+        }
+    }
+
+    return m
+}
+
+fun Matrix.erode(kernel: Matrix, strength: Double = 1.0, repeat: Int = 1): Matrix {
+    var m1 = create(width, height).onEach { x, y, _ ->  this[x, y] }
+    var m2 = create(width, height)
+
+    val kernelCenterX = kernel.width / 2
+    val kernelCenterY = kernel.height / 2
+
+    for (i in 0 until repeat) {
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                var minValue = Double.MAX_VALUE
+
+                for (ky in 0..kernel.height) {
+                    for (kx in 0..kernel.width) {
+                        if (kernel[kx, ky] >= 1.0) {
+                            minValue = minOf(minValue, m1[x + kx - kernelCenterX, y + ky - kernelCenterY])
+                        }
+                    }
+                }
+
+                m2[x, y] = m1[x, y] * (1.0 - strength) + minValue * strength
+            }
+        }
+
+        val tmp = m1
+        m1 = m2
+        m2 = tmp
+    }
+
+    return m1
+}
