@@ -229,6 +229,23 @@ fun Image.stretchClassic(min: Double, max: Double, func: (value: Double) -> Doub
     }
 }
 
+fun Image.stretchPercentile(low: Double, high: Double, channels: List<Channel> = listOf(Channel.Red, Channel.Green, Channel.Blue), func: (value: Double) -> Double = { it }): Image {
+    val histogram = Histogram()
+    for (measureChannel in channels) {
+        histogram.add(this[measureChannel])
+    }
+
+    val lowValue = histogram.estimatePercentile(low)
+    val highValue = histogram.estimatePercentile(high)
+
+    return MatrixImage(
+        this.width,
+        this.height,
+        this.channels) { channel, _, _ ->
+        this[channel].stretchClassic(lowValue, highValue, func)
+    }
+}
+
 fun Image.values(channels: List<Channel> = this.channels): Iterable<Double> =
     ImageValueIterable(this, channels)
 
@@ -339,6 +356,39 @@ fun Image.interpolate(fixPoints: List<Pair<Int, Int>>, fixValues: List<Double>, 
         this[channel].interpolate(fixPoints,  fixValues, power = power)
     }
 }
+
+fun Image.erode(kernelRadius: Int = 1): Image {
+    val hue = this[Channel.Hue]
+    val saturation = this[Channel.Saturation]
+    val brightness = this[Channel.Brightness].erode(kernelRadius)
+
+    val hsbImage = MatrixImage(this.width, this.height,
+        Channel.Hue to hue,
+        Channel.Saturation to saturation,
+        Channel.Brightness to brightness)
+
+    return MatrixImage(this.width, this.height,
+        Channel.Red to hsbImage[Channel.Red],
+        Channel.Green to hsbImage[Channel.Green],
+        Channel.Blue to hsbImage[Channel.Blue])
+}
+
+fun Image.erode(kernel: Matrix, strength: Double = 1.0, repeat: Int = 1): Image {
+    val hue = this[Channel.Hue]
+    val saturation = this[Channel.Saturation]
+    val brightness = this[Channel.Brightness].erode(kernel, strength, repeat)
+
+    val hsbImage = MatrixImage(this.width, this.height,
+        Channel.Hue to hue,
+        Channel.Saturation to saturation,
+        Channel.Brightness to brightness)
+
+    return MatrixImage(this.width, this.height,
+        Channel.Red to hsbImage[Channel.Red],
+        Channel.Green to hsbImage[Channel.Green],
+        Channel.Blue to hsbImage[Channel.Blue])
+}
+
 
 fun Image.write(file: File) {
     ImageWriter.write(this, file)
