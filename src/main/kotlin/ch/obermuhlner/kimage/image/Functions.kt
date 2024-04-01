@@ -4,6 +4,7 @@ import ch.obermuhlner.kimage.Scaling
 import ch.obermuhlner.kimage.io.ImageFormat
 import ch.obermuhlner.kimage.io.ImageWriter
 import ch.obermuhlner.kimage.math.Histogram
+import ch.obermuhlner.kimage.math.clamp
 import ch.obermuhlner.kimage.matrix.*
 import java.io.File
 import kotlin.math.*
@@ -387,6 +388,68 @@ fun Image.erode(kernel: Matrix, strength: Double = 1.0, repeat: Int = 1): Image 
         Channel.Red to hsbImage[Channel.Red],
         Channel.Green to hsbImage[Channel.Green],
         Channel.Blue to hsbImage[Channel.Blue])
+}
+
+fun Image.processMatrixTiles(size: Int, overlap: Int = size / 4, gradient: (Double) -> Double = { x -> 1.0 - x }, func: (Matrix) -> Matrix): Image {
+    return MatrixImage(
+        this.width,
+        this.height,
+        this.channels) { channel, _, _ ->
+        this[channel].processTiles(size, overlap, gradient, func)
+    }
+}
+
+fun Image.processImageTiles(size: Int, overlap: Int = size / 4, gradient: (Double) -> Double = { x -> 1.0 - x }, func: (Image) -> Image): Image {
+    require (size > overlap) { "Overlap too large" }
+
+    val resultChannelMatrixes = this.channels.associateWith { _ -> Matrix.matrixOf(this.width, this.height) }
+
+    val overlay = Matrix.matrixOf(this.width, this.height) { x, y ->
+        val rx = if (x < overlap) {
+            (overlap - x.toDouble()) / overlap
+        } else if (x > size - overlap) {
+            (overlap - (size-x).toDouble()) / overlap
+        } else {
+            0.0
+        }
+        val ry = if (y < overlap) {
+            (overlap - y.toDouble()) / overlap
+        } else if (y > size - overlap) {
+            (overlap - (size-y).toDouble()) / overlap
+        } else {
+            0.0
+        }
+        clamp(gradient(rx), 0.0, 1.0) * clamp(gradient(ry), 0.0, 1.0)
+    }
+
+    val step = size - overlap
+    for (tileY in -overlap until this.height step step) {
+        for (tileX in -overlap until this.width step step) {
+            val croppedImage = this.crop(tileX, tileY, size, size)
+            val processedImage = func(croppedImage)
+            for (channel in this.channels) {
+                val resultChannelMatrix = resultChannelMatrixes[channel]!!
+                val processedMatrix = processedImage[channel]
+                val m = processedMatrix elementTimes overlay
+                for (y in 0 until size) {
+                    for (x in 0 until size) {
+                        val xx = tileX + x
+                        val yy = tileY + y
+                        if (resultChannelMatrix.isInside(xx, yy)) {
+                            resultChannelMatrix[xx, yy] = clamp(resultChannelMatrix[xx, yy] + m[x, y], 0.0, 1.0)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return MatrixImage(
+        this.width,
+        this.height,
+        this.channels) { channel, _, _ ->
+        resultChannelMatrixes[channel]!!
+    }
 }
 
 

@@ -2,6 +2,7 @@ package ch.obermuhlner.kimage.matrix
 
 import ch.obermuhlner.kimage.Scaling
 import ch.obermuhlner.kimage.math.*
+import ch.obermuhlner.kimage.matrix.Matrix.Companion.matrixOf
 import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.sqrt
@@ -350,3 +351,48 @@ fun Matrix.erode(kernel: Matrix, strength: Double = 1.0, repeat: Int = 1): Matri
 
     return m1
 }
+
+fun Matrix.processTiles(size: Int, overlap: Int = size / 4, gradient: (Double) -> Double = { x -> 1.0 - x }, func: (Matrix) -> Matrix): Matrix {
+    require (size > overlap) { "Overlap too large" }
+
+    val result = matrixOf(this.width, this.height)
+
+    val overlay = matrixOf(this.width, this.height) { x, y ->
+        val rx = if (x < overlap) {
+            (overlap - x.toDouble()) / overlap
+        } else if (x > size - overlap) {
+            (overlap - (size-x).toDouble()) / overlap
+        } else {
+            0.0
+        }
+        val ry = if (y < overlap) {
+            (overlap - y.toDouble()) / overlap
+        } else if (y > size - overlap) {
+            (overlap - (size-y).toDouble()) / overlap
+        } else {
+            0.0
+        }
+        clamp(gradient(rx), 0.0, 1.0) * clamp(gradient(ry), 0.0, 1.0)
+    }
+
+    val step = size - overlap
+    for (tileY in -overlap until this.height step step) {
+        for (tileX in -overlap until this.width step step) {
+            val cropped = this.crop(tileX, tileY, size, size)
+            val processed = func(cropped)
+            val m = processed elementTimes overlay
+            for (y in 0 until size) {
+                for (x in 0 until size) {
+                    val xx = tileX + x
+                    val yy = tileY + y
+                    if (result.isInside(xx, yy)) {
+                        result[xx, yy] = clamp(result[xx, yy] + m[x, y], 0.0, 1.0)
+                    }
+                }
+            }
+        }
+    }
+
+    return result
+}
+
