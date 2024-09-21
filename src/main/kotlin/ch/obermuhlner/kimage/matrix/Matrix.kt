@@ -377,6 +377,13 @@ interface Matrix : Iterable<Double> {
         return crop(croppedCenterX - radiusX, croppedCenterY - radiusY, radiusX*2+1, radiusY*2+1, strictClipping)
     }
 
+    fun toDoubleArray(): Array<DoubleArray> {
+        return Array(height) { y ->
+            DoubleArray(width) { x ->
+                this[x, y]
+            }
+        }
+    }
 
     companion object {
         private fun checkHeight(height: Int) {

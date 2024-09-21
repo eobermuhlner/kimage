@@ -334,6 +334,12 @@ fun Iterable<Double>.median(): Double {
     return toMutableList().medianInplace()
 }
 
+fun Iterable<Double>.medianAbsoluteDeviation(): Double {
+    val m = median()
+    val list = toMutableList()
+    return list.onEach { abs(it - m) }.medianInplace()
+}
+
 fun Iterable<Float>.fastMedian(binCount: Int = 100): Float {
     val min = min()
     val max = max()
